@@ -3,7 +3,7 @@
 export type CardType = 'attack' | 'skill' | 'power' | 'status';
 
 export interface CardEffect {
-  type: 'damage' | 'block' | 'draw' | 'heal' | 'apply_status' | 'add_card' | 'discard' | 'lose_bandwidth' | 'add_copy' | 'exhaust_random' | 'exhaust_targeted' | 'conditional_strength' | 'upgrade_hand' | 'damage_scale_mitigation' | 'damage_scale_matches' | 'retrieve_discard' | 'gain_bandwidth' | 'conditional_refund';
+  type: 'damage' | 'block' | 'draw' | 'heal' | 'apply_status' | 'add_card' | 'discard' | 'lose_bandwidth' | 'add_copy' | 'exhaust_random' | 'exhaust_targeted' | 'conditional_strength' | 'upgrade_hand' | 'damage_scale_mitigation' | 'damage_scale_matches' | 'retrieve_discard' | 'gain_bandwidth' | 'conditional_refund' | 'lose_hp_turn_end';
   value: number;
   target?: 'enemy' | 'self' | 'all_enemies';
   status?: 'vulnerable' | 'weak' | 'strength' | 'metallicize' | 'evolve' | 'feelNoPain' | 'noDraw' | 'thorns' | 'antifragile';
@@ -12,50 +12,40 @@ export interface CardEffect {
   strengthMultiplier?: number; // For Heavy Blade mechanics
 }
 
-export interface CardData {
-  id: string;
-  name: string;
-  type: CardType;
-  cost: number; // -1 for X cost
-  description: string;
-  effects: CardEffect[];
-  icon?: string;
-  upgraded?: boolean;
-  exhaust?: boolean;
-  unplayable?: boolean;
-  ethereal?: boolean; // Disappears if not played
-  retain?: boolean; // Stays in hand at end of turn
-  playCondition?: 'only_attacks_in_hand'; // For Ship It! (Clash)
+unplayable ?: boolean;
+ethereal ?: boolean; // Disappears if not played
+retain ?: boolean; // Stays in hand at end of turn
+playCondition ?: 'only_attacks_in_hand'; // For Ship It! (Clash)
 }
 
 export interface RelicData {
-    id: string;
-    name: string;
-    rarity: 'starter' | 'common' | 'rare' | 'boss';
-    description: string;
-    icon: string;
-    trigger: 'combat_start' | 'turn_start' | 'combat_end';
-    effect: {
-        type: 'block' | 'heal' | 'bandwidth';
-        value: number;
-    };
-    tooltip?: {
-        term: string;
-        definition: string;
-    }
+  id: string;
+  name: string;
+  rarity: 'starter' | 'common' | 'rare' | 'boss';
+  description: string;
+  icon: string;
+  trigger: 'combat_start' | 'turn_start' | 'combat_end';
+  effect: {
+    type: 'block' | 'heal' | 'bandwidth';
+    value: number;
+  };
+  tooltip?: {
+    term: string;
+    definition: string;
+  }
 }
 
 export interface EntityStatus {
-    vulnerable: number;
-    weak: number;
-    strength: number;
-    // New Powers
-    metallicize: number; // Block at end of turn
-    evolve: number;      // Draw when status drawn
-    feelNoPain: number;  // Block when exhaust
-    noDraw: number;      // Cannot draw cards
-    thorns: number;      // Damage attacker
-    antifragile: number; // Gain strength at start of turn
+  vulnerable: number;
+  weak: number;
+  strength: number;
+  // New Powers
+  metallicize: number; // Block at end of turn
+  evolve: number;      // Draw when status drawn
+  feelNoPain: number;  // Block when exhaust
+  noDraw: number;      // Cannot draw cards
+  thorns: number;      // Damage attacker
+  antifragile: number; // Gain strength at start of turn
 }
 
 export interface CharacterStats {
@@ -77,7 +67,7 @@ export interface EnemyIntent {
 }
 
 export interface EnemyStatus extends EntityStatus {
-    growth: number;
+  growth: number;
 }
 
 export interface EnemyData {
@@ -121,8 +111,8 @@ export interface GameState {
   lastVictoryReward?: { capital: number; relic?: RelicData };
   pendingDiscard: number;
   pendingSelection?: {
-      context: 'hand' | 'discard_pile';
-      action: 'upgrade' | 'move_to_draw_pile' | 'exhaust';
-      count: number;
+    context: 'hand' | 'discard_pile';
+    action: 'upgrade' | 'move_to_draw_pile' | 'exhaust';
+    count: number;
   };
 }
