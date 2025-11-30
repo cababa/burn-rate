@@ -1,5 +1,7 @@
 
-import { CardData, EnemyData, CharacterStats, RelicData } from './types';
+import { CardData, EnemyData, CharacterStats, RelicData } from './types.ts';
+
+export const MAX_HAND_SIZE = 10;
 
 export const CARD_TYPE_CONFIG = {
     attack: {

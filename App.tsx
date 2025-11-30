@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Unit } from './components/Unit';
 import { Card } from './components/Card';
 import { MapScreen } from './components/MapScreen';
-import { GAME_DATA } from './constants';
+import { GAME_DATA, MAX_HAND_SIZE } from './constants';
 import { CardData, GameState, EnemyIntent, MapLayer, MapNode, CharacterStats, RelicData, EntityStatus, EnemyData, CardEffect } from './types';
 import { Battery, DollarSign, CheckCircle2, AlertOctagon, RefreshCw, Play, Layers, Archive, Gift, ArrowRight, Coffee, Hammer, Store, Trash2, Gem, Wrench, FastForward, Heart, Plus, Bug, Ghost, Rocket, Lock, User, Briefcase, ChevronRight, Zap, X } from 'lucide-react';
 
@@ -762,10 +762,21 @@ const App: React.FC = () => {
                             newMessage += ` (Draw prevented by Flow State)`;
                         } else {
                             const result = drawCards(newDrawPile, newDiscardPile, effect.value);
-                            drawnCards = [...drawnCards, ...result.drawn];
                             newDrawPile = result.newDraw;
                             newDiscardPile = result.newDiscard;
-                            newMessage += ` Drew ${effect.value} cards.`;
+
+                            result.drawn.forEach(c => {
+                                if (currentHand.length + drawnCards.length < MAX_HAND_SIZE) {
+                                    drawnCards.push(c);
+                                } else {
+                                    newDiscardPile.push(c);
+                                    newMessage += ` (Hand full! Burned ${c.name})`;
+                                }
+                            });
+                            
+                            if (result.drawn.length > 0 && !newMessage.includes('Drew')) {
+                                newMessage += ` Drew ${result.drawn.length} cards.`;
+                            }
                         }
                     } else if (effect.type === 'add_card' && effect.cardId) {
                         const template = Object.values(GAME_DATA.cards).find(c => c.id === effect.cardId);
@@ -1473,15 +1484,36 @@ const App: React.FC = () => {
 
             if (newStatus === 'PLAYING') {
                 const { drawn, newDraw, newDiscard } = drawCards(nextDrawPile, prev.discardPile, 5);
-                nextState.hand = [...prev.hand, ...drawn]; // Append drawn cards to retained cards
+                
+                // Hand Limit Logic
+                let nextHand = [...prev.hand];
+                let burnedCount = 0;
+                const actualDrawn: CardData[] = [];
+                let nextDiscard = newDiscard;
+
+                drawn.forEach(card => {
+                    if (nextHand.length < MAX_HAND_SIZE) {
+                        nextHand.push(card);
+                        actualDrawn.push(card);
+                    } else {
+                        nextDiscard.push(card);
+                        burnedCount++;
+                    }
+                });
+
+                nextState.hand = nextHand;
                 nextState.drawPile = newDraw;
-                nextState.discardPile = newDiscard;
+                nextState.discardPile = nextDiscard;
+
+                if (burnedCount > 0) {
+                    newMessage += ` (Hand full! Burned ${burnedCount} cards)`;
+                }
 
                 let extraDraws: CardData[] = [];
-                let cardsToCheck = [...drawn];
+                let cardsToCheck = [...actualDrawn];
                 let safety = 0;
                 let currentNewDraw = newDraw;
-                let currentNewDiscard = newDiscard;
+                let currentNewDiscard = nextDiscard;
 
                 while (cardsToCheck.length > 0 && safety < 10) {
                     const c = cardsToCheck.shift();
