@@ -40,12 +40,13 @@ export const GAME_DATA = {
             bandwidth: 3,
             capital: 0,
             mitigation: 0,
-            statuses: { vulnerable: 0, weak: 0, strength: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0 }
+            statuses: { vulnerable: 0, weak: 0, strength: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0 }
         } as CharacterStats
     },
     relics: {
         git_repository: {
             id: "relic_git_repository",
+            character: "cto",
             name: "Git Repository",
             rarity: "starter",
             trigger: "combat_end",
@@ -59,10 +60,11 @@ export const GAME_DATA = {
         } as RelicData,
         coffee_drip: {
             id: "relic_coffee_drip",
+            character: "shared",
             name: "Coffee Drip",
             rarity: "rare",
             trigger: "turn_start",
-            effect: { type: "bandwidth", value: 1 },
+            effect: { type: "gain_bandwidth", value: 1 },
             description: "Start each turn with +1 Bandwidth.",
             icon: "☕",
             tooltip: {
@@ -75,26 +77,33 @@ export const GAME_DATA = {
         // --- BASIC ---
         cto_commit: {
             id: "cto_commit",
+            character: "cto",
             name: "Commit",
             type: "attack",
             rarity: "starter",
             cost: 1,
             description: "Deal 6 Execution damage.",
             effects: [{ type: "damage", value: 6, target: "enemy" }],
-            icon: "🚀"
+            icon: "🚀",
+            keywords: [],
+            tooltip: { term: "Git Commit", definition: "Snapshot of code changes. In startups: shipping small, testable increments." }
         } as CardData,
         cto_rollback: {
             id: "cto_rollback",
+            character: "cto",
             name: "Rollback",
             type: "skill",
             rarity: "starter",
             cost: 1,
             description: "Gain 5 Mitigation.",
             effects: [{ type: "block", value: 5, target: "self" }],
-            icon: "⏪"
+            icon: "⏪",
+            keywords: [],
+            tooltip: { term: "Rollback", definition: "Undo changes when something breaks. Essential for recovery." }
         } as CardData,
         cto_hotfix: {
             id: "cto_hotfix",
+            character: "cto",
             name: "Hotfix",
             type: "attack",
             rarity: "starter",
@@ -104,12 +113,15 @@ export const GAME_DATA = {
                 { type: "damage", value: 8, target: "enemy" },
                 { type: "apply_status", value: 2, status: 'vulnerable', target: "enemy" }
             ],
-            icon: "🔥"
+            icon: "🔥",
+            keywords: [],
+            tooltip: { term: "Hotfix", definition: "Emergency patch deployed directly to production. Risky but necessary." }
         } as CardData,
 
         // --- COMMON ---
         cto_quick_fix: { // Anger
             id: "cto_quick_fix",
+            character: "cto",
             name: "Quick Fix",
             type: "attack",
             rarity: "common",
@@ -119,10 +131,13 @@ export const GAME_DATA = {
                 { type: "damage", value: 6, target: "enemy" },
                 { type: "add_copy", value: 1, target: "self" }
             ],
-            icon: "🩹"
+            icon: "🩹",
+            keywords: [],
+            tooltip: { term: "Quick Fix", definition: "A temporary solution that gets the job done but might need revisiting." }
         } as CardData,
         cto_brute_force: { // Heavy Blade
             id: "cto_brute_force",
+            character: "cto",
             name: "Brute Force",
             type: "attack",
             rarity: "common",
@@ -131,10 +146,13 @@ export const GAME_DATA = {
             effects: [
                 { type: "damage", value: 14, target: "enemy", strengthMultiplier: 3 }
             ],
-            icon: "🔨"
+            icon: "🔨",
+            keywords: [],
+            tooltip: { term: "Brute Force", definition: "Solving a problem through raw computational power or effort, ignoring elegance." }
         } as CardData,
         cto_sprint_planning: { // Pommel Strike
             id: "cto_sprint_planning",
+            character: "cto",
             name: "Sprint Plan",
             type: "attack",
             rarity: "common",
@@ -144,10 +162,13 @@ export const GAME_DATA = {
                 { type: "damage", value: 9, target: "enemy" },
                 { type: "draw", value: 1, target: "self" }
             ],
-            icon: "📅"
+            icon: "📅",
+            keywords: [],
+            tooltip: { term: "Sprint Planning", definition: "Setting goals for the next iteration. Clears the path for execution." }
         } as CardData,
         cto_risk_mitigation: { // Clothesline
             id: "cto_risk_mitigation",
+            character: "cto",
             name: "Risk Mitigation",
             type: "attack",
             rarity: "common",
@@ -157,10 +178,13 @@ export const GAME_DATA = {
                 { type: "damage", value: 12, target: "enemy" },
                 { type: "apply_status", value: 2, status: 'weak', target: "enemy" }
             ],
-            icon: "👔"
+            icon: "👔",
+            keywords: [],
+            tooltip: { term: "Risk Mitigation", definition: "Strategies to reduce the impact of potential threats." }
         } as CardData,
         cto_refactor: { // True Grit
             id: "cto_refactor",
+            character: "cto",
             name: "Refactor",
             type: "skill",
             rarity: "common",
@@ -170,10 +194,13 @@ export const GAME_DATA = {
                 { type: "block", value: 7, target: "self" },
                 { type: "exhaust_random", value: 1, target: "self" }
             ],
-            icon: "♻️"
+            icon: "♻️",
+            keywords: [],
+            tooltip: { term: "Refactor", definition: "Restructuring code without changing its external behavior. Improves maintainability." }
         } as CardData,
         cto_ship_it: { // Clash
             id: "cto_ship_it",
+            character: "cto",
             name: "Ship It!",
             type: "attack",
             rarity: "common",
@@ -183,10 +210,13 @@ export const GAME_DATA = {
             effects: [
                 { type: "damage", value: 14, target: "enemy" }
             ],
-            icon: "🚢"
+            icon: "🚢",
+            keywords: [],
+            tooltip: { term: "Ship It!", definition: "Deploying to production. The ultimate goal of the sprint." }
         } as CardData,
         cto_tooling: { // Armaments
             id: "cto_tooling",
+            character: "cto",
             name: "Tooling",
             type: "skill",
             rarity: "common",
@@ -196,10 +226,13 @@ export const GAME_DATA = {
                 { type: "block", value: 5, target: "self" },
                 { type: "upgrade_hand", value: 1, target: "self" }
             ],
-            icon: "🛠️"
+            icon: "🛠️",
+            keywords: [],
+            tooltip: { term: "Tooling", definition: "Investing in developer experience and infrastructure. Makes everything better." }
         } as CardData,
         cto_leverage: { // Body Slam
             id: "cto_leverage",
+            character: "cto",
             name: "Leverage",
             type: "attack",
             rarity: "common",
@@ -208,10 +241,13 @@ export const GAME_DATA = {
             effects: [
                 { type: "damage_scale_mitigation", value: 1, target: "enemy" }
             ],
-            icon: "🏗️"
+            icon: "🏗️",
+            keywords: [],
+            tooltip: { term: "Leverage", definition: "Using existing assets to achieve outsized results." }
         } as CardData,
         cto_batch_deploy: { // Cleave
             id: "cto_batch_deploy",
+            character: "cto",
             name: "Batch Deploy",
             type: "attack",
             rarity: "common",
@@ -220,10 +256,13 @@ export const GAME_DATA = {
             effects: [
                 { type: "damage", value: 8, target: "all_enemies" }
             ],
-            icon: "📦"
+            icon: "📦",
+            keywords: [],
+            tooltip: { term: "Batch Deploy", definition: "Releasing multiple changes at once. Efficient but risky." }
         } as CardData,
         cto_cherry_pick: { // Headbutt
             id: "cto_cherry_pick",
+            character: "cto",
             name: "Cherry Pick",
             type: "attack",
             rarity: "common",
@@ -233,10 +272,13 @@ export const GAME_DATA = {
                 { type: "damage", value: 9, target: "enemy" },
                 { type: "retrieve_discard", value: 1, target: "self" }
             ],
-            icon: "🍒"
+            icon: "🍒",
+            keywords: [],
+            tooltip: { term: "Cherry Pick", definition: "Selecting specific commits to apply to another branch." }
         } as CardData,
         cto_dual_track: { // Iron Wave
             id: "cto_dual_track",
+            character: "cto",
             name: "Dual Track",
             type: "attack",
             rarity: "common",
@@ -246,10 +288,13 @@ export const GAME_DATA = {
                 { type: "damage", value: 5, target: "enemy" },
                 { type: "block", value: 5, target: "self" }
             ],
-            icon: "🛤️"
+            icon: "🛤️",
+            keywords: [],
+            tooltip: { term: "Dual Track", definition: "Discovery and Delivery happening in parallel." }
         } as CardData,
         cto_compounding_commits: { // Perfected Strike
             id: "cto_compounding_commits",
+            character: "cto",
             name: "Compounding",
             type: "attack",
             rarity: "common",
@@ -258,10 +303,13 @@ export const GAME_DATA = {
             effects: [
                 { type: "damage_scale_matches", value: 6, matchString: 'Commit', target: "enemy" }
             ],
-            icon: "📚"
+            icon: "📚",
+            keywords: [],
+            tooltip: { term: "Compounding", definition: "Small improvements adding up to massive value over time." }
         } as CardData,
         cto_yolo_deploy: { // Reckless Charge
             id: "cto_yolo_deploy",
+            character: "cto",
             name: "YOLO Deploy",
             type: "attack",
             rarity: "common",
@@ -271,10 +319,13 @@ export const GAME_DATA = {
                 { type: "damage", value: 7, target: "enemy" },
                 { type: "add_card", value: 1, cardId: "status_legacy_code", target: "self" }
             ],
-            icon: "🤠"
+            icon: "🤠",
+            keywords: [],
+            tooltip: { term: "YOLO Deploy", definition: "Deploying on Friday at 5pm without tests. What could go wrong?" }
         } as CardData,
         cto_shotgun_debug: { // Sword Boomerang
             id: "cto_shotgun_debug",
+            character: "cto",
             name: "Shotgun Debug",
             type: "attack",
             rarity: "common",
@@ -285,10 +336,13 @@ export const GAME_DATA = {
                 { type: "damage", value: 3, target: "enemy" },
                 { type: "damage", value: 3, target: "enemy" }
             ],
-            icon: "🔫"
+            icon: "🔫",
+            keywords: [],
+            tooltip: { term: "Shotgun Debugging", definition: "Changing random things until it works. Not recommended." }
         } as CardData,
         cto_pair_programming: { // Twin Strike
             id: "cto_pair_programming",
+            character: "cto",
             name: "Pair Prog",
             type: "attack",
             rarity: "common",
@@ -298,10 +352,13 @@ export const GAME_DATA = {
                 { type: "damage", value: 5, target: "enemy" },
                 { type: "damage", value: 5, target: "enemy" }
             ],
-            icon: "👥"
+            icon: "👥",
+            keywords: [],
+            tooltip: { term: "Pair Programming", definition: "Two developers, one keyboard. Higher quality, shared context." }
         } as CardData,
         cto_tech_shortcut: { // Wild Strike
             id: "cto_tech_shortcut",
+            character: "cto",
             name: "Tech Shortcut",
             type: "attack",
             rarity: "common",
@@ -311,12 +368,15 @@ export const GAME_DATA = {
                 { type: "damage", value: 12, target: "enemy" },
                 { type: "add_card", value: 1, cardId: "status_legacy_code", target: "self" }
             ],
-            icon: "✂️"
+            icon: "✂️",
+            keywords: [],
+            tooltip: { term: "Technical Shortcut", definition: "Quick solution that creates debt. Fast now, painful later." }
         } as CardData,
 
         // --- UNCOMMON ---
         cto_root_cause: { // Uppercut
             id: "cto_root_cause",
+            character: "cto",
             name: "Root Cause",
             type: "attack",
             rarity: "uncommon",
@@ -327,10 +387,13 @@ export const GAME_DATA = {
                 { type: "apply_status", value: 1, status: 'weak', target: "enemy" },
                 { type: "apply_status", value: 1, status: 'vulnerable', target: "enemy" }
             ],
-            icon: "🔍"
+            icon: "🔍",
+            keywords: [],
+            tooltip: { term: "Root Cause Analysis", definition: "Finding the fundamental reason for a problem to prevent recurrence." }
         } as CardData,
         cto_troubleshooting: { // Evolve
             id: "cto_troubleshooting",
+            character: "cto",
             name: "Troubleshoot",
             type: "power",
             rarity: "uncommon",
@@ -339,10 +402,13 @@ export const GAME_DATA = {
             effects: [
                 { type: "apply_status", value: 1, status: "evolve", target: "self" }
             ],
-            icon: "💡"
+            icon: "💡",
+            keywords: [],
+            tooltip: { term: "Troubleshooting", definition: "Systematic search for the source of a problem." }
         } as CardData,
         cto_lean_ops: { // Feel No Pain
             id: "cto_lean_ops",
+            character: "cto",
             name: "Lean Ops",
             type: "power",
             rarity: "uncommon",
@@ -351,10 +417,13 @@ export const GAME_DATA = {
             effects: [
                 { type: "apply_status", value: 3, status: "feelNoPain", target: "self" }
             ],
-            icon: "🧘"
+            icon: "🧘",
+            keywords: [],
+            tooltip: { term: "Lean Operations", definition: "Maximizing value while minimizing waste." }
         } as CardData,
         cto_caching: { // Metallicize
             id: "cto_caching",
+            character: "cto",
             name: "Caching",
             type: "power",
             rarity: "uncommon",
@@ -363,20 +432,26 @@ export const GAME_DATA = {
             effects: [
                 { type: "apply_status", value: 3, status: "metallicize", target: "self" }
             ],
-            icon: "💾"
+            icon: "💾",
+            keywords: [],
+            tooltip: { term: "Caching", definition: "Storing data in a temporary storage area for faster access." }
         } as CardData,
         cto_code_review: { // Inflame
             id: "cto_code_review",
+            character: "cto",
             name: "Code Review",
             type: "power",
             rarity: "uncommon",
             cost: 1,
             description: "Gain 2 Execution Power (Strength).",
             effects: [{ type: "apply_status", value: 2, status: 'strength', target: "self" }],
-            icon: "👓"
+            icon: "👓",
+            keywords: [],
+            tooltip: { term: "Code Review", definition: "Systematic examination of computer source code." }
         } as CardData,
         cto_resource_allocation: { // Spot Weakness
             id: "cto_resource_allocation",
+            character: "cto",
             name: "Resource Alloc",
             type: "skill",
             rarity: "uncommon",
@@ -385,10 +460,13 @@ export const GAME_DATA = {
             effects: [
                 { type: "conditional_strength", value: 3, target: "self" }
             ],
-            icon: "🎯"
+            icon: "🎯",
+            keywords: [],
+            tooltip: { term: "Resource Allocation", definition: "Assigning available resources to the most critical tasks." }
         } as CardData,
         cto_flow_state: { // Battle Trance
             id: "cto_flow_state",
+            character: "cto",
             name: "Flow State",
             type: "skill",
             rarity: "uncommon",
@@ -398,10 +476,13 @@ export const GAME_DATA = {
                 { type: "draw", value: 3, target: "self" },
                 { type: "apply_status", value: 1, status: "noDraw", target: "self" }
             ],
-            icon: "🌊"
+            icon: "🌊",
+            keywords: [],
+            tooltip: { term: "Flow State", definition: "A mental state of complete immersion and focus." }
         } as CardData,
         cto_market_window: { // Carnage
             id: "cto_market_window",
+            character: "cto",
             name: "Market Window",
             type: "attack",
             rarity: "uncommon",
@@ -411,10 +492,13 @@ export const GAME_DATA = {
             effects: [
                 { type: "damage", value: 20, target: "enemy" }
             ],
-            icon: "⏱️"
+            icon: "⏱️",
+            keywords: ["ethereal"],
+            tooltip: { term: "Market Window", definition: "A limited time opportunity to launch a product." }
         } as CardData,
         cto_talent_poach: { // Disarm
             id: "cto_talent_poach",
+            character: "cto",
             name: "Talent Poach",
             type: "skill",
             rarity: "uncommon",
@@ -424,10 +508,13 @@ export const GAME_DATA = {
             effects: [
                 { type: "apply_status", value: -2, status: 'strength', target: "enemy" }
             ],
-            icon: "🎣"
+            icon: "🎣",
+            keywords: ["exhaust"],
+            tooltip: { term: "Talent Poaching", definition: "Hiring key employees from competitors to weaken them." }
         } as CardData,
         cto_viral_loop: { // Dropkick
             id: "cto_viral_loop",
+            character: "cto",
             name: "Viral Loop",
             type: "attack",
             rarity: "uncommon",
@@ -437,10 +524,13 @@ export const GAME_DATA = {
                 { type: "damage", value: 5, target: "enemy" },
                 { type: "conditional_refund", value: 1, target: "self" }
             ],
-            icon: "➰"
+            icon: "➰",
+            keywords: [],
+            tooltip: { term: "Viral Loop", definition: "A mechanism that encourages users to invite others, creating exponential growth." }
         } as CardData,
         cto_firewall: { // Flame Barrier
             id: "cto_firewall",
+            character: "cto",
             name: "Firewall",
             type: "skill",
             rarity: "uncommon",
@@ -450,10 +540,13 @@ export const GAME_DATA = {
                 { type: "block", value: 12, target: "self" },
                 { type: "apply_status", value: 4, status: "thorns", target: "self" }
             ],
-            icon: "🔥🧱"
+            icon: "🔥🧱",
+            keywords: [],
+            tooltip: { term: "Firewall", definition: "A network security system that monitors and controls incoming and outgoing traffic." }
         } as CardData,
         cto_hackathon: { // Pummel
             id: "cto_hackathon",
+            character: "cto",
             name: "Hackathon",
             type: "attack",
             rarity: "uncommon",
@@ -466,10 +559,13 @@ export const GAME_DATA = {
                 { type: "damage", value: 2, target: "enemy" },
                 { type: "damage", value: 2, target: "enemy" }
             ],
-            icon: "🍕"
+            icon: "🍕",
+            keywords: ["exhaust"],
+            tooltip: { term: "Hackathon", definition: "An event where people engage in rapid collaborative engineering." }
         } as CardData,
         cto_antifragile: { // Rupture
             id: "cto_antifragile",
+            character: "cto",
             name: "Antifragile",
             type: "power",
             rarity: "uncommon",
@@ -478,10 +574,13 @@ export const GAME_DATA = {
             effects: [
                 { type: "apply_status", value: 1, status: "antifragile", target: "self" }
             ],
-            icon: "💪"
+            icon: "💪",
+            keywords: [],
+            tooltip: { term: "Antifragile", definition: "Systems that benefit from shocks, volatility, and stress." }
         } as CardData,
         cto_bridge_round: { // Seeing Red
             id: "cto_bridge_round",
+            character: "cto",
             name: "Bridge Round",
             type: "skill",
             rarity: "uncommon",
@@ -491,10 +590,13 @@ export const GAME_DATA = {
             effects: [
                 { type: "gain_bandwidth", value: 2, target: "self" }
             ],
-            icon: "🌉"
+            icon: "🌉",
+            keywords: ["exhaust"],
+            tooltip: { term: "Bridge Round", definition: "Short-term funding to keep the company afloat until the next major round." }
         } as CardData,
         cto_market_disruption: { // Shockwave
             id: "cto_market_disruption",
+            character: "cto",
             name: "Disruption",
             type: "skill",
             rarity: "uncommon",
@@ -505,10 +607,13 @@ export const GAME_DATA = {
                 { type: "apply_status", value: 3, status: "weak", target: "all_enemies" },
                 { type: "apply_status", value: 3, status: "vulnerable", target: "all_enemies" }
             ],
-            icon: "💥"
+            icon: "💥",
+            keywords: ["exhaust"],
+            tooltip: { term: "Market Disruption", definition: "A new market innovation that displaces established market-leading firms." }
         } as CardData,
         cto_blitzscaling: { // Whirlwind
             id: "cto_blitzscaling",
+            character: "cto",
             name: "Blitzscaling",
             type: "attack",
             rarity: "uncommon",
@@ -517,12 +622,15 @@ export const GAME_DATA = {
             effects: [
                 { type: "damage", value: 5, target: "all_enemies" }
             ],
-            icon: "🌪️"
+            icon: "🌪️",
+            keywords: [],
+            tooltip: { term: "Blitzscaling", definition: "Prioritizing speed over efficiency in an environment of uncertainty." }
         } as CardData,
 
         // --- STATUS ---
         status_legacy_code: { // Wound
             id: "status_legacy_code",
+            character: "status",
             name: "Legacy Code",
             type: "status",
             rarity: "special",
@@ -531,10 +639,13 @@ export const GAME_DATA = {
             retain: true,
             description: "Unplayable. Retain.",
             effects: [],
-            icon: "🏚️"
+            icon: "🏚️",
+            keywords: ["retain", "unplayable"],
+            tooltip: { term: "Legacy Code", definition: "Code inherited from someone else or an older version of the software." }
         } as CardData,
         status_bug: { // Dazed
             id: "status_bug",
+            character: "status",
             name: "Bug",
             type: "status",
             rarity: "special",
@@ -543,10 +654,13 @@ export const GAME_DATA = {
             ethereal: true,
             description: "Unplayable. Ethereal.",
             effects: [],
-            icon: "🐛"
+            icon: "🐛",
+            keywords: ["ethereal", "unplayable"],
+            tooltip: { term: "Software Bug", definition: "An error, flaw or fault in a computer program or system." }
         } as CardData,
         status_burnout: { // Burn
             id: "status_burnout",
+            character: "status",
             name: "Burnout",
             type: "status",
             rarity: "special",
@@ -556,10 +670,13 @@ export const GAME_DATA = {
             effects: [
                 { type: "lose_hp_turn_end", value: 2, target: "self" }
             ],
-            icon: "🔥"
+            icon: "🔥",
+            keywords: ["unplayable"],
+            tooltip: { term: "Burnout", definition: "State of emotional, physical, and mental exhaustion caused by excessive and prolonged stress." }
         } as CardData,
         status_scope_creep: { // Slimed
             id: "status_scope_creep",
+            character: "status",
             name: "Scope Creep",
             type: "status",
             rarity: "special",
@@ -567,10 +684,13 @@ export const GAME_DATA = {
             exhaust: true,
             description: "Exhaust.",
             effects: [],
-            icon: "🐙"
+            icon: "🐙",
+            keywords: ["exhaust"],
+            tooltip: { term: "Scope Creep", definition: "Uncontrolled changes or continuous growth in a project's scope." }
         } as CardData,
         status_context_switch: { // Void
             id: "status_context_switch",
+            character: "status",
             name: "Context Switch",
             type: "status",
             rarity: "special",
@@ -581,68 +701,514 @@ export const GAME_DATA = {
             effects: [
                 { type: "lose_bandwidth", value: 1, target: "self" }
             ],
-            icon: "🔀"
+            icon: "🔀",
+            keywords: ["ethereal", "unplayable", "exhaust"],
+            tooltip: { term: "Context Switching", definition: "Storing and restoring the state of a process so that execution can be resumed from the same point later." }
         } as CardData,
+        card_bug: {
+            id: "card_bug",
+            character: "status",
+            name: "Bug",
+            type: "status",
+            rarity: "common",
+            cost: -2,
+            description: "Unplayable. Ethereal.",
+            unplayable: true,
+            ethereal: true,
+            effects: [],
+            icon: "🐛",
+            keywords: ["ethereal"],
+            tooltip: { term: "Bug", definition: "A minor issue. Unplayable. Fades away at end of turn." }
+        } as CardData
     },
     enemies: {
-        simple_bug: {
-            id: "enemy_simple_bug",
-            name: "Legacy Bug",
-            hp: 42,
-            maxHp: 42,
-            emoji: "🐛",
-            description: "A small issue in production.",
-            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0 },
-            currentIntent: {
-                type: 'attack',
-                value: 6,
-                icon: 'attack',
-                description: "6 Burn"
-            }
-        } as EnemyData,
-        legacy_code: {
-            id: "enemy_legacy_code",
-            name: "Legacy Code",
-            hp: 56,
-            maxHp: 56,
-            emoji: "🦕",
-            description: "Ancient code that grows more complex over time.",
-            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0 },
+        // --- COMMON ---
+        fanboy: { // Cultist
+            id: "fanboy",
+            name: "The Fanboy",
+            act: 1,
+            type: "normal",
+            hp: 50, // 48-54
+            maxHp: 50,
+            mitigation: 0,
+            emoji: "🤓",
+            description: "Obsessed with new tech. Hype grows every turn.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'buff',
                 value: 3,
                 icon: 'buff',
-                description: "Spaghetti Code"
+                description: "Ritual (Hype)"
+            },
+            rewards: {
+                capital: { min: 10, max: 15 },
+                card_reward: true
             }
         } as EnemyData,
-        scope_creep: {
-            id: "enemy_scope_creep",
-            name: "Scope Creep",
-            hp: 90,
-            maxHp: 90,
-            emoji: "🐙",
-            description: "Elite: Grows stronger when you use Skills.",
-            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0 },
+        spaghetti_code: { // Jaw Worm
+            id: "spaghetti_code",
+            name: "Spaghetti Code",
+            act: 1,
+            type: "normal",
+            hp: 42, // 40-44
+            maxHp: 42,
+            mitigation: 0,
+            emoji: "🍝",
+            description: "Messy, redundant code that grows more complex over time.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'attack',
-                value: 10,
+                value: 11,
                 icon: 'attack',
-                description: "Feature Bloat"
+                description: "Chomp"
+            },
+            rewards: {
+                capital: { min: 12, max: 18 },
+                card_reward: true
             }
         } as EnemyData,
-        boss_the_pivot: {
-            id: "boss_the_pivot",
-            name: "The Pivot",
-            hp: 120,
-            maxHp: 120,
-            emoji: "🌪️",
-            description: "Existential crisis. Can you survive the change?",
-            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0 },
+        critical_bug: { // Louse Red
+            id: "critical_bug",
+            name: "Critical Bug",
+            act: 1,
+            type: "normal",
+            hp: 13, // 10-15
+            maxHp: 13,
+            mitigation: 0,
+            emoji: "🐞",
+            description: "A high-priority bug. Grows stronger if not fixed.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 5, malleable: 0, asleep: 0, frail: 0 },
+            currentIntent: {
+                type: 'buff',
+                value: 3,
+                icon: 'buff',
+                description: "Grow (Severity)"
+            },
+            rewards: {
+                capital: { min: 5, max: 10 },
+                card_reward: true
+            }
+        } as EnemyData,
+        minor_bug: { // Louse Green
+            id: "minor_bug",
+            name: "Minor Bug",
+            act: 1,
+            type: "normal",
+            hp: 13, // 10-15
+            maxHp: 13,
+            mitigation: 0,
+            emoji: "🪲",
+            description: "A nagging issue that slows you down.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 5, malleable: 0, asleep: 0, frail: 0 },
+            currentIntent: {
+                type: 'debuff',
+                value: 2,
+                icon: 'debuff',
+                description: "Spit Web (Weak)"
+            },
+            rewards: {
+                capital: { min: 5, max: 10 },
+                card_reward: true
+            }
+        } as EnemyData,
+        quick_hack: { // Acid Slime S
+            id: "quick_hack",
+            name: "Quick Hack",
+            act: 1,
+            type: "normal",
+            hp: 10, // 8-12
+            maxHp: 10,
+            mitigation: 0,
+            emoji: "🧪",
+            description: "A small, sloppy fix. Easy to kill but annoying.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
+            currentIntent: {
+                type: 'debuff',
+                value: 1,
+                icon: 'debuff',
+                description: "Lick (Weak)"
+            },
+            rewards: {
+                capital: { min: 3, max: 7 },
+                card_reward: false
+            }
+        } as EnemyData,
+        tech_debt: { // Acid Slime M
+            id: "tech_debt",
+            name: "Tech Debt",
+            act: 1,
+            type: "normal",
+            hp: 30, // 28-32
+            maxHp: 30,
+            mitigation: 0,
+            emoji: "📉",
+            description: "A moderate chunk of bad code. Adds 'Slimed' to discard.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
+            currentIntent: {
+                type: 'debuff',
+                value: 1,
+                icon: 'debuff',
+                description: "Corrosive Spit (Slimed)"
+            },
+            rewards: {
+                capital: { min: 8, max: 12 },
+                card_reward: true
+            }
+        } as EnemyData,
+        legacy_module: { // Acid Slime L
+            id: "legacy_module",
+            name: "Legacy Module",
+            act: 1,
+            type: "normal",
+            hp: 67, // 65-69
+            maxHp: 67,
+            mitigation: 0,
+            emoji: "🏗️",
+            description: "A large, outdated system. Splits into Tech Debt when killed.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
+            currentIntent: {
+                type: 'debuff',
+                value: 2,
+                icon: 'debuff',
+                description: "Corrosive Spit (Slimed)"
+            },
+            rewards: {
+                capital: { min: 15, max: 20 },
+                card_reward: true
+            }
+        } as EnemyData,
+        hotfix: { // Spike Slime S
+            id: "hotfix",
+            name: "Hotfix",
+            act: 1,
+            type: "normal",
+            hp: 12, // 10-14
+            maxHp: 12,
+            mitigation: 0,
+            emoji: "🩹",
+            description: "A tiny patch that might break something else.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
+            currentIntent: {
+                type: 'attack',
+                value: 5,
+                icon: 'attack',
+                description: "Tackle"
+            },
+            rewards: {
+                capital: { min: 3, max: 7 },
+                card_reward: false
+            }
+        } as EnemyData,
+        bad_merge: { // Spike Slime M
+            id: "bad_merge",
+            name: "Bad Merge",
+            act: 1,
+            type: "normal",
+            hp: 30, // 28-32
+            maxHp: 30,
+            mitigation: 0,
+            emoji: "🔀",
+            description: "A merge conflict that hurts.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
+            currentIntent: {
+                type: 'debuff',
+                value: 1,
+                icon: 'debuff',
+                description: "Lick (Frail)"
+            },
+            rewards: {
+                capital: { min: 8, max: 12 },
+                card_reward: true
+            }
+        } as EnemyData,
+        merge_conflict: { // Spike Slime L
+            id: "merge_conflict",
+            name: "Merge Conflict",
+            act: 1,
+            type: "normal",
+            hp: 67, // 64-70
+            maxHp: 67,
+            mitigation: 0,
+            emoji: "💥",
+            description: "A massive integration issue. Splits into Bad Merges.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
+            currentIntent: {
+                type: 'debuff',
+                value: 2,
+                icon: 'debuff',
+                description: "Flame Tackle (Slimed)"
+            },
+            rewards: {
+                capital: { min: 15, max: 20 },
+                card_reward: true
+            }
+        } as EnemyData,
+        micromanager: { // Blue Slaver
+            id: "micromanager",
+            name: "Micromanager",
+            act: 1,
+            type: "normal",
+            hp: 48, // 46-50
+            maxHp: 48,
+            mitigation: 0,
+            emoji: "👔",
+            description: "Stabs you with tasks and weakens your autonomy.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'attack',
                 value: 12,
                 icon: 'attack',
-                description: "Market Shift"
+                description: "Stab"
+            },
+            rewards: {
+                capital: { min: 12, max: 18 },
+                card_reward: true
+            }
+        } as EnemyData,
+        feature_pusher: { // Red Slaver
+            id: "feature_pusher",
+            name: "Feature Pusher",
+            act: 1,
+            type: "normal",
+            hp: 48, // 46-50
+            maxHp: 48,
+            mitigation: 0,
+            emoji: "📢",
+            description: "Demands features, making you Vulnerable to bugs.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
+            currentIntent: {
+                type: 'attack',
+                value: 13,
+                icon: 'attack',
+                description: "Stab"
+            },
+            rewards: {
+                capital: { min: 12, max: 18 },
+                card_reward: true
+            }
+        } as EnemyData,
+        headhunter: { // Looter
+            id: "headhunter",
+            name: "Headhunter",
+            act: 1,
+            type: "normal",
+            hp: 46, // 44-48
+            maxHp: 46,
+            mitigation: 0,
+            emoji: "🕵️",
+            description: "Tries to steal your capital (budget/talent).",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
+            currentIntent: {
+                type: 'attack',
+                value: 10,
+                icon: 'attack',
+                description: "Mug (Steal Capital)"
+            },
+            rewards: {
+                capital: { min: 15, max: 25 },
+                card_reward: true
+            }
+        } as EnemyData,
+        memory_leak: { // Fungi Beast
+            id: "memory_leak",
+            name: "Memory Leak",
+            act: 1,
+            type: "normal",
+            hp: 25, // 22-28
+            maxHp: 25,
+            mitigation: 0,
+            emoji: "🍄",
+            description: "Grows over time. Explodes if you kill the wrong part first.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
+            currentIntent: {
+                type: 'buff',
+                value: 3,
+                icon: 'buff',
+                description: "Grow (Strength)"
+            },
+            rewards: {
+                capital: { min: 8, max: 12 },
+                card_reward: true
+            }
+        } as EnemyData,
+
+        // --- ELITES ---
+        scope_creep: { // Gremlin Nob
+            id: "scope_creep",
+            name: "Scope Creep",
+            act: 1,
+            type: "elite",
+            hp: 86, // 82-90
+            maxHp: 86,
+            mitigation: 0,
+            emoji: "🐙",
+            description: "Elite: Grows stronger when you use Skills.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
+            currentIntent: {
+                type: 'buff',
+                value: 1,
+                icon: 'buff',
+                description: "Bellow (Enrage)"
+            },
+            rewards: {
+                capital: { min: 25, max: 35 },
+                card_reward: true
+            }
+        } as EnemyData,
+        over_engineer: { // Lagavulin
+            id: "over_engineer",
+            name: "The Over-Engineer",
+            act: 1,
+            type: "elite",
+            hp: 110, // 109-111
+            maxHp: 110,
+            mitigation: 0,
+            emoji: "🐚",
+            description: "Asleep at first. Wakes up with massive complexity costs.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 8, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 1, frail: 0 },
+            currentIntent: {
+                type: 'debuff',
+                value: 1,
+                icon: 'debuff',
+                description: "Siphon (Str/Dex)"
+            },
+            rewards: {
+                capital: { min: 25, max: 35 },
+                card_reward: true
+            }
+        } as EnemyData,
+        legacy_monolith: { // Sentry 1
+            id: "legacy_monolith",
+            name: "Legacy Monolith",
+            act: 1,
+            type: "elite",
+            hp: 42, // 38-42
+            maxHp: 42,
+            mitigation: 0,
+            emoji: "🗿",
+            description: "The core of the legacy system. Resistant to change.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 1, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
+            currentIntent: {
+                type: 'debuff',
+                value: 2,
+                icon: 'debuff',
+                description: "Bolt (Shuffle Bugs)"
+            },
+            rewards: {
+                capital: { min: 10, max: 15 },
+                card_reward: true
+            }
+        } as EnemyData,
+        legacy_hack: { // Sentry 2
+            id: "legacy_hack",
+            name: "Legacy Hack",
+            act: 1,
+            type: "elite",
+            hp: 42,
+            maxHp: 42,
+            mitigation: 0,
+            emoji: "💾",
+            description: "A quick fix that creates bugs.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 1, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
+            currentIntent: {
+                type: 'attack',
+                value: 9,
+                icon: 'attack',
+                description: "Beam"
+            },
+            rewards: {
+                capital: { min: 10, max: 15 },
+                card_reward: false
+            }
+        } as EnemyData,
+        legacy_patch: { // Sentry 3
+            id: "legacy_patch",
+            name: "Legacy Patch",
+            act: 1,
+            type: "elite",
+            hp: 42,
+            maxHp: 42,
+            mitigation: 0,
+            emoji: "🩹",
+            description: "A band-aid solution that creates bugs.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 1, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
+            currentIntent: {
+                type: 'debuff',
+                value: 2,
+                icon: 'debuff',
+                description: "Bolt (Shuffle Bugs)"
+            },
+            rewards: {
+                capital: { min: 10, max: 15 },
+                card_reward: false
+            }
+        } as EnemyData,
+
+        // --- BOSSES ---
+        boss_the_pivot: { // The Guardian
+            id: "boss_the_pivot",
+            name: "The Pivot",
+            act: 1,
+            type: "boss",
+            hp: 240,
+            maxHp: 240,
+            mitigation: 0,
+            emoji: "🛡️",
+            description: "Existential crisis. Can you survive the change?",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
+            currentIntent: {
+                type: 'buff',
+                value: 9,
+                icon: 'buff',
+                description: "Charging Up"
+            },
+            rewards: {
+                capital: { min: 100, max: 100 },
+                card_reward: true
+            }
+        } as EnemyData,
+        boss_burn_rate: { // Hexaghost
+            id: "boss_burn_rate",
+            name: "The Burn Rate",
+            act: 1,
+            type: "boss",
+            hp: 250,
+            maxHp: 250,
+            mitigation: 0,
+            emoji: "🔥",
+            description: "Dwindling cash. Damage scales with your Runway.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
+            currentIntent: {
+                type: 'attack',
+                value: 0, // Scales with HP
+                icon: 'attack',
+                description: "Divider"
+            },
+            rewards: {
+                capital: { min: 100, max: 100 },
+                card_reward: true
+            }
+        } as EnemyData,
+        boss_the_monolith: { // Slime Boss
+            id: "boss_the_monolith",
+            name: "The Monolith",
+            act: 1,
+            type: "boss",
+            hp: 140, // Splits at 50% (70)
+            maxHp: 140,
+            mitigation: 0,
+            emoji: "🏗️",
+            description: "A massive, unmaintainable codebase. Splits into microservices.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
+            currentIntent: {
+                type: 'debuff',
+                value: 3,
+                icon: 'debuff',
+                description: "Goop Spray (Slimed)"
+            },
+            rewards: {
+                capital: { min: 100, max: 100 },
+                card_reward: true
             }
         } as EnemyData
     }
