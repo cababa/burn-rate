@@ -1,5 +1,5 @@
 
-import { CardData, EnemyData, CharacterStats, RelicData } from './types.ts';
+import { CardData, EnemyData, CharacterStats, RelicData, EncounterTemplate, EventData } from './types.ts';
 
 export const MAX_HAND_SIZE = 10;
 
@@ -1213,5 +1213,351 @@ export const GAME_DATA = {
                 card_reward: true
             }
         } as EnemyData
+    }
+};
+
+// Act 1 Encounter Templates
+export const ENCOUNTER_TEMPLATES: EncounterTemplate[] = [
+    // Easy Pool (Floors 1-2) - "Day 1 Problems"
+    { id: 'solo_fanboy', name: 'The Fanboy', enemies: [{ enemyId: 'fanboy', count: [1, 1] }], weight: 10, pool: 'easy' },
+    { id: 'solo_spaghetti', name: 'Spaghetti Code', enemies: [{ enemyId: 'spaghetti_code', count: [1, 1] }], weight: 10, pool: 'easy' },
+    { id: 'bug_duo', name: 'Bug Report', enemies: [{ enemyId: 'minor_bug', count: [2, 2] }], weight: 8, pool: 'easy' },
+    { id: 'bug_trio', name: 'Critical Path', enemies: [{ enemyId: 'critical_bug', count: [1, 1] }, { enemyId: 'minor_bug', count: [1, 2] }], weight: 8, pool: 'easy' },
+    { id: 'quick_patches', name: 'Quick Patches', enemies: [{ enemyId: 'quick_hack', count: [2, 2] }], weight: 6, pool: 'easy' },
+
+    // Hard Pool (Floors 3-13) - "Growth Pains"
+    { id: 'tech_debt_solo', name: 'Debt Collection', enemies: [{ enemyId: 'tech_debt', count: [1, 1] }], weight: 8, pool: 'hard' },
+    { id: 'merge_hell', name: 'Merge Hell', enemies: [{ enemyId: 'bad_merge', count: [1, 1] }, { enemyId: 'tech_debt', count: [1, 1] }], weight: 6, pool: 'hard' },
+    { id: 'stakeholder_sync', name: 'Stakeholder Sync', enemies: [{ enemyId: 'micromanager', count: [1, 1] }, { enemyId: 'feature_pusher', count: [1, 1] }], weight: 6, pool: 'hard' },
+    { id: 'dependency', name: 'The Dependency', enemies: [{ enemyId: 'legacy_module', count: [1, 1] }], weight: 5, pool: 'hard' },
+    { id: 'talent_war', name: 'Talent War', enemies: [{ enemyId: 'headhunter', count: [1, 1] }], weight: 7, pool: 'hard' },
+    { id: 'memory_leak', name: 'Memory Leak', enemies: [{ enemyId: 'memory_leak', count: [1, 1] }, { enemyId: 'quick_hack', count: [1, 2] }], weight: 5, pool: 'hard' },
+    { id: 'infestation', name: 'Infestation', enemies: [{ enemyId: 'minor_bug', count: [3, 4] }], weight: 4, pool: 'hard' },
+];
+
+// Act 1 Events - "The Incubator"
+export const ACT1_EVENTS: EventData[] = [
+    {
+        id: 'angel_investor',
+        name: 'The Angel Investor',
+        description: 'A wealthy individual offers to fund your MVP. They seem eager, but the terms might not be ideal...',
+        choices: [
+            {
+                id: 'accept',
+                label: 'Accept Terms',
+                description: 'Gain $150 Capital, add 1 "Burnout" curse to deck',
+                effects: [
+                    { type: 'gain_gold', value: 150 },
+                    { type: 'add_status_card', statusId: 'status_burnout' }
+                ]
+            },
+            {
+                id: 'negotiate',
+                label: 'Negotiate',
+                description: '50% chance: Gain $200 OR they walk away',
+                effects: [
+                    {
+                        type: 'random_chance',
+                        chance: 50,
+                        successEffects: [{ type: 'gain_gold', value: 200 }],
+                        failureEffects: [{ type: 'nothing' }]
+                    }
+                ]
+            },
+            {
+                id: 'decline',
+                label: 'Decline',
+                description: 'Walk away with nothing',
+                effects: [{ type: 'nothing' }]
+            }
+        ]
+    },
+    {
+        id: 'demo_day',
+        name: 'The Demo Day',
+        description: 'Present your pitch to a room full of investors. How will you approach this?',
+        choices: [
+            {
+                id: 'wing_it',
+                label: 'Wing It',
+                description: '50% chance: Gain rare card OR lose $50 Capital',
+                effects: [
+                    {
+                        type: 'random_chance',
+                        chance: 50,
+                        successEffects: [{ type: 'gain_card', cardRarity: 'rare' }],
+                        failureEffects: [{ type: 'lose_gold', value: 50 }]
+                    }
+                ]
+            },
+            {
+                id: 'prepare',
+                label: 'Prepare',
+                description: 'Exhaust 1 card, gain 1 uncommon card',
+                effects: [
+                    { type: 'exhaust_card', value: 1 },
+                    { type: 'gain_card', cardRarity: 'uncommon' }
+                ]
+            },
+            {
+                id: 'skip',
+                label: 'Skip',
+                description: 'Not worth the stress',
+                effects: [{ type: 'nothing' }]
+            }
+        ]
+    },
+    {
+        id: 'hackathon',
+        name: 'The Hackathon',
+        description: 'A 48-hour coding marathon at your coworking space. Pizza and Red Bull everywhere...',
+        choices: [
+            {
+                id: 'participate',
+                label: 'Go All In',
+                description: 'Lose 15% max Runway, upgrade 2 cards',
+                effects: [
+                    { type: 'lose_max_hp', value: 15 },
+                    { type: 'upgrade_card', value: 2 }
+                ]
+            },
+            {
+                id: 'network',
+                label: 'Network Only',
+                description: 'Gain $50 Capital',
+                effects: [{ type: 'gain_gold', value: 50 }]
+            },
+            {
+                id: 'rest',
+                label: 'Rest Instead',
+                description: 'Heal 10 Runway',
+                effects: [{ type: 'gain_hp', value: 10 }]
+            }
+        ]
+    },
+    {
+        id: 'yc_interview',
+        name: 'The Y Combinator Interview',
+        description: 'You got an interview slot with the top accelerator. This could change everything...',
+        choices: [
+            {
+                id: 'nail_it',
+                label: 'Nail It',
+                description: 'Requires 3+ upgraded cards: Gain rare relic',
+                condition: { type: 'upgraded_cards', operator: '>=', value: 3 },
+                effects: [{ type: 'gain_relic' }]
+            },
+            {
+                id: 'bomb_it',
+                label: 'Bomb It',
+                description: 'Gain "Imposter Syndrome" status card',
+                effects: [{ type: 'add_status_card', statusId: 'status_context_switch' }]
+            },
+            {
+                id: 'skip',
+                label: 'Not Ready Yet',
+                description: 'Walk away',
+                effects: [{ type: 'nothing' }]
+            }
+        ]
+    },
+    {
+        id: 'cofounder_dispute',
+        name: 'The Cofounder Dispute',
+        description: 'Your cofounder wants to take the product in a different direction. Tensions are high...',
+        choices: [
+            {
+                id: 'agree',
+                label: 'Agree With Them',
+                description: 'Remove 2 cards from deck',
+                effects: [{ type: 'remove_card', value: 2 }]
+            },
+            {
+                id: 'assert',
+                label: 'Assert Dominance',
+                description: 'Gain 2 Strength, lose $100',
+                effects: [
+                    { type: 'gain_strength', value: 2 },
+                    { type: 'lose_gold', value: 100 }
+                ]
+            },
+            {
+                id: 'compromise',
+                label: 'Compromise',
+                description: 'Gain 1 random card',
+                effects: [{ type: 'gain_card', cardRarity: 'random' }]
+            }
+        ]
+    },
+    {
+        id: 'pivot_moment',
+        name: 'The Pivot Moment',
+        description: 'User feedback suggests you might be building the wrong thing. Time to decide...',
+        choices: [
+            {
+                id: 'full_pivot',
+                label: 'Full Pivot',
+                description: 'Transform 3 random cards into different cards',
+                effects: [{ type: 'transform_card', value: 3 }]
+            },
+            {
+                id: 'iterate',
+                label: 'Minor Iteration',
+                description: 'Upgrade 1 card',
+                effects: [{ type: 'upgrade_card', value: 1 }]
+            },
+            {
+                id: 'stay_course',
+                label: 'Stay The Course',
+                description: 'Gain "Technical Debt" status card',
+                effects: [{ type: 'add_status_card', statusId: 'status_legacy_code' }]
+            }
+        ]
+    },
+    {
+        id: 'talent_poach',
+        name: 'The Talent Poach',
+        description: 'A FAANG recruiter is calling your best engineer. Their offer is tempting...',
+        choices: [
+            {
+                id: 'match',
+                label: 'Match Offer',
+                description: 'Pay $100, nothing else happens',
+                condition: { type: 'gold', operator: '>=', value: 100 },
+                effects: [{ type: 'lose_gold', value: 100 }]
+            },
+            {
+                id: 'let_go',
+                label: 'Let Them Go',
+                description: 'Lose 1 random card from deck',
+                effects: [{ type: 'remove_card', value: 1 }]
+            },
+            {
+                id: 'counter_poach',
+                label: 'Counter-Poach',
+                description: 'Pay $150, gain rare card',
+                condition: { type: 'gold', operator: '>=', value: 150 },
+                effects: [
+                    { type: 'lose_gold', value: 150 },
+                    { type: 'gain_card', cardRarity: 'rare' }
+                ]
+            }
+        ]
+    },
+    {
+        id: 'viral_tweet',
+        name: 'The Viral Tweet',
+        description: 'Your product demo just went viral on Twitter. Your mentions are exploding...',
+        choices: [
+            {
+                id: 'ride_wave',
+                label: 'Ride The Wave',
+                description: 'Fight elite encounter, guaranteed relic',
+                effects: [{ type: 'fight_elite' }]
+            },
+            {
+                id: 'manage',
+                label: 'Manage Expectations',
+                description: 'Gain $75 Capital',
+                effects: [{ type: 'gain_gold', value: 75 }]
+            },
+            {
+                id: 'ignore',
+                label: 'Ignore It',
+                description: 'Heal 15 Runway',
+                effects: [{ type: 'gain_hp', value: 15 }]
+            }
+        ]
+    },
+    {
+        id: 'office_space',
+        name: 'The Office Space',
+        description: 'You found a cheap office but it\'s in a sketchy area. The commute would be brutal...',
+        choices: [
+            {
+                id: 'move_in',
+                label: 'Move In',
+                description: 'Lose 10 Runway, gain $100 Capital',
+                effects: [
+                    { type: 'lose_hp', value: 10 },
+                    { type: 'gain_gold', value: 100 }
+                ]
+            },
+            {
+                id: 'wework',
+                label: 'WeWork It',
+                description: 'Pay $75, nothing special',
+                condition: { type: 'gold', operator: '>=', value: 75 },
+                effects: [{ type: 'lose_gold', value: 75 }]
+            },
+            {
+                id: 'remote',
+                label: 'Stay Remote',
+                description: 'Gain "Context Switch" status card',
+                effects: [{ type: 'add_status_card', statusId: 'status_context_switch' }]
+            }
+        ]
+    },
+    {
+        id: 'product_hunt',
+        name: 'The Product Hunt Launch',
+        description: 'Today\'s the day you launch on Product Hunt. The whole team is watching the rankings...',
+        choices: [
+            {
+                id: 'all_hands',
+                label: 'All Hands On Deck',
+                description: 'Exhaust 2 cards, gain 2 rare cards',
+                effects: [
+                    { type: 'exhaust_card', value: 2 },
+                    { type: 'gain_card', cardRarity: 'rare' },
+                    { type: 'gain_card', cardRarity: 'rare' }
+                ]
+            },
+            {
+                id: 'soft_launch',
+                label: 'Soft Launch',
+                description: 'Gain 1 uncommon card',
+                effects: [{ type: 'gain_card', cardRarity: 'uncommon' }]
+            },
+            {
+                id: 'delay',
+                label: 'Delay Launch',
+                description: 'We\'re not ready yet',
+                effects: [{ type: 'nothing' }]
+            }
+        ]
+    }
+];
+
+// Map Generation Constants
+export const MAP_CONFIG = {
+    FLOORS: 15,
+    COLUMNS: 7,
+    NUM_PATHS: 6,
+
+    // Node type probabilities (floor 3-13)
+    NODE_PROBABILITIES: {
+        problem: 45,      // Monster
+        elite: 8,         // Elite (floor 6+ only)
+        retrospective: 12, // Rest site
+        vendor: 5,        // Shop
+        opportunity: 22,  // Unknown (?)
+        treasure: 8       // Only at floor 8
+    },
+
+    // Opportunity node distribution
+    OPPORTUNITY_DISTRIBUTION: {
+        vendor: 25,   // Becomes shop
+        problem: 25,  // Becomes monster
+        event: 50     // Actual event
+    },
+
+    // Floor constraints
+    CONSTRAINTS: {
+        EASY_POOL_FLOORS: [1, 2],
+        NO_ELITE_BEFORE_FLOOR: 6,
+        GUARANTEED_TREASURE_FLOOR: 8,
+        GUARANTEED_REST_FLOOR: 14,
+        BOSS_FLOOR: 15
     }
 };

@@ -171,16 +171,69 @@ export interface RelicData {
   tooltip?: TooltipData;
 }
 
+export type MapNodeType = 'problem' | 'elite' | 'retrospective' | 'vendor' | 'opportunity' | 'treasure' | 'boss';
+
 export interface MapNode {
   id: string;
-  type: 'problem' | 'boss' | 'retrospective' | 'vendor' | 'milestone';
-  floor: number;
-  lane: number;
-  locked: boolean;
+  type: MapNodeType;
+  floor: number;        // 1-16 (15 floors + boss)
+  column: number;       // 0-6 position
+  connections: string[];      // IDs of nodes this connects TO (next floor)
+  parentConnections: string[]; // IDs of nodes that connect to this
   completed: boolean;
+  accessible: boolean;  // Can player reach this from their path
 }
 
 export type MapLayer = MapNode[];
+
+// Encounter System
+export interface EncounterEnemy {
+  enemyId: string;
+  count: [number, number]; // [min, max] for variance
+}
+
+export interface EncounterTemplate {
+  id: string;
+  name: string;
+  enemies: EncounterEnemy[];
+  weight: number;
+  pool: 'easy' | 'hard';
+}
+
+// Event System
+export interface EventChoice {
+  id: string;
+  label: string;
+  description: string;
+  condition?: {
+    type: 'gold' | 'hp' | 'upgraded_cards' | 'deck_size';
+    operator: '>=' | '<=' | '>' | '<';
+    value: number;
+  };
+  effects: EventEffect[];
+}
+
+export interface EventEffect {
+  type: 'gain_gold' | 'lose_gold' | 'gain_hp' | 'lose_hp' | 'lose_max_hp' |
+        'gain_card' | 'remove_card' | 'upgrade_card' | 'transform_card' |
+        'exhaust_card' | 'add_status_card' | 'gain_relic' | 'gain_strength' |
+        'apply_status' | 'fight_elite' | 'random_chance' | 'nothing';
+  value?: number;
+  cardRarity?: 'common' | 'uncommon' | 'rare' | 'random';
+  statusId?: string;
+  relicId?: string;
+  chance?: number; // For random_chance type (0-100)
+  successEffects?: EventEffect[];
+  failureEffects?: EventEffect[];
+}
+
+export interface EventData {
+  id: string;
+  name: string;
+  description: string;
+  image?: string;
+  choices: EventChoice[];
+}
 
 export interface GameState {
   playerStats: CharacterStats;
@@ -194,7 +247,7 @@ export interface GameState {
   relics: RelicData[];
   turn: number;
   floor: number;
-  status: 'MENU' | 'CHARACTER_SELECT' | 'PLAYING' | 'VICTORY' | 'GAME_OVER' | 'ENEMY_TURN' | 'REWARD_SELECTION' | 'MAP' | 'RETROSPECTIVE' | 'VENDOR' | 'DISCARD_SELECTION' | 'CARD_SELECTION';
+  status: 'MENU' | 'CHARACTER_SELECT' | 'PLAYING' | 'VICTORY' | 'GAME_OVER' | 'ENEMY_TURN' | 'REWARD_SELECTION' | 'MAP' | 'RETROSPECTIVE' | 'VENDOR' | 'DISCARD_SELECTION' | 'CARD_SELECTION' | 'EVENT';
   rewardOptions: CardData[];
   message: string;
   map: MapLayer[];
@@ -208,4 +261,5 @@ export interface GameState {
     action: 'upgrade' | 'move_to_draw_pile' | 'exhaust';
     count: number;
   };
+  currentEvent?: EventData;
 }

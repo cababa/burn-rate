@@ -2,238 +2,14 @@ import React, { useState } from 'react';
 import { Unit } from './components/Unit';
 import { Card } from './components/Card';
 import { MapScreen } from './components/MapScreen';
-import { GAME_DATA, MAX_HAND_SIZE } from './constants';
-import { CardData, GameState, EnemyIntent, MapLayer, MapNode, CharacterStats, RelicData, EntityStatus, EnemyData, CardEffect } from './types';
-import { Battery, DollarSign, CheckCircle2, AlertOctagon, RefreshCw, Play, Layers, Archive, Gift, ArrowRight, Coffee, Hammer, Store, Trash2, Gem, Wrench, FastForward, Heart, Plus, Bug, Ghost, Rocket, Lock, User, Briefcase, ChevronRight, Zap, X } from 'lucide-react';
-
-// --- Math Helpers ---
-
-const calculateDamage = (baseDamage: number, attackerStatus: EntityStatus, defenderStatus: EntityStatus, strengthMultiplier: number = 1): number => {
-    // 1. Base + Strength (Multiplied by Heavy Blade factor if present)
-    let damage = baseDamage + (attackerStatus.strength * strengthMultiplier);
-
-    // 2. Weak (Attacker has Weak) -> 0.75x
-    if (attackerStatus.weak > 0) {
-        damage = damage * 0.75;
-    }
-
-    // 3. Vulnerable (Defender has Vulnerable) -> 1.5x
-    if (defenderStatus.vulnerable > 0) {
-        damage = damage * 1.5;
-    }
-
-    // 4. Floor
-    return Math.floor(damage);
-};
-
-const countCardsMatches = (cards: CardData[], matchString: string): number => {
-    return cards.filter(c => c.name.includes(matchString)).length;
-};
-
-// --- Deck Helpers ---
-
-const generateStarterDeck = (): CardData[] => {
-    const deck: CardData[] = [];
-    // 5 Commits
-    for (let i = 0; i < 5; i++) {
-        deck.push({ ...GAME_DATA.cards.cto_commit, id: `commit_${i}_${Math.random().toString(36).substr(2, 9)}` });
-    }
-    // 4 Rollbacks
-    for (let i = 0; i < 4; i++) {
-        deck.push({ ...GAME_DATA.cards.cto_rollback, id: `rollback_${i}_${Math.random().toString(36).substr(2, 9)}` });
-    }
-    // 1 Hotfix (Bash)
-    deck.push({ ...GAME_DATA.cards.cto_hotfix, id: `hotfix_${Math.random().toString(36).substr(2, 9)}` });
-
-    return deck;
-};
-
-const getRandomRewardCards = (count: number): CardData[] => {
-    // Rarity Weights: Common 60%, Uncommon 37%, Rare 3%
-    const getRarity = (): 'common' | 'uncommon' | 'rare' => {
-        const roll = Math.random() * 100;
-        if (roll < 60) return 'common';
-        if (roll < 97) return 'uncommon';
-        return 'rare';
-    };
-
-    const pool = Object.values(GAME_DATA.cards).filter(c => c.type !== 'status' && c.rarity !== 'starter' && c.rarity !== 'special');
-    const rewards: CardData[] = [];
-
-    for (let i = 0; i < count; i++) {
-        const targetRarity = getRarity();
-        const rarityPool = pool.filter(c => c.rarity === targetRarity);
-
-        // Fallback if pool empty (shouldn't happen with full implementation)
-        const finalPool = rarityPool.length > 0 ? rarityPool : pool;
-
-        const randomCard = finalPool[Math.floor(Math.random() * finalPool.length)];
-        rewards.push({ ...randomCard, id: `reward_${Date.now()}_${i}` });
-    }
-    return rewards;
-};
-
-const shuffle = (cards: CardData[]) => {
-    return [...cards].sort(() => Math.random() - 0.5);
-};
-
-const drawCards = (
-    currentDraw: CardData[],
-    currentDiscard: CardData[],
-    count: number
-): { drawn: CardData[], newDraw: CardData[], newDiscard: CardData[] } => {
-    let drawn: CardData[] = [];
-    let newDraw = [...currentDraw];
-    let newDiscard = [...currentDiscard];
-
-    for (let i = 0; i < count; i++) {
-        if (newDraw.length === 0) {
-            if (newDiscard.length === 0) break; // No cards left anywhere
-            // Reshuffle discard into draw
-            newDraw = shuffle(newDiscard);
-            newDiscard = [];
-        }
-        const card = newDraw.pop();
-        if (card) drawn.push(card);
-    }
-    return { drawn, newDraw, newDiscard };
-};
-
-const upgradeCard = (card: CardData): CardData => {
-    if (card.upgraded) return card;
-
-    // Special Logic for Refactor (True Grit): Exhaust Random -> Exhaust Targeted
-    if (card.id === 'cto_refactor') {
-        const upgradedEffects = [
-            { type: 'block', value: 9, target: 'self' }, // 7 -> 9
-            { type: 'exhaust_targeted', value: 1, target: 'self' } // Random -> Targeted
-        ] as CardEffect[];
-        return {
-            ...card,
-            name: card.name + "+", // Standardize naming
-            upgraded: {
-                name: card.name + "+",
-                effects: upgradedEffects
-            },
-            effects: upgradedEffects,
-            description: "Gain 9 Mitigation. Exhaust a card."
-        };
-    }
-
-    // Simple upgrade logic: +3 to base numbers.
-    const newEffects = card.effects.map(effect => {
-        if (effect.type === 'damage' || effect.type === 'block') {
-            return { ...effect, value: effect.value + 3 };
-        }
-        if (effect.type === 'apply_status' && (effect.status === 'vulnerable' || effect.status === 'weak' || effect.status === 'strength')) {
-            return { ...effect, value: effect.value + 1 };
-        }
-        // Heavy Blade Upgrade (5x Strength)
-        if (effect.strengthMultiplier && effect.strengthMultiplier === 3) {
-            return { ...effect, strengthMultiplier: 5 };
-        }
-        // Tooling (Armaments) Upgrade: Upgrade ALL cards (1 -> 99)
-        if (effect.type === 'upgrade_hand' && effect.value === 1) {
-            return { ...effect, value: 99 };
-        }
-        return effect;
-    });
-
-    let newDesc = card.description;
-    newDesc = newDesc.replace(/\d+/, (match) => {
-        return (parseInt(match) + 3).toString();
-    });
-    // Description Hacks for Specific Cards
-    if (card.id === 'cto_brute_force') newDesc = newDesc.replace('3 times', '5 times');
-    if (card.id === 'cto_tooling') newDesc = newDesc.replace('a card', 'ALL cards');
-    if (card.id === 'cto_refactor') newDesc = "Gain 9 Mitigation. Exhaust a card.";
-
-    return {
-        ...card,
-        name: card.name + "+",
-        upgraded: {
-            name: card.name + "+",
-            effects: newEffects
-        },
-        effects: newEffects,
-        description: newDesc
-    };
-};
-
-// --- Relic Helpers ---
-
-const applyCombatStartRelics = (currentStats: CharacterStats, relics: RelicData[]): { stats: CharacterStats, message: string } => {
-    let newStats = { ...currentStats };
-    let message = '';
-
-    relics.forEach(relic => {
-        if (relic.trigger === 'combat_start') {
-            if (relic.effect.type === 'block') {
-                newStats.mitigation += relic.effect.value;
-                message = `Relic Active: ${relic.name} (+${relic.effect.value} Mitigation)`;
-            }
-        }
-    });
-
-    return { stats: newStats, message };
-};
-
-const applyCombatEndRelics = (currentStats: CharacterStats, relics: RelicData[]): { stats: CharacterStats, message: string } => {
-    let newStats = { ...currentStats };
-    let message = '';
-
-    relics.forEach(relic => {
-        if (relic.trigger === 'combat_end') {
-            if (relic.effect.type === 'heal') {
-                const healAmount = relic.effect.value;
-                const oldHp = newStats.hp;
-                newStats.hp = Math.min(newStats.maxHp, newStats.hp + healAmount);
-                const actualHeal = newStats.hp - oldHp;
-                if (actualHeal > 0) {
-                    message = `${relic.name}: Recovered ${actualHeal} Runway.`;
-                }
-            }
-        }
-    });
-
-    return { stats: newStats, message };
-};
-
-const getTurnStartBandwidth = (relics: RelicData[]): number => {
-    let bandwidth = 3; // Base
-    relics.forEach(relic => {
-        if (relic.trigger === 'turn_start' && relic.effect.type === 'gain_bandwidth') {
-            bandwidth += relic.effect.value;
-        }
-    });
-    return bandwidth;
-}
-
-// --- Map Generation ---
-
-const generateMap = (): MapLayer[] => {
-    const floor1: MapNode[] = [
-        { id: 'f1_l', type: 'problem', floor: 1, lane: 0, locked: false, completed: false },
-        { id: 'f1_r', type: 'problem', floor: 1, lane: 1, locked: false, completed: false }
-    ];
-    const floor2: MapNode[] = [
-        { id: 'f2_l', type: 'problem', floor: 2, lane: 0, locked: false, completed: false },
-        { id: 'f2_r', type: 'retrospective', floor: 2, lane: 1, locked: false, completed: false }
-    ];
-    const floor3: MapNode[] = [
-        { id: 'f3_vendor', type: 'vendor', floor: 3, lane: 0, locked: false, completed: false },
-        { id: 'f3_elite', type: 'milestone', floor: 3, lane: 1, locked: false, completed: false }
-    ];
-    const floor4: MapNode[] = [
-        { id: 'f4_l', type: 'problem', floor: 4, lane: 0, locked: false, completed: false },
-        { id: 'f4_r', type: 'problem', floor: 4, lane: 1, locked: false, completed: false }
-    ];
-    const floor5: MapNode[] = [
-        { id: 'f5_boss', type: 'boss', floor: 5, lane: 0, locked: false, completed: false }
-    ];
-
-    return [floor1, floor2, floor3, floor4, floor5];
-};
+import { GAME_DATA, MAX_HAND_SIZE, ACT1_EVENTS } from './constants';
+import { CardData, GameState, EnemyIntent, MapLayer, MapNode, CharacterStats, RelicData, EntityStatus, EnemyData, CardEffect, EventData, EventChoice, EventEffect } from './types';
+import { Battery, DollarSign, CheckCircle2, AlertOctagon, RefreshCw, Play, Layers, Archive, Gift, ArrowRight, Coffee, Hammer, Store, Trash2, Gem, Wrench, FastForward, Heart, Plus, Bug, Ghost, Rocket, Lock, User, Briefcase, ChevronRight, Zap, X, HelpCircle } from 'lucide-react';
+import {
+    calculateDamage, countCardsMatches, generateStarterDeck, getRandomRewardCards, shuffle, drawCards, upgradeCard,
+    applyCombatStartRelics, applyCombatEndRelics, getTurnStartBandwidth, generateMap, resolveCardEffect, resolveEnemyTurn, resolveEndTurn, processDrawnCards,
+    getEncounterForFloor, getEliteEncounter, getBossEncounter
+} from './gameLogic';
 
 const App: React.FC = () => {
     // --- Game State Initialization ---
@@ -361,82 +137,37 @@ const App: React.FC = () => {
             // Patch: Starts with Beam (Attack) - STAGGERED
             const patch = { ...GAME_DATA.enemies.legacy_patch, id: `legacy_patch_${Date.now()}`, hp: GAME_DATA.enemies.legacy_patch.hp + floorScaling, maxHp: GAME_DATA.enemies.legacy_patch.maxHp + floorScaling, statuses: { ...GAME_DATA.enemies.legacy_patch.statuses }, currentIntent: { type: 'attack', value: 9, icon: 'attack', description: "Beam" } };
 
+            // Draw Initial Hand
+            const combatDeck = shuffle([...prev.deck]);
+            const { drawn, newDraw, newDiscard } = drawCards(combatDeck, [], 5);
+            
+            const startStatsWithRelics = {
+                ...prev.playerStats,
+                bandwidth: getTurnStartBandwidth(prev.relics),
+            };
+            
+            const processed = processDrawnCards(drawn, [], newDiscard, newDraw, startStatsWithRelics, 'DEV: Spawned Legacy Systems.');
+
             return {
                 ...prev,
                 status: 'PLAYING',
                 enemies: [hack, monolith, patch],
-                message: 'DEV: Spawned Legacy Systems.'
+                message: processed.message,
+                playerStats: processed.stats,
+                drawPile: processed.drawPile,
+                hand: processed.hand,
+                discardPile: processed.discard,
+                exhaustPile: []
             };
         });
     };
 
     const endTurn = () => {
         if (gameState.status !== 'PLAYING') return;
-
-        setGameState(prev => {
-            let newHand = [...prev.hand];
-            let newDiscardPile = [...prev.discardPile];
-            let newExhaustPile = [...prev.exhaustPile];
-            let newPlayerStats = { ...prev.playerStats };
-            let newMessage = "End of Turn.";
-
-            // 1. Handle Ethereal (Exhaust) and Burnout (Damage)
-            const retainedHand: CardData[] = [];
-
-            newHand.forEach(card => {
-                // Burnout Logic
-                if (card.effects?.some(e => e.type === 'lose_hp_turn_end')) {
-                    const burnDamage = card.effects.find(e => e.type === 'lose_hp_turn_end')?.value || 0;
-                    newPlayerStats.hp = Math.max(0, newPlayerStats.hp - burnDamage);
-                    newMessage += ` Burnout: -${burnDamage} Runway.`;
-
-                    // Antifragile Trigger
-                    if (newPlayerStats.statuses.antifragile > 0) {
-                        newPlayerStats.statuses.strength += newPlayerStats.statuses.antifragile;
-                        newMessage += ` (Antifragile: +${newPlayerStats.statuses.antifragile} STR)`;
-                    }
-                }
-
-                if (card.ethereal) {
-                    newExhaustPile.push(card);
-                    newMessage += ` ${card.name} faded away.`;
-                    // Feel No Pain Trigger
-                    if (newPlayerStats.statuses.feelNoPain > 0) {
-                        newPlayerStats.mitigation += newPlayerStats.statuses.feelNoPain;
-                    }
-                } else if (card.retain) {
-                    retainedHand.push(card);
-                } else {
-                    newDiscardPile.push(card);
-                }
-            });
-
-            // 2. Metallicize
-            if (newPlayerStats.statuses.metallicize > 0) {
-                newPlayerStats.mitigation += newPlayerStats.statuses.metallicize;
-                newMessage += ` (Caching: +${newPlayerStats.statuses.metallicize} Block)`;
-            }
-
-            // 3. Reset Block (unless Barricade - not implemented yet)
-            // newPlayerStats.mitigation = 0; // Wait, block expires at START of next turn usually? Or end? StS is Start of next.
-            // Actually StS block expires at start of your turn. But here we clear it now for simplicity or keep it?
-            // Let's clear it at Start of Player Turn to allow enemy to attack into it.
-
-            return {
-                ...prev,
-                hand: retainedHand, // Only retained cards stay
-                discardPile: newDiscardPile,
-                exhaustPile: newExhaustPile,
-                playerStats: newPlayerStats,
-                status: 'ENEMY_TURN',
-                message: newMessage,
-                turn: prev.turn // Turn number increments at start of player turn
-            };
-        });
-
-        // Trigger Enemy Turn after short delay
+        setGameState(prev => resolveEndTurn(prev));
         setTimeout(processEnemyTurn, 1000);
     };
+
 
     const devDrawCards = () => {
         setGameState(prev => {
@@ -599,403 +330,9 @@ const App: React.FC = () => {
     };
 
     const playCard = (card: CardData, target: 'enemy' | 'self', targetEnemyId?: string) => {
-        const costPaid = card.cost === -1 ? gameState.playerStats.bandwidth : card.cost;
-
-        if (gameState.playerStats.bandwidth < costPaid) {
-            setGameState(prev => ({ ...prev, message: "Not enough Bandwidth to deploy component." }));
-            return;
-        }
-
-        setGameState(prev => {
-            // Clone enemies array
-            let newEnemies = prev.enemies.map(e => ({ ...e }));
-
-            // Resolve Target Enemy
-            // If targetEnemyId provided, use it. Else use selectedEnemyId. Else default to first enemy.
-            const targetId = targetEnemyId || prev.selectedEnemyId || (newEnemies.length > 0 ? newEnemies[0].id : undefined);
-            const targetEnemyIndex = newEnemies.findIndex(e => e.id === targetId);
-            let targetEnemy = targetEnemyIndex !== -1 ? newEnemies[targetEnemyIndex] : null;
-
-            let newMessage = `Deployed ${card.name}.`;
-            let newStatus = prev.status;
-            let newMitigation = prev.playerStats.mitigation;
-            let newPlayerStatuses = { ...prev.playerStats.statuses };
-            let newPlayerStats = { ...prev.playerStats }; // Create mutable copy of stats
-            let newBandwidth = prev.playerStats.bandwidth - costPaid;
-            let newPendingDiscard = 0;
-            let newPendingSelection = prev.pendingSelection;
-            let newRelics = [...prev.relics]; // Create mutable copy of relics
-
-            let drawnCards: CardData[] = [];
-            let newDrawPile = [...prev.drawPile];
-            let newDiscardPile = [...prev.discardPile];
-            let newExhaustPile = [...prev.exhaustPile];
-            let currentHand = [...prev.hand.filter(c => c.id !== card.id)];
-
-            // Helper for Repeat Effects (X Cost or Twin Strike)
-            const executeEffect = (effect: any, loops: number = 1) => {
-                for (let i = 0; i < loops; i++) {
-                    if (effect.type === 'damage') {
-                        // Determine target (support ALL enemies)
-                        let targets: EnemyData[] = [];
-                        if (effect.target === 'all_enemies') {
-                            targets = newEnemies;
-                        } else if (target === 'enemy' && targetEnemy) {
-                            targets = [targetEnemy];
-                        }
-
-                        targets.forEach(t => {
-                            let finalDamage = calculateDamage(
-                                effect.value,
-                                prev.playerStats.statuses,
-                                t.statuses,
-                                effect.strengthMultiplier || 1
-                            );
-
-                            if (t.statuses.vulnerable > 0) newMessage += " (Vuln!)";
-                            if (prev.playerStats.statuses.weak > 0) newMessage += " (Weak...)";
-
-                            // Handle Enemy Block
-                            if (t.mitigation > 0) {
-                                const blocked = Math.min(t.mitigation, finalDamage);
-                                t.mitigation -= blocked;
-                                finalDamage -= blocked;
-                                newMessage += ` (${blocked} Blocked)`;
-                            }
-
-                            const newHp = Math.max(0, t.hp - finalDamage);
-                            t.hp = newHp;
-                            newMessage += ` Dealt ${finalDamage} execution.`;
-
-                            // Curl Up / Malleable Triggers
-                            if (t.statuses.curlUp > 0 && finalDamage > 0) {
-                                t.mitigation += t.statuses.curlUp;
-                                t.statuses.curlUp = 0; // Trigger once
-                                newMessage += ` ${t.name} Curled Up! (+${t.statuses.curlUp} Blk)`;
-                            }
-                            if (t.statuses.malleable > 0 && finalDamage > 0) {
-                                t.mitigation += t.statuses.malleable;
-                                t.statuses.malleable += 1; // Increases each time
-                                newMessage += ` ${t.name} is Malleable! (+${t.statuses.malleable} Blk)`;
-                            }
-                            // Wake Up Lagavulin
-                            if (t.statuses.asleep > 0 && finalDamage > 0) {
-                                t.statuses.asleep = 0;
-                                newMessage += ` ${t.name} Woke Up!`;
-                            }
-                        });
-
-                        // Check for Victory (All enemies dead)
-                        if (newEnemies.every(e => e.hp <= 0)) {
-                            newStatus = 'VICTORY';
-                            newMessage = "PROBLEM SOLVED. FEATURE DEPLOYED.";
-                        }
-                    } else if (effect.type === 'damage_scale_mitigation' && targetEnemy) {
-                        // Body Slam logic: Damage = Block
-                        const dmg = newMitigation;
-                        let finalDamage = calculateDamage(dmg, newPlayerStatuses, targetEnemy.statuses);
-                        targetEnemy.hp = Math.max(0, targetEnemy.hp - finalDamage);
-                        newMessage += ` Dealt ${finalDamage} (based on ${newMitigation} block).`;
-                        if (newEnemies.every(e => e.hp <= 0)) { newStatus = 'VICTORY'; newMessage = "PROBLEM SOLVED."; }
-                    } else if (effect.type === 'damage_scale_matches' && targetEnemy && effect.matchString) {
-                        // Perfected Strike Logic
-                        const matchCount = countCardsMatches([...newDrawPile, ...newDiscardPile, ...currentHand], effect.matchString);
-                        const dmg = effect.value + (2 * matchCount); // Base + 2 per match
-                        let finalDamage = calculateDamage(dmg, prev.playerStats.statuses, targetEnemy.statuses);
-                        targetEnemy.hp = Math.max(0, targetEnemy.hp - finalDamage);
-                        newMessage += ` Dealt ${finalDamage} (${matchCount} matching cards).`;
-                        if (newEnemies.every(e => e.hp <= 0)) { newStatus = 'VICTORY'; newMessage = "PROBLEM SOLVED."; }
-                    } else if (effect.type === 'block') {
-                        let blockAmount = effect.value;
-                        if (newPlayerStatuses.frail > 0) {
-                            blockAmount = Math.floor(blockAmount * 0.75);
-                            newMessage += " (Frail)";
-                        }
-                        newMitigation += blockAmount;
-                        newMessage += ` gained ${blockAmount} Mitigation.`;
-                    } else if (effect.type === 'apply_status') {
-                        const amount = effect.value;
-                        const statusType = effect.status || 'vulnerable';
-
-                        let targets: (EnemyData | 'self')[] = [];
-                        if (effect.target === 'self') {
-                            targets = ['self'];
-                        } else if (effect.target === 'all_enemies') {
-                            targets = newEnemies;
-                        } else if (target === 'enemy' && targetEnemy) {
-                            targets = [targetEnemy];
-                        }
-
-                        targets.forEach(t => {
-                            if (t === 'self') {
-                                if (statusType === 'vulnerable') newPlayerStatuses.vulnerable += amount;
-                                if (statusType === 'weak') newPlayerStatuses.weak += amount;
-                                if (statusType === 'strength') newPlayerStatuses.strength += amount;
-                                if (statusType === 'metallicize') newPlayerStatuses.metallicize += amount;
-                                if (statusType === 'evolve') newPlayerStatuses.evolve += amount;
-                                if (statusType === 'feelNoPain') newPlayerStatuses.feelNoPain += amount;
-                                if (statusType === 'noDraw') newPlayerStatuses.noDraw += amount;
-                                if (statusType === 'thorns') newPlayerStatuses.thorns += amount;
-                                if (statusType === 'antifragile') newPlayerStatuses.antifragile += amount;
-                                if (statusType === 'artifact') newPlayerStatuses.artifact += amount;
-                                newMessage += ` Gained ${statusType}.`;
-                            } else if (typeof t === 'object') {
-                                // Enemy
-                                t.statuses = { ...t.statuses };
-
-                                // Check Artifact for Debuffs
-                                const isDebuff = statusType === 'vulnerable' || statusType === 'weak';
-                                if (isDebuff && t.statuses.artifact > 0) {
-                                    t.statuses.artifact -= 1;
-                                    newMessage += ` ${t.name}'s Artifact blocked ${statusType}!`;
-                                } else {
-                                    if (statusType === 'vulnerable') t.statuses.vulnerable += amount;
-                                    if (statusType === 'weak') t.statuses.weak += amount;
-                                    if (statusType === 'strength') t.statuses.strength += amount;
-                                    if (statusType === 'artifact') t.statuses.artifact += amount;
-                                    newMessage += ` Applied ${statusType} to ${t.name}.`;
-                                }
-                            }
-                        });
-                    } else if (effect.type === 'draw') {
-                        if (newPlayerStatuses.noDraw > 0) {
-                            newMessage += ` (Draw prevented by Flow State)`;
-                        } else {
-                            const result = drawCards(newDrawPile, newDiscardPile, effect.value);
-                            newDrawPile = result.newDraw;
-                            newDiscardPile = result.newDiscard;
-
-                            result.drawn.forEach(c => {
-                                if (currentHand.length + drawnCards.length < MAX_HAND_SIZE) {
-                                    drawnCards.push(c);
-                                } else {
-                                    newDiscardPile.push(c);
-                                    newMessage += ` (Hand full! Burned ${c.name})`;
-                                }
-                            });
-                            
-                            if (result.drawn.length > 0 && !newMessage.includes('Drew')) {
-                                newMessage += ` Drew ${result.drawn.length} cards.`;
-                            }
-                        }
-                    } else if (effect.type === 'add_card' && effect.cardId) {
-                        const template = Object.values(GAME_DATA.cards).find(c => c.id === effect.cardId);
-                        if (template) {
-                            const newCard = { ...template, id: `${effect.cardId}_${Date.now()}` };
-                            // Default to discard, check if specific logic requires Draw pile (YOLO Deploy)
-                            if (card.id === 'cto_yolo_deploy') {
-                                newDrawPile.push(newCard);
-                                newDrawPile = shuffle(newDrawPile);
-                                newMessage += ` Shuffled ${template.name} into Draw Pile.`;
-                            } else {
-                                newDiscardPile.push(newCard);
-                                newMessage += ` Added ${template.name} to discard.`;
-                            }
-                        }
-                    } else if (effect.type === 'add_copy') {
-                        const copy = { ...card, id: `${card.id}_copy_${Date.now()}` };
-                        newDiscardPile.push(copy);
-                        newMessage += ` Copied to discard.`;
-                    } else if (effect.type === 'discard') {
-                        newPendingDiscard = effect.value;
-                        newMessage += ` Select ${effect.value} cards to discard.`;
-                    } else if (effect.type === 'exhaust_random') {
-                        if (currentHand.length > 0) {
-                            const randomIndex = Math.floor(Math.random() * currentHand.length);
-                            const exhaustedCard = currentHand.splice(randomIndex, 1)[0];
-                            newExhaustPile.push(exhaustedCard);
-                            if (newPlayerStatuses.feelNoPain > 0) {
-                                newMitigation += newPlayerStatuses.feelNoPain;
-                            }
-                            newMessage += ` Exhausted ${exhaustedCard.name}.`;
-                        }
-                    } else if (effect.type === 'exhaust_targeted') {
-                        if (currentHand.length > 0) {
-                            newStatus = 'CARD_SELECTION';
-                            newPendingSelection = {
-                                context: 'hand',
-                                action: 'exhaust',
-                                count: effect.value
-                            };
-                            newMessage += ` Select a card to exhaust.`;
-                        }
-                    } else if (effect.type === 'upgrade_hand') {
-                        const upgradeCount = effect.value;
-                        if (upgradeCount > 10) {
-                            // Upgrade ALL
-                            currentHand = currentHand.map(c => upgradeCard(c));
-                            newMessage += ` Upgraded ALL cards in hand.`;
-                        } else {
-                            // Targeted Upgrade (Armaments)
-                            if (currentHand.length > 0) {
-                                newStatus = 'CARD_SELECTION';
-                                newPendingSelection = {
-                                    context: 'hand',
-                                    action: 'upgrade',
-                                    count: upgradeCount
-                                };
-                                newMessage += ` Select a card to upgrade.`;
-                            } else {
-                                newMessage += ` (No cards to upgrade)`;
-                            }
-                        }
-                    } else if (effect.type === 'retrieve_discard') {
-                        if (newDiscardPile.length > 0) {
-                            newStatus = 'CARD_SELECTION';
-                            newPendingSelection = {
-                                context: 'discard_pile',
-                                action: 'move_to_draw_pile',
-                                count: effect.value
-                            };
-                            newMessage += ` Select a card to retrieve from discard.`;
-                        } else {
-                            newMessage += ` (Discard is empty)`;
-                        }
-                    } else if (effect.type === 'gain_bandwidth') {
-                        newBandwidth += effect.value;
-                        newMessage += ` Gained ${effect.value} Bandwidth.`;
-                    } else if (effect.type === 'conditional_refund' && targetEnemy) {
-                        if (targetEnemy.statuses.vulnerable > 0) {
-                            newBandwidth += 1;
-                            const result = drawCards(newDrawPile, newDiscardPile, 1);
-                            drawnCards = [...drawnCards, ...result.drawn];
-                            newDrawPile = result.newDraw;
-                            newDiscardPile = result.newDiscard;
-                            newMessage += ` (Vulnerable Bonus: +1 BW, +1 Draw)`;
-                        }
-                    } else if (effect.type === 'conditional_strength' && target === 'self') {
-                        // Check if ANY enemy is attacking
-                        if (newEnemies.some(e => e.currentIntent.type === 'attack')) {
-                            newPlayerStatuses.strength += effect.value;
-                            newMessage += ` Gained ${effect.value} Strength!`;
-                        }
-                    }
-                }
-            };
-
-            // Apply Effects
-            card.effects.forEach(effect => {
-                // Check for X Cost (Cost -1) loops
-                let loops = 1;
-                if (card.cost === -1) {
-                    loops = costPaid;
-                }
-                executeEffect(effect, loops);
-            });
-
-            // Elite Mechanism: Scope Creep Passive
-            newEnemies.forEach(e => {
-                if (e.id === 'enemy_scope_creep' && card.type === 'skill' && e.hp > 0) {
-                    e.statuses = { ...e.statuses };
-                    e.statuses.strength += 2;
-                    newMessage += " Scope Creep grows stronger! (+2 Complexity)";
-                }
-            });
-
-            // Exhaust vs Discard Logic
-            if (card.exhaust) {
-                newExhaustPile.push(card);
-                // Trigger Feel No Pain
-                if (newPlayerStatuses.feelNoPain > 0) {
-                    newMitigation += newPlayerStatuses.feelNoPain;
-                    newMessage += ` (Lean Ops: +${newPlayerStatuses.feelNoPain} Blk)`;
-                }
-                newMessage += " (Exhausted)";
-            } else {
-                newDiscardPile.push(card);
-            }
-
-            // Handle On-Draw Triggers for Newly Drawn Cards (Logic + Evolve)
-            let extraDraws: CardData[] = [];
-            let cardsToCheck = [...drawnCards];
-            let safetyCap = 0;
-
-            while (cardsToCheck.length > 0 && safetyCap < 20) {
-                const checking = cardsToCheck.shift();
-                if (!checking) continue;
-                safetyCap++;
-
-                // Evolve Trigger
-                if (checking.type === 'status' && newPlayerStatuses.evolve > 0 && newPlayerStatuses.noDraw === 0) {
-                    const evolveResult = drawCards(newDrawPile, newDiscardPile, newPlayerStatuses.evolve);
-                    extraDraws = [...extraDraws, ...evolveResult.drawn];
-                    newDrawPile = evolveResult.newDraw;
-                    newDiscardPile = evolveResult.newDiscard;
-                    cardsToCheck = [...cardsToCheck, ...evolveResult.drawn];
-                    newMessage += ` (Troubleshoot: Drew ${evolveResult.drawn.length})`;
-                }
-
-                // Context Switch (Void) Logic: Lose Bandwidth on Draw
-                if (checking.effects.some(e => e.type === 'lose_bandwidth')) {
-                    newBandwidth -= 1;
-                    newMessage += ` ${checking.name} drained 1 Bandwidth!`;
-                }
-            }
-
-            drawnCards = [...drawnCards, ...extraDraws];
-
-            // Check Victory Rewards
-            let newCapital = prev.playerStats.capital;
-            // newRelics already declared above
-            let earnedRelic: RelicData | undefined;
-            let earnedCapital = 0;
-
-            let nextPlayerStats = {
-                ...prev.playerStats,
-                bandwidth: Math.max(0, newBandwidth),
-                mitigation: newMitigation,
-                capital: newCapital,
-                statuses: newPlayerStatuses
-            };
-
-            if (newStatus === 'VICTORY' && prev.enemy) {
-                const enemyData = prev.enemy;
-                if (enemyData.rewards) {
-                    const { min, max } = enemyData.rewards.capital;
-                    earnedCapital = Math.floor(Math.random() * (max - min + 1)) + min;
-                    newMessage += ` Earned $${earnedCapital}k Capital.`;
-
-                    // Elite Relic Logic
-                    if (enemyData.type === 'elite') {
-                        const hasCoffee = newRelics.some(r => r.id === 'relic_coffee_drip');
-                        if (!hasCoffee) {
-                            earnedRelic = GAME_DATA.relics.coffee_drip;
-                            newRelics.push(earnedRelic);
-                            newMessage += ` Milestone Reached! Found Relic: ${earnedRelic.name}.`;
-                        }
-                    }
-                } else {
-                    earnedCapital = 15;
-                    newMessage += ` Earned $${earnedCapital}k Capital.`;
-                }
-                nextPlayerStats.capital += earnedCapital;
-
-                const { stats: afterRelicStats, message: relicMsg } = applyCombatEndRelics(nextPlayerStats, newRelics);
-                nextPlayerStats = afterRelicStats;
-                if (relicMsg) newMessage += ` ${relicMsg}`;
-            }
-
-            if (newPendingDiscard > 0 && newStatus !== 'VICTORY') {
-                newStatus = 'DISCARD_SELECTION';
-            }
-
-            return {
-                ...prev,
-                playerStats: nextPlayerStats,
-                relics: newRelics,
-                enemies: newEnemies, // Was enemy: newEnemy
-                hand: [...currentHand, ...drawnCards],
-                drawPile: newDrawPile,
-                discardPile: newDiscardPile,
-                exhaustPile: newExhaustPile,
-                status: newStatus,
-                message: newMessage,
-                pendingDiscard: newPendingDiscard,
-                pendingSelection: newPendingSelection,
-                lastVictoryReward: newStatus === 'VICTORY' ? { capital: earnedCapital, relic: earnedRelic } : undefined
-            };
-        });
+        setGameState(prev => resolveCardEffect(prev, card, target, targetEnemyId));
     };
+
 
     // --- Turn Management ---
 
@@ -1056,494 +393,9 @@ const App: React.FC = () => {
     };
 
     const processEnemyTurn = () => {
-        setGameState(prev => {
-            if (prev.enemies.length === 0) return prev;
-            if (prev.status === 'VICTORY') return prev;
-
-            let newPlayerHp = prev.playerStats.hp;
-            let newMitigation = prev.playerStats.mitigation;
-            let newPlayerStatuses = { ...prev.playerStats.statuses };
-            let newMessage = '';
-            let newEnemies = prev.enemies.map(e => ({ ...e, statuses: { ...e.statuses } })); // Deep clone
-            let enemiesToSpawn: EnemyData[] = [];
-
-            let nextDrawPile = [...prev.drawPile];
-
-            // Process each enemy
-            newEnemies.forEach(enemy => {
-                if (enemy.hp <= 0) return; // Skip dead enemies
-
-                const intent = enemy.currentIntent;
-
-                if (intent.type === 'attack') {
-                    // Hexaghost Divider Check
-                    let attackValue = intent.value;
-                    if (enemy.id === 'boss_burn_rate' && intent.description.includes('Divider')) {
-                        attackValue = Math.floor(newPlayerHp / 12) + 1; // 6 hits of (HP/12 + 1)
-                        // Actually Divider is multi-hit (6x). Let's assume intent.value was 0 placeholder.
-                        // But wait, multi-hit logic needs loop.
-                        // Simplified: Just deal the total damage for now, or handle multi-hit if I can.
-                        // My combat log handles single hits. Let's just sum it up for now or treat as big hit.
-                        // Better: Update intent description to show damage.
-                        // For execution:
-                        const hits = 6;
-                        const dmgPerHit = Math.floor(newPlayerHp / 12) + 1;
-                        attackValue = dmgPerHit * hits;
-                        newMessage += ` Divider dealt ${hits}x${dmgPerHit} damage!`;
-                    }
-
-                    const damage = calculateDamage(attackValue, enemy.statuses, newPlayerStatuses);
-                    let unblockedDamage = damage;
-
-                    // Thorns Check
-                    if (newPlayerStatuses.thorns > 0) {
-                        enemy.hp -= newPlayerStatuses.thorns;
-                        newMessage += ` Thorns dealt ${newPlayerStatuses.thorns} to ${enemy.name}.`;
-                    }
-
-                    if (newMitigation > 0) {
-                        const blocked = Math.min(newMitigation, unblockedDamage);
-                        newMitigation -= blocked;
-                        unblockedDamage -= blocked;
-                    }
-                    newPlayerHp -= unblockedDamage;
-                    if (unblockedDamage > 0) {
-                        newMessage += ` ${enemy.name} caused ${unblockedDamage} Burn.`;
-                    } else {
-                        newMessage += ` Blocked ${enemy.name}.`;
-                    }
-                } else if (intent.type === 'buff') {
-                    if (intent.description.includes('Growth') || intent.description.includes('Ritual')) {
-                        enemy.statuses.strength += intent.value;
-                        newMessage += ` ${enemy.name} gained ${intent.value} Strength.`;
-                    } else if (intent.description.includes('Block') || intent.description.includes('Barricade')) {
-                        enemy.mitigation += intent.value;
-                        newMessage += ` ${enemy.name} gained ${intent.value} Block.`;
-                    } else if (intent.description.includes('Prepare')) {
-                        // Slime Boss Prepare - do nothing or buff next turn
-                        newMessage += ` ${enemy.name} is preparing...`;
-                    } else if (intent.description.includes('Escape')) {
-                        enemy.hp = 0;
-                        enemy.maxHp = 0; // Mark as escaped (no reward)
-                        newMessage += ` ${enemy.name} Escaped with your capital!`;
-                        // TODO: Remove stolen capital from rewards?
-                    } else if (intent.description.includes('Split')) {
-                        // Slime Boss Split Logic would go here if it was an intent execution
-                        // But usually it's triggered by damage or HP threshold.
-                        // If we make it an intent:
-                        if (enemy.id === 'boss_the_monolith') {
-                            // Split into Acid Slime L and Spike Slime L
-                            const acidL = { ...GAME_DATA.enemies.legacy_module, id: `legacy_module_split_${Date.now()}_acid`, hp: 70, maxHp: 70 };
-                            const spikeL = { ...GAME_DATA.enemies.merge_conflict, id: `merge_conflict_split_${Date.now()}_spike`, hp: 70, maxHp: 70 };
-                            enemiesToSpawn.push(acidL, spikeL);
-                            enemy.hp = 0; // Boss dies (splits)
-                            newMessage += ` ${enemy.name} Split into two!`;
-                        }
-                    }
-
-                    // Generic Growth handling if not caught above
-                    if (enemy.statuses.growth > 0) {
-                        // Growth is usually auto-tick, but if intent adds it:
-                        // enemy.statuses.growth += intent.value; 
-                        // Already handled in previous code?
-                    }
-                } else if (intent.type === 'debuff') {
-                    if (enemy.id.startsWith('legacy_') && intent.description.includes('Shuffle Bugs')) {
-                        // Shuffle 2 Bugs into Draw Pile
-                        const bugCard = GAME_DATA.cards.card_bug;
-                        const bug1 = { ...bugCard, id: `card_bug_${Date.now()}_1` };
-                        const bug2 = { ...bugCard, id: `card_bug_${Date.now()}_2` };
-                        nextDrawPile.push(bug1, bug2);
-                        nextDrawPile = shuffle(nextDrawPile);
-                        newMessage += ` ${enemy.name} shuffled 2 Bugs into your roadmap!`;
-                    } else if (intent.description.includes('Slimed')) {
-                        const slimeCard = GAME_DATA.cards.status_scope_creep;
-                        const slime = { ...slimeCard, id: `status_scope_creep_${Date.now()}` };
-                        // Add to Discard (usually)
-                        // But we don't have access to discardPile setter here easily without returning it.
-                        // We can add to nextDrawPile or just say we need to update state.
-                        // Let's add to nextDrawPile for now or find a way to add to discard.
-                        // Actually we have nextDrawPile. StS Slimed goes to Discard usually.
-                        // Let's assume we can add to discard in the state update.
-                        // For now, add to Draw Pile to be annoying immediately? No, standard is Discard.
-                        // We'll add a property to the returned state to append to discard.
-                        // Or just push to nextDrawPile for higher difficulty.
-                        nextDrawPile.push(slime);
-                        nextDrawPile = shuffle(nextDrawPile);
-                        newMessage += ` ${enemy.name} Slimed you!`;
-                    } else if (intent.description.includes('Weak')) {
-                        newPlayerStatuses.weak += intent.value;
-                        newMessage += ` ${enemy.name} applied ${intent.value} Weak.`;
-                    } else if (intent.description.includes('Vulnerable')) {
-                        newPlayerStatuses.vulnerable += intent.value;
-                        newMessage += ` ${enemy.name} applied ${intent.value} Vulnerable.`;
-                    } else if (intent.description.includes('Frail')) {
-                        newPlayerStatuses.frail += intent.value;
-                        newMessage += ` ${enemy.name} applied ${intent.value} Frail.`;
-                    }
-                }
-
-                // Tick Enemy Statuses
-                if (enemy.statuses.vulnerable > 0) enemy.statuses.vulnerable--;
-                if (enemy.statuses.weak > 0) enemy.statuses.weak--;
-                if (enemy.statuses.growth > 0) enemy.statuses.strength += enemy.statuses.growth;
-                if (enemy.statuses.metallicize > 0) {
-                    enemy.mitigation += enemy.statuses.metallicize;
-                    newMessage += ` ${enemy.name} hardened (+${enemy.statuses.metallicize} Blk).`;
-                }
-                if (enemy.statuses.malleable > 0) {
-                    // Malleable resets or decays? StS: Gains block when hit. Doesn't decay amount?
-                    // "Whenever you play an Attack, gain X Block. Increases by 1."
-                    // It resets to base at start of turn? No, it's a buff.
-                }
-                // Reset Block if not Barricade?
-                // Enemies usually lose block at start of their turn (end of player turn).
-                // Wait, this is processEnemyTurn, which happens AFTER player turn.
-                // So enemy block should have been cleared at START of player turn?
-                // Or end of Enemy turn?
-                // In StS, Block expires at the start of your turn.
-                // So Enemy Block expires at start of Enemy Turn? No, start of Player Turn.
-                // My logic clears Player block at start of Player turn.
-                // I need to clear Enemy block at start of Enemy turn?
-                // Actually, Enemy block should persist through Player turn, then expire at start of Enemy turn (before they act).
-                // So here, before they act, we should clear their block?
-                // Yes, unless they have Barricade.
-                // But wait, if they gain block NOW (during their turn), it needs to last for the Player's NEXT turn.
-                // So we should clear OLD block first.
-                enemy.mitigation = 0; // Clear block at start of enemy turn action
-                // Re-apply metallicize (which happens at end of turn effectively)
-                if (enemy.statuses.metallicize > 0) {
-                    enemy.mitigation += enemy.statuses.metallicize;
-                }
-            });
-
-            // Append spawned enemies
-            if (enemiesToSpawn.length > 0) {
-                newEnemies = [...newEnemies, ...enemiesToSpawn];
-            }
-
-            let newStatus: GameState['status'] = 'PLAYING';
-            if (newPlayerHp <= 0) {
-                newStatus = 'GAME_OVER';
-                newMessage = "RUNWAY DEPLETED. STARTUP FAILED.";
-            }
-
-            // Check for Enemy Death (e.g. Thorns) & Victory
-            let earnedCapital = 0;
-            let earnedRelic: RelicData | undefined;
-            let newRelics = [...prev.relics];
-
-            if (newEnemies.every(e => e.hp <= 0) && newStatus !== 'GAME_OVER') {
-                newStatus = 'VICTORY';
-                newMessage = "PROBLEM SOLVED. THORN DEFENSE SUCCESSFUL.";
-
-                // Data-Driven Rewards (Sum of all enemies)
-                newEnemies.forEach(enemyData => {
-                    // Skip escaped enemies (marked with maxHp = 0)
-                    if (enemyData.maxHp === 0) return;
-
-                    if (enemyData.rewards) {
-                        const { min, max } = enemyData.rewards.capital;
-                        const cap = Math.floor(Math.random() * (max - min + 1)) + min;
-                        earnedCapital += cap;
-
-                        // Elite Relic Logic (Only one relic per combat usually, but let's check per elite)
-                        if (enemyData.type === 'elite') {
-                            const hasCoffee = prev.relics.some(r => r.id === 'relic_coffee_drip');
-                            if (!hasCoffee && !earnedRelic) { // Limit 1 relic per fight for now
-                                earnedRelic = GAME_DATA.relics.coffee_drip;
-                                newRelics.push(earnedRelic);
-                                newMessage += ` Found Relic: ${earnedRelic.name}.`;
-                            }
-                        }
-                    } else {
-                        earnedCapital += 15;
-                    }
-                });
-                newMessage += ` Earned $${earnedCapital}k Capital.`;
-            }
-
-            // AI Logic for Next Turn
-            const nextTurn = prev.turn + 1;
-            newEnemies.forEach(enemy => {
-                if (enemy.hp > 0) {
-                    let nextIntent: EnemyIntent = enemy.currentIntent;
-                    const randomRoll = Math.random();
-
-                    // --- COMMON ENEMIES ---
-
-                    // 1. The Fanboy (Cultist)
-                    if (enemy.id === 'fanboy') {
-                        if (nextTurn === 1) {
-                            nextIntent = { type: 'buff', value: 3, icon: 'buff', description: "Ritual (Hype)" };
-                        } else {
-                            const dmg = 6 + enemy.statuses.strength;
-                            nextIntent = { type: 'attack', value: 6, icon: 'attack', description: `${dmg} Dark Strike` };
-                        }
-                    }
-                    // 2. Spaghetti Code (Jaw Worm)
-                    else if (enemy.id === 'spaghetti_code') {
-                        if (nextTurn === 1) {
-                            nextIntent = { type: 'attack', value: 11, icon: 'attack', description: "Chomp" };
-                        } else {
-                            // 45% Bellow (Buff), 30% Thrash (Attack+Block), 25% Chomp (Attack)
-                            // Simplified: Cycle
-                            const cycle = nextTurn % 3;
-                            if (cycle === 0) nextIntent = { type: 'buff', value: 3, icon: 'buff', description: "Bellow (Str/Blk)" };
-                            else if (cycle === 1) nextIntent = { type: 'attack', value: 7, icon: 'attack', description: "Thrash (+5 Blk)" }; // +5 Block handled in execution
-                            else nextIntent = { type: 'attack', value: 11, icon: 'attack', description: "Chomp" };
-                        }
-                    }
-                    // 3. Critical Bug (Red Louse)
-                    else if (enemy.id === 'critical_bug') {
-                        // Random between Bite and Grow
-                        if (randomRoll < 0.75) {
-                            const dmg = 6 + enemy.statuses.strength;
-                            nextIntent = { type: 'attack', value: 6, icon: 'attack', description: `${dmg} Bite` };
-                        } else {
-                            nextIntent = { type: 'buff', value: 3, icon: 'buff', description: "Grow (Str)" };
-                        }
-                    }
-                    // 4. Minor Bug (Green Louse)
-                    else if (enemy.id === 'minor_bug') {
-                        if (randomRoll < 0.75) {
-                            const dmg = 5 + enemy.statuses.strength;
-                            nextIntent = { type: 'attack', value: 5, icon: 'attack', description: `${dmg} Bite` };
-                        } else {
-                            nextIntent = { type: 'debuff', value: 2, icon: 'debuff', description: "Spit Web (Weak)" };
-                        }
-                    }
-                    // 5. Quick Hack (Acid Slime S)
-                    else if (enemy.id === 'quick_hack') {
-                        // Alternate Tackle / Lick
-                        if (nextTurn % 2 !== 0) nextIntent = { type: 'debuff', value: 1, icon: 'debuff', description: "Lick (Weak)" };
-                        else nextIntent = { type: 'attack', value: 3, icon: 'attack', description: "Tackle" };
-                    }
-                    // 6. Tech Debt (Acid Slime M)
-                    else if (enemy.id === 'tech_debt') {
-                        // 30% Corrosive Spit, 40% Tackle, 30% Lick
-                        if (randomRoll < 0.3) nextIntent = { type: 'debuff', value: 1, icon: 'debuff', description: "Corrosive Spit (Slimed)" };
-                        else if (randomRoll < 0.7) nextIntent = { type: 'attack', value: 7, icon: 'attack', description: "Tackle" };
-                        else nextIntent = { type: 'debuff', value: 1, icon: 'debuff', description: "Lick (Weak)" };
-                    }
-                    // 7. Legacy Module (Acid Slime L)
-                    else if (enemy.id === 'legacy_module') {
-                        // Split at 50% HP handled in damage logic.
-                        // Pattern: Corrosive -> Tackle -> Lick -> Tackle
-                        const step = nextTurn % 4;
-                        if (step === 1) nextIntent = { type: 'debuff', value: 2, icon: 'debuff', description: "Corrosive Spit (Slimed)" };
-                        else if (step === 2 || step === 0) nextIntent = { type: 'attack', value: 16, icon: 'attack', description: "Tackle" };
-                        else nextIntent = { type: 'debuff', value: 2, icon: 'debuff', description: "Lick (Weak)" };
-                    }
-                    // 8. Hotfix (Spike Slime S)
-                    else if (enemy.id === 'hotfix') {
-                        nextIntent = { type: 'attack', value: 5, icon: 'attack', description: "Tackle" };
-                    }
-                    // 9. Bad Merge (Spike Slime M)
-                    else if (enemy.id === 'bad_merge') {
-                        // 30% Flame Tackle, 70% Lick
-                        if (randomRoll < 0.3) nextIntent = { type: 'debuff', value: 1, icon: 'debuff', description: "Flame Tackle (Slimed)" }; // Actually deals dmg too
-                        else nextIntent = { type: 'debuff', value: 1, icon: 'debuff', description: "Lick (Frail)" };
-                    }
-                    // 10. Merge Conflict (Spike Slime L)
-                    else if (enemy.id === 'merge_conflict') {
-                        // Flame Tackle -> Lick -> Flame Tackle
-                        const step = nextTurn % 3;
-                        if (step === 1 || step === 0) nextIntent = { type: 'debuff', value: 2, icon: 'debuff', description: "Flame Tackle (Slimed)" };
-                        else nextIntent = { type: 'debuff', value: 2, icon: 'debuff', description: "Lick (Frail)" };
-                    }
-                    // 11. Micromanager (Blue Slaver)
-                    else if (enemy.id === 'micromanager') {
-                        // Stab -> Rake -> Stab -> Rake
-                        if (nextTurn % 2 !== 0) nextIntent = { type: 'attack', value: 12, icon: 'attack', description: "Stab" };
-                        else nextIntent = { type: 'debuff', value: 1, icon: 'debuff', description: "Rake (Weak)" };
-                    }
-                    // 12. Feature Pusher (Red Slaver)
-                    else if (enemy.id === 'feature_pusher') {
-                        // Stab -> Scrape -> Stab -> Scrape
-                        if (nextTurn % 2 !== 0) nextIntent = { type: 'attack', value: 13, icon: 'attack', description: "Stab" };
-                        else nextIntent = { type: 'debuff', value: 1, icon: 'debuff', description: "Scrape (Vuln)" };
-                    }
-                    // 13. Headhunter (Looter)
-                    else if (enemy.id === 'headhunter') {
-                        if (nextTurn < 3) nextIntent = { type: 'attack', value: 10, icon: 'attack', description: "Mug (Steal Capital)" };
-                        else if (nextTurn === 3) nextIntent = { type: 'debuff', value: 0, icon: 'debuff', description: "Smoke Bomb (Block)" };
-                        else nextIntent = { type: 'buff', value: 0, icon: 'buff', description: "Escape" };
-                    }
-                    // 14. Memory Leak (Fungi Beast)
-                    else if (enemy.id === 'memory_leak') {
-                        // Bite -> Grow -> Bite -> Grow
-                        if (nextTurn % 2 !== 0) nextIntent = { type: 'attack', value: 6, icon: 'attack', description: "Bite" };
-                        else nextIntent = { type: 'buff', value: 3, icon: 'buff', description: "Grow (Str)" };
-                    }
-
-                    // --- ELITES ---
-
-                    // 15. Scope Creep (Gremlin Nob)
-                    else if (enemy.id === 'scope_creep') {
-                        if (nextTurn === 1) nextIntent = { type: 'buff', value: 0, icon: 'buff', description: "Bellow (Enrage)" };
-                        else if (nextTurn === 2) nextIntent = { type: 'debuff', value: 2, icon: 'debuff', description: "Skull Bash (Vuln)" };
-                        else nextIntent = { type: 'attack', value: 14, icon: 'attack', description: "Rush" };
-                    }
-                    // 16. The Over-Engineer (Lagavulin)
-                    else if (enemy.id === 'over_engineer') {
-                        if (enemy.statuses.asleep > 0) {
-                            // While asleep, do nothing or debuff? StS: Asleep for 3 turns then wakes.
-                            // Simplified: If attacked, wakes up. If 3 turns pass, wakes up.
-                            if (nextTurn <= 3) nextIntent = { type: 'debuff', value: 1, icon: 'debuff', description: "Siphon (Str/Dex)" };
-                            else {
-                                enemy.statuses.asleep = 0; // Wake up naturally
-                                nextIntent = { type: 'attack', value: 18, icon: 'attack', description: "Attack" };
-                            }
-                        } else {
-                            // Awake pattern: Attack -> Attack -> Debuff
-                            const cycle = (nextTurn - 3) % 3;
-                            if (cycle === 0 || cycle === 1) nextIntent = { type: 'attack', value: 18, icon: 'attack', description: "Attack" };
-                            else nextIntent = { type: 'debuff', value: 1, icon: 'debuff', description: "Siphon (Str/Dex)" };
-                        }
-                    }
-                    // 17. Legacy Systems (Sentries)
-                    else if (enemy.id.startsWith('legacy_')) {
-                        // Monolith (Middle): Beam -> Bolt -> Beam
-                        // Hack/Patch (Sides): Bolt -> Beam -> Bolt
-                        const isMonolith = enemy.name.includes('Monolith');
-                        if (isMonolith) {
-                            if (nextTurn % 2 !== 0) nextIntent = { type: 'debuff', value: 2, icon: 'debuff', description: "Bolt (Shuffle Bugs)" };
-                            else nextIntent = { type: 'attack', value: 9, icon: 'attack', description: "Beam" };
-                        } else {
-                            if (nextTurn % 2 !== 0) nextIntent = { type: 'attack', value: 9, icon: 'attack', description: "Beam" };
-                            else nextIntent = { type: 'debuff', value: 2, icon: 'debuff', description: "Bolt (Shuffle Bugs)" };
-                        }
-                    }
-
-                    // --- BOSSES ---
-
-                    // 18. The Pivot (The Guardian)
-                    else if (enemy.id === 'boss_the_pivot') {
-                        // Mode Shift Logic handled in damage.
-                        // Pattern: Charge Up -> Fierce Bash -> Vent Steam -> Whirlwind
-                        const cycle = nextTurn % 4;
-                        if (cycle === 1) nextIntent = { type: 'buff', value: 9, icon: 'buff', description: "Charging Up (Block)" };
-                        else if (cycle === 2) nextIntent = { type: 'attack', value: 32, icon: 'attack', description: "Fierce Bash" };
-                        else if (cycle === 3) nextIntent = { type: 'debuff', value: 2, icon: 'debuff', description: "Vent Steam (Vuln)" };
-                        else nextIntent = { type: 'attack', value: 5, icon: 'attack', description: "Whirlwind (x4)" };
-                    }
-                    // 19. The Burn Rate (Hexaghost)
-                    else if (enemy.id === 'boss_burn_rate') {
-                        // Divider -> Burn -> Tackle -> Burn -> Inferno
-                        const cycle = nextTurn % 5;
-                        if (cycle === 1) {
-                            const dmg = Math.floor(newPlayerHp / 12) + 1;
-                            nextIntent = { type: 'attack', value: dmg, icon: 'attack', description: "Divider (x6)" };
-                        }
-                        else if (cycle === 2 || cycle === 4) nextIntent = { type: 'debuff', value: 1, icon: 'debuff', description: "Sear (Burn Cards)" };
-                        else if (cycle === 3) nextIntent = { type: 'attack', value: 6, icon: 'attack', description: "Tackle (x2)" };
-                        else nextIntent = { type: 'attack', value: 2, icon: 'attack', description: "Inferno (x6)" };
-                    }
-                    // 20. The Monolith (Slime Boss)
-                    else if (enemy.id === 'boss_the_monolith') {
-                        // Goop -> Prepare -> Slam
-                        const cycle = nextTurn % 3;
-                        if (cycle === 1) nextIntent = { type: 'debuff', value: 3, icon: 'debuff', description: "Goop Spray (Slimed)" };
-                        else if (cycle === 2) nextIntent = { type: 'buff', value: 0, icon: 'buff', description: "Prepare" };
-                        else nextIntent = { type: 'attack', value: 35, icon: 'attack', description: "Slam" };
-                    }
-
-                    enemy.currentIntent = nextIntent;
-                }
-            });
-
-            const nextBandwidth = getTurnStartBandwidth(prev.relics);
-
-            let nextPlayerStats = {
-                ...prev.playerStats,
-                hp: Math.max(0, newPlayerHp),
-                mitigation: 0,
-                bandwidth: nextBandwidth,
-                statuses: { ...newPlayerStatuses, thorns: 0 } // Reset Thorns at start of player turn
-            };
-
-            if (newStatus === 'VICTORY') {
-                nextPlayerStats.capital += earnedCapital;
-                // Apply combat end relics (Heal)
-                const { stats: afterRelicStats, message: relicMsg } = applyCombatEndRelics(nextPlayerStats, newRelics);
-                nextPlayerStats = afterRelicStats;
-                if (relicMsg) newMessage += ` ${relicMsg}`;
-            }
-
-            let nextState = {
-                ...prev,
-                playerStats: nextPlayerStats,
-                relics: newRelics,
-                enemies: newEnemies, // Was enemy: ...
-                turn: nextTurn,
-                status: newStatus,
-                message: newMessage,
-                lastVictoryReward: newStatus === 'VICTORY' ? { capital: earnedCapital, relic: earnedRelic } : undefined
-            };
-
-            if (newStatus === 'PLAYING') {
-                const { drawn, newDraw, newDiscard } = drawCards(nextDrawPile, prev.discardPile, 5);
-                
-                // Hand Limit Logic
-                let nextHand = [...prev.hand];
-                let burnedCount = 0;
-                const actualDrawn: CardData[] = [];
-                let nextDiscard = newDiscard;
-
-                drawn.forEach(card => {
-                    if (nextHand.length < MAX_HAND_SIZE) {
-                        nextHand.push(card);
-                        actualDrawn.push(card);
-                    } else {
-                        nextDiscard.push(card);
-                        burnedCount++;
-                    }
-                });
-
-                nextState.hand = nextHand;
-                nextState.drawPile = newDraw;
-                nextState.discardPile = nextDiscard;
-
-                if (burnedCount > 0) {
-                    newMessage += ` (Hand full! Burned ${burnedCount} cards)`;
-                }
-
-                let extraDraws: CardData[] = [];
-                let cardsToCheck = [...actualDrawn];
-                let safety = 0;
-                let currentNewDraw = newDraw;
-                let currentNewDiscard = nextDiscard;
-
-                while (cardsToCheck.length > 0 && safety < 10) {
-                    const c = cardsToCheck.shift();
-                    if (!c) continue;
-
-                    // Legacy Code
-                    if (c.effects.some(e => e.type === 'lose_bandwidth' && c.unplayable)) {
-                        nextState.playerStats.bandwidth = Math.max(0, nextState.playerStats.bandwidth - 1);
-                        nextState.message = `${nextState.message} (Legacy Code drained 1 Bandwidth!)`;
-                    }
-
-                    // Evolve
-                    if (c.type === 'status' && nextState.playerStats.statuses.evolve > 0 && nextState.playerStats.statuses.noDraw === 0) {
-                        safety++;
-                        const evolveResult = drawCards(currentNewDraw, currentNewDiscard, nextState.playerStats.statuses.evolve);
-                        extraDraws = [...extraDraws, ...evolveResult.drawn];
-                        currentNewDraw = evolveResult.newDraw;
-                        currentNewDiscard = evolveResult.newDiscard;
-                        cardsToCheck = [...cardsToCheck, ...evolveResult.drawn];
-                    }
-                }
-
-                nextState.hand = [...nextState.hand, ...extraDraws];
-                nextState.drawPile = currentNewDraw;
-                nextState.discardPile = currentNewDiscard;
-            }
-
-            return nextState;
-        });
+        setGameState(prev => resolveEnemyTurn(prev));
     };
+
 
     // --- Transition Logic ---
 
@@ -1589,17 +441,6 @@ const App: React.FC = () => {
                 exhaustPile: []
             };
         });
-    }; status: 'MAP',
-        hand: [],
-            discardPile: [],
-                exhaustPile: [], // Reset exhaust on combat end
-                    drawPile: newDrawPile,
-                        rewardOptions: [],
-                            map: newMap,
-                                message: "Check the roadmap for next steps.",
-                                    enemy: null
-};
-        });
     };
 
 const handleNodeSelect = (node: MapNode) => {
@@ -1610,6 +451,7 @@ const handleNodeSelect = (node: MapNode) => {
             floor: node.floor,
         };
 
+        // Handle non-combat nodes
         if (node.type === 'retrospective') {
             return { ...newState, status: 'RETROSPECTIVE', message: 'Sprint Retrospective: Optimize or Recover?' };
         }
@@ -1617,81 +459,99 @@ const handleNodeSelect = (node: MapNode) => {
             const stock = getRandomRewardCards(3);
             return { ...newState, status: 'VENDOR', vendorStock: stock, message: 'Vendor: Acquire new assets.' };
         }
+        if (node.type === 'treasure') {
+            // Grant a random relic and go back to map
+            const availableRelics = Object.values(GAME_DATA.relics).filter(r => !prev.relics.some(pr => pr.id === r.id));
+            const relic = availableRelics.length > 0 ? availableRelics[Math.floor(Math.random() * availableRelics.length)] : GAME_DATA.relics.coffee_drip;
 
-        // Data-Driven Enemy Selection
-        const currentAct = 1; // MVP is Act 1
-        const availableEnemies = Object.values(GAME_DATA.enemies).filter(e => e.act === currentAct);
+            // Mark node as completed
+            let newMap = [...prev.map];
+            newMap[node.floor - 1] = newMap[node.floor - 1].map(n => n.id === node.id ? { ...n, completed: true } : n);
 
-        let enemyData: EnemyData;
-        const floorScaling = (node.floor - 1) * 10;
-
-        if (node.type === 'boss') {
-            enemyData = availableEnemies.find(e => e.type === 'boss') || GAME_DATA.enemies.boss_the_pivot;
-        } else if (node.type === 'milestone') { // Elite
-            const elites = availableEnemies.filter(e => e.type === 'elite');
-            enemyData = elites.length > 0 ? elites[Math.floor(Math.random() * elites.length)] : GAME_DATA.enemies.scope_creep;
-        } else { // Normal
-            const normals = availableEnemies.filter(e => e.type === 'normal');
-            enemyData = normals.length > 0 ? normals[Math.floor(Math.random() * normals.length)] : GAME_DATA.enemies.critical_bug;
+            return {
+                ...newState,
+                map: newMap,
+                relics: [...prev.relics, relic],
+                status: 'MAP',
+                message: `Funding Round! Found ${relic.name}.`
+            };
+        }
+        if (node.type === 'opportunity') {
+            // 25% Shop, 25% Monster, 50% Event
+            const roll = Math.random() * 100;
+            if (roll < 25) {
+                const stock = getRandomRewardCards(3);
+                return { ...newState, status: 'VENDOR', vendorStock: stock, message: 'Opportunity: Hidden Vendor discovered!' };
+            } else if (roll < 50) {
+                // Fight hard pool monster
+                const nextEnemies = getEncounterForFloor(node.floor);
+                return startCombat(newState, prev, nextEnemies, 'Unexpected Problem appeared!');
+            }
+            // 50% - Actual Event
+            const randomEvent = ACT1_EVENTS[Math.floor(Math.random() * ACT1_EVENTS.length)];
+            return {
+                ...newState,
+                status: 'EVENT',
+                currentEvent: randomEvent,
+                message: `Event: ${randomEvent.name}`
+            };
         }
 
-        // Create Enemy Instance(s)
+        // Combat nodes
         let nextEnemies: EnemyData[] = [];
 
-        // Special Case: Legacy Systems (3 Sentries)
-        // If the selected enemy is one of the legacy components, spawn all 3.
-        // Or if we decide to force it for testing.
-        // Let's check if the selected 'enemyData' is one of the legacy types.
-        if (enemyData.id.startsWith('legacy_')) {
-            // Spawn the Trio with Staggered Intents
-            // Monolith: Starts with Beam (Attack)
-            const monolith = { ...GAME_DATA.enemies.legacy_monolith, id: `legacy_monolith_${Date.now()}`, hp: GAME_DATA.enemies.legacy_monolith.hp + floorScaling, maxHp: GAME_DATA.enemies.legacy_monolith.maxHp + floorScaling, statuses: { ...GAME_DATA.enemies.legacy_monolith.statuses }, currentIntent: { ...GAME_DATA.enemies.legacy_monolith.currentIntent } };
-
-            // Hack: Starts with Bolt (Debuff)
-            const hack = { ...GAME_DATA.enemies.legacy_hack, id: `legacy_hack_${Date.now()}`, hp: GAME_DATA.enemies.legacy_hack.hp + floorScaling, maxHp: GAME_DATA.enemies.legacy_hack.maxHp + floorScaling, statuses: { ...GAME_DATA.enemies.legacy_hack.statuses }, currentIntent: { ...GAME_DATA.enemies.legacy_hack.currentIntent } };
-
-            // Patch: Starts with Beam (Attack) - STAGGERED (Default is Debuff)
-            const patch = { ...GAME_DATA.enemies.legacy_patch, id: `legacy_patch_${Date.now()}`, hp: GAME_DATA.enemies.legacy_patch.hp + floorScaling, maxHp: GAME_DATA.enemies.legacy_patch.maxHp + floorScaling, statuses: { ...GAME_DATA.enemies.legacy_patch.statuses }, currentIntent: { type: 'attack' as const, value: 9, icon: 'attack', description: "Beam" } };
-
-            // Order: Hack (Left), Monolith (Middle), Patch (Right)
-            nextEnemies = [hack, monolith, patch];
+        if (node.type === 'boss') {
+            nextEnemies = getBossEncounter();
+        } else if (node.type === 'elite') {
+            nextEnemies = getEliteEncounter();
         } else {
-            // Single enemy
-            // Ensure we copy rewards!
-            nextEnemies = [{
-                ...enemyData,
-                // Ensure unique ID for React keys if multiple of same type
-                id: `${enemyData.id}_${Date.now()}`,
-                hp: enemyData.hp + floorScaling,
-                maxHp: enemyData.maxHp + floorScaling,
-                statuses: { ...enemyData.statuses },
-                currentIntent: { ...enemyData.currentIntent },
-                rewards: enemyData.rewards
-            }];
+            // Normal problem node
+            nextEnemies = getEncounterForFloor(node.floor);
         }
 
-        // Apply Combat Start Relics
-        const { stats: startStats, message: relicMsg } = applyCombatStartRelics(newState.playerStats, newState.relics);
+        // Apply floor scaling
+        const floorScaling = Math.floor((node.floor - 1) * 5);
+        nextEnemies = nextEnemies.map(e => ({
+            ...e,
+            hp: e.hp + floorScaling,
+            maxHp: e.maxHp + floorScaling
+        }));
 
-        // Reset Deck for Combat
-        const combatDeck = shuffle([...prev.deck]);
-
-        return {
-            ...newState,
-            status: 'PLAYING',
-            enemies: nextEnemies,
-            playerStats: {
-                ...startStats,
-                bandwidth: getTurnStartBandwidth(prev.relics),
-            },
-            message: relicMsg ? `Encounter: ${enemyData.name}. ${relicMsg}` : `Encounter: ${enemyData.name}.`,
-            turn: 1,
-            drawPile: combatDeck,
-            hand: [],
-            discardPile: [],
-            exhaustPile: []
-        };
+        return startCombat(newState, prev, nextEnemies, `Encounter: ${nextEnemies.map(e => e.name).join(', ')}`);
     });
+};
+
+// Helper function to start combat
+const startCombat = (newState: any, prev: GameState, nextEnemies: EnemyData[], encounterMessage: string) => {
+    // Apply Combat Start Relics
+    const { stats: startStats, message: relicMsg } = applyCombatStartRelics(newState.playerStats, newState.relics);
+
+    // Reset Deck for Combat
+    const combatDeck = shuffle([...prev.deck]);
+
+    // Draw Initial Hand
+    const { drawn, newDraw, newDiscard } = drawCards(combatDeck, [], 5);
+
+    // Process Initial Draw (e.g. Legacy Code)
+    const startStatsWithRelics = {
+        ...startStats,
+        bandwidth: getTurnStartBandwidth(prev.relics),
+    };
+
+    const processed = processDrawnCards(drawn, [], newDiscard, newDraw, startStatsWithRelics, relicMsg ? `${encounterMessage} ${relicMsg}` : encounterMessage);
+
+    return {
+        ...newState,
+        status: 'PLAYING',
+        enemies: nextEnemies,
+        playerStats: processed.stats,
+        message: processed.message,
+        turn: 1,
+        drawPile: processed.drawPile,
+        hand: processed.hand,
+        discardPile: processed.discard,
+        exhaustPile: []
+    };
 };
 
 // --- Retrospective Actions ---
@@ -1783,6 +643,170 @@ const handleRemoveCardService = (price: number) => {
             playerStats: { ...prev.playerStats, capital: prev.playerStats.capital - price },
             deck: newDeck,
             message: "Removed 1 'Commit' (Technical Debt) from codebase."
+        };
+    });
+};
+
+// --- Event Actions ---
+
+const handleEventChoice = (choice: EventChoice) => {
+    setGameState(prev => {
+        let newStats = { ...prev.playerStats };
+        let newDeck = [...prev.deck];
+        let newRelics = [...prev.relics];
+        let message = '';
+
+        // Check condition if present
+        if (choice.condition) {
+            const { type, operator, value } = choice.condition;
+            let conditionMet = false;
+
+            if (type === 'gold') {
+                conditionMet = operator === '>=' ? newStats.capital >= value : newStats.capital < value;
+            } else if (type === 'hp') {
+                conditionMet = operator === '>=' ? newStats.hp >= value : newStats.hp < value;
+            } else if (type === 'upgraded_cards') {
+                const upgradedCount = newDeck.filter(c => c.name.endsWith('+')).length;
+                conditionMet = operator === '>=' ? upgradedCount >= value : upgradedCount < value;
+            }
+
+            if (!conditionMet) {
+                return { ...prev, message: 'Condition not met for this choice.' };
+            }
+        }
+
+        // Process effects
+        const processEffect = (effect: EventEffect) => {
+            switch (effect.type) {
+                case 'gain_gold':
+                    newStats.capital += effect.value || 0;
+                    message += ` Gained $${effect.value}k.`;
+                    break;
+                case 'lose_gold':
+                    newStats.capital = Math.max(0, newStats.capital - (effect.value || 0));
+                    message += ` Lost $${effect.value}k.`;
+                    break;
+                case 'gain_hp':
+                    newStats.hp = Math.min(newStats.maxHp, newStats.hp + (effect.value || 0));
+                    message += ` Healed ${effect.value} Runway.`;
+                    break;
+                case 'lose_hp':
+                    newStats.hp = Math.max(0, newStats.hp - (effect.value || 0));
+                    message += ` Lost ${effect.value} Runway.`;
+                    break;
+                case 'lose_max_hp':
+                    const lostHp = Math.floor(newStats.maxHp * (effect.value || 0) / 100);
+                    newStats.maxHp = Math.max(1, newStats.maxHp - lostHp);
+                    newStats.hp = Math.min(newStats.hp, newStats.maxHp);
+                    message += ` Lost ${lostHp} max Runway.`;
+                    break;
+                case 'gain_card':
+                    const rarityPool = effect.cardRarity === 'random'
+                        ? ['common', 'uncommon', 'rare'][Math.floor(Math.random() * 3)]
+                        : effect.cardRarity;
+                    const cards = getRandomRewardCards(1);
+                    if (cards.length > 0) {
+                        newDeck.push(cards[0]);
+                        message += ` Gained ${cards[0].name}.`;
+                    }
+                    break;
+                case 'remove_card':
+                    for (let i = 0; i < (effect.value || 1); i++) {
+                        if (newDeck.length > 5) { // Keep minimum deck size
+                            const idx = Math.floor(Math.random() * newDeck.length);
+                            const removed = newDeck.splice(idx, 1)[0];
+                            message += ` Removed ${removed.name}.`;
+                        }
+                    }
+                    break;
+                case 'upgrade_card':
+                    for (let i = 0; i < (effect.value || 1); i++) {
+                        const upgradeable = newDeck.filter(c => !c.name.endsWith('+'));
+                        if (upgradeable.length > 0) {
+                            const cardToUpgrade = upgradeable[Math.floor(Math.random() * upgradeable.length)];
+                            const idx = newDeck.findIndex(c => c.id === cardToUpgrade.id);
+                            if (idx !== -1) {
+                                newDeck[idx] = upgradeCard(newDeck[idx]);
+                                message += ` Upgraded ${cardToUpgrade.name}.`;
+                            }
+                        }
+                    }
+                    break;
+                case 'transform_card':
+                    for (let i = 0; i < (effect.value || 1); i++) {
+                        if (newDeck.length > 5) {
+                            const idx = Math.floor(Math.random() * newDeck.length);
+                            const removed = newDeck.splice(idx, 1)[0];
+                            const replacement = getRandomRewardCards(1)[0];
+                            newDeck.push(replacement);
+                            message += ` Transformed ${removed.name} into ${replacement.name}.`;
+                        }
+                    }
+                    break;
+                case 'gain_strength':
+                    newStats.statuses.strength += effect.value || 0;
+                    message += ` Gained ${effect.value} permanent Strength.`;
+                    break;
+                case 'gain_relic':
+                    const availableRelics = Object.values(GAME_DATA.relics).filter(r => !newRelics.some(pr => pr.id === r.id));
+                    if (availableRelics.length > 0) {
+                        const relic = availableRelics[Math.floor(Math.random() * availableRelics.length)];
+                        newRelics.push(relic);
+                        message += ` Gained relic: ${relic.name}.`;
+                    }
+                    break;
+                case 'add_status_card':
+                    const statusCard = GAME_DATA.cards[effect.statusId as keyof typeof GAME_DATA.cards];
+                    if (statusCard) {
+                        newDeck.push({ ...statusCard, id: `${statusCard.id}_${Date.now()}` });
+                        message += ` Added ${statusCard.name} to deck.`;
+                    }
+                    break;
+                case 'random_chance':
+                    const successRoll = Math.random() * 100;
+                    if (successRoll < (effect.chance || 50)) {
+                        effect.successEffects?.forEach(e => processEffect(e));
+                    } else {
+                        effect.failureEffects?.forEach(e => processEffect(e));
+                    }
+                    break;
+                case 'fight_elite':
+                    // This will trigger an elite fight - handled separately
+                    message += ' Elite encounter triggered!';
+                    break;
+                case 'nothing':
+                default:
+                    message += ' Nothing happened.';
+                    break;
+            }
+        };
+
+        choice.effects.forEach(e => processEffect(e));
+
+        // Check for elite fight
+        const triggerEliteFight = choice.effects.some(e => e.type === 'fight_elite');
+
+        if (triggerEliteFight) {
+            const eliteEnemies = getEliteEncounter();
+            return startCombat({ ...prev, currentEvent: undefined }, prev, eliteEnemies, 'Elite Encounter!' + message);
+        }
+
+        // Mark node as completed
+        let newMap = [...prev.map];
+        if (prev.currentMapPosition) {
+            const { floor, nodeId } = prev.currentMapPosition;
+            newMap[floor - 1] = newMap[floor - 1].map(n => n.id === nodeId ? { ...n, completed: true } : n);
+        }
+
+        return {
+            ...prev,
+            playerStats: newStats,
+            deck: newDeck,
+            relics: newRelics,
+            map: newMap,
+            status: 'MAP',
+            currentEvent: undefined,
+            message: `${choice.label}:${message}`
         };
     });
 };
@@ -2024,6 +1048,7 @@ if (gameState.status === 'MAP') {
                 <MapScreen
                     map={gameState.map}
                     currentFloor={gameState.currentMapPosition ? gameState.currentMapPosition.floor : 0}
+                    currentNodeId={gameState.currentMapPosition?.nodeId || null}
                     onNodeSelect={handleNodeSelect}
                 />
             </main>
@@ -2163,6 +1188,104 @@ if (gameState.status === 'VENDOR') {
                     <button onClick={handleLeaveNode} className="text-gray-400 hover:text-white flex items-center gap-2">
                         Leave Shop <ArrowRight size={16} />
                     </button>
+                </div>
+            </div>
+            <DevConsole />
+        </div>
+    );
+}
+
+// --- EVENT SCREEN ---
+if (gameState.status === 'EVENT' && gameState.currentEvent) {
+    const event = gameState.currentEvent;
+
+    const checkCondition = (choice: EventChoice): boolean => {
+        if (!choice.condition) return true;
+        const { type, operator, value } = choice.condition;
+
+        if (type === 'gold') {
+            return operator === '>=' ? gameState.playerStats.capital >= value : gameState.playerStats.capital < value;
+        }
+        if (type === 'hp') {
+            return operator === '>=' ? gameState.playerStats.hp >= value : gameState.playerStats.hp < value;
+        }
+        if (type === 'upgraded_cards') {
+            const upgradedCount = gameState.deck.filter(c => c.name.endsWith('+')).length;
+            return operator === '>=' ? upgradedCount >= value : upgradedCount < value;
+        }
+        return true;
+    };
+
+    return (
+        <div className="min-h-screen bg-black/95 flex flex-col items-center justify-center p-8">
+            <div className="w-full max-w-2xl bg-surface border border-blue-500/30 rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(59,130,246,0.1)]">
+                {/* Event Header */}
+                <div className="bg-blue-900/30 border-b border-blue-500/20 p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="p-3 bg-blue-500/20 rounded-full">
+                            <HelpCircle size={32} className="text-blue-400" />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-display font-bold text-white">{event.name}</h2>
+                            <span className="text-xs font-mono text-blue-400 uppercase tracking-wider">Opportunity Event</span>
+                        </div>
+                    </div>
+                    <p className="text-gray-300 leading-relaxed italic">"{event.description}"</p>
+                </div>
+
+                {/* Choices */}
+                <div className="p-6 space-y-4">
+                    {event.choices.map((choice, index) => {
+                        const isAvailable = checkCondition(choice);
+                        return (
+                            <button
+                                key={choice.id}
+                                onClick={() => isAvailable && handleEventChoice(choice)}
+                                disabled={!isAvailable}
+                                className={`
+                                    w-full p-4 rounded-xl border text-left transition-all
+                                    ${isAvailable
+                                        ? 'border-gray-700 bg-black/40 hover:border-blue-500/50 hover:bg-blue-500/10 cursor-pointer'
+                                        : 'border-gray-800 bg-gray-900/30 opacity-50 cursor-not-allowed'}
+                                `}
+                            >
+                                <div className="flex items-start gap-4">
+                                    <div className={`
+                                        w-8 h-8 rounded-full flex items-center justify-center font-bold font-mono text-sm
+                                        ${isAvailable ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-800 text-gray-600'}
+                                    `}>
+                                        {index + 1}
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className={`font-bold mb-1 ${isAvailable ? 'text-white' : 'text-gray-500'}`}>
+                                            {choice.label}
+                                        </div>
+                                        <div className={`text-sm ${isAvailable ? 'text-gray-400' : 'text-gray-600'}`}>
+                                            {choice.description}
+                                        </div>
+                                        {!isAvailable && choice.condition && (
+                                            <div className="text-xs text-red-400 mt-2 flex items-center gap-1">
+                                                <X size={12} /> Requires: {choice.condition.type} {choice.condition.operator} {choice.condition.value}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* Footer Stats */}
+                <div className="bg-black/40 border-t border-gray-800 px-6 py-4 flex justify-between items-center text-sm font-mono">
+                    <div className="flex items-center gap-4 text-gray-500">
+                        <span className="flex items-center gap-1">
+                            <Battery size={14} className="text-primary" /> {gameState.playerStats.hp}/{gameState.playerStats.maxHp}k
+                        </span>
+                        <span className="flex items-center gap-1">
+                            <DollarSign size={14} className="text-warning" /> ${gameState.playerStats.capital}k
+                        </span>
+                    </div>
+                    <span className="text-gray-600">Deck: {gameState.deck.length} cards</span>
                 </div>
             </div>
             <DevConsole />
