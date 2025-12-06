@@ -1,5 +1,6 @@
 import { CardData, GameState, EnemyIntent, MapLayer, MapNode, MapNodeType, CharacterStats, RelicData, EntityStatus, EnemyData, CardEffect, PlayerStatuses, EnemyStatuses, EncounterTemplate } from './types.ts';
 import { GAME_DATA, MAX_HAND_SIZE, MAP_CONFIG, ENCOUNTER_TEMPLATES } from './constants.ts';
+import { getGlobalLogger } from './logger.ts';
 
 // --- Math Helpers ---
 
@@ -89,9 +90,11 @@ export const processDrawnCards = (
         if (nextHand.length < MAX_HAND_SIZE) {
             nextHand.push(card);
             actualDrawn.push(card);
+            getGlobalLogger().log('CARD_ADDED_TO_HAND', `Added ${card.name} to hand.`);
         } else {
             nextDiscard.push(card);
             newMessage += ` (Hand full! Burned ${card.name})`;
+            getGlobalLogger().log('CARD_BURNED', `Hand full, ${card.name} burned to discard.`);
             continue;
         }
 
@@ -99,11 +102,13 @@ export const processDrawnCards = (
         if (card.effects?.some(e => e.type === 'lose_bandwidth') && card.unplayable) {
             nextStats.bandwidth = Math.max(0, nextStats.bandwidth - 1);
             newMessage += ` (Legacy Code drained 1 Bandwidth!)`;
+            getGlobalLogger().log('LEGACY_CODE_EFFECT', `Legacy Code drained 1 Bandwidth.`);
         }
 
         // Evolve
         if (card.type === 'status' && nextStats.statuses.evolve > 0 && nextStats.statuses.noDraw === 0) {
             safety++;
+            getGlobalLogger().log('EVOLVE_TRIGGER', `Evolve triggered, drawing ${nextStats.statuses.evolve} cards.`);
             const evolveResult = drawCards(currentDrawPile, nextDiscard, nextStats.statuses.evolve);
             currentDrawPile = evolveResult.newDraw;
             nextDiscard = evolveResult.newDiscard;
@@ -115,10 +120,10 @@ export const processDrawnCards = (
 };
 
 export const upgradeCard = (card: CardData): CardData => {
-    if (card.upgraded) return card;
+    if (card.name.endsWith('+')) return card;
     if (card.id === 'cto_refactor') {
         const upgradedEffects = [{ type: 'block', value: 9, target: 'self' }, { type: 'exhaust_targeted', value: 1, target: 'self' }] as CardEffect[];
-        return { ...card, name: card.name + "+", upgraded: { name: card.name + "+", effects: upgradedEffects }, effects: upgradedEffects, description: "Gain 9 Mitigation. Exhaust a card." };
+        return { ...card, name: card.name + "+", effects: upgradedEffects, description: "Gain 9 Mitigation. Exhaust a card." };
     }
     const newEffects = card.effects.map(effect => {
         if (effect.type === 'damage' || effect.type === 'block') return { ...effect, value: effect.value + 3 };
@@ -130,7 +135,7 @@ export const upgradeCard = (card: CardData): CardData => {
     let newDesc = card.description.replace(/\d+/, (match) => (parseInt(match) + 3).toString());
     if (card.id === 'cto_brute_force') newDesc = newDesc.replace('3 times', '5 times');
     if (card.id === 'cto_tooling') newDesc = newDesc.replace('a card', 'ALL cards');
-    return { ...card, name: card.name + "+", upgraded: { name: card.name + "+", effects: newEffects }, effects: newEffects, description: newDesc };
+    return { ...card, name: card.name + "+", effects: newEffects, description: newDesc };
 };
 
 // --- Relic Helpers ---
@@ -149,6 +154,7 @@ export const applyCombatStartRelics = (currentStats: CharacterStats, relics: Rel
         if (relic.trigger === 'combat_start' && relic.effect.type === 'block') {
             newStats.mitigation += relic.effect.value || 0;
             messages.push(`${relic.name}: +${relic.effect.value} Mitigation`);
+            getGlobalLogger().log('RELIC_EFFECT', `${relic.name} applied ${relic.effect.value} block at combat start.`);
         }
 
         // Sticky Note: Apply 1 Vulnerable to ALL enemies
@@ -157,12 +163,14 @@ export const applyCombatStartRelics = (currentStats: CharacterStats, relics: Rel
                 e.statuses.vulnerable += relic.effect.value || 1;
             });
             messages.push(`${relic.name}: All enemies Vulnerable!`);
+            getGlobalLogger().log('RELIC_EFFECT', `${relic.name} applied vulnerable to all enemies at combat start.`);
         }
 
         // Fresh Eyes: Passive +1 Strength (applied at combat start)
         if (relic.trigger === 'passive' && relic.effect.type === 'strength') {
             newStats.statuses.strength += relic.effect.value || 1;
             messages.push(`${relic.name}: +${relic.effect.value} Strength`);
+            getGlobalLogger().log('RELIC_EFFECT', `${relic.name} applied ${relic.effect.value} strength at combat start.`);
         }
 
         // Aggressive Growth: Enemies start with +1 Strength
@@ -171,6 +179,7 @@ export const applyCombatStartRelics = (currentStats: CharacterStats, relics: Rel
                 e.statuses.strength += relic.effect.enemy_strength || 0;
             });
             messages.push(`${relic.name}: Enemies have +${relic.effect.enemy_strength} Strength`);
+            getGlobalLogger().log('RELIC_EFFECT', `${relic.name} applied ${relic.effect.enemy_strength} strength to enemies at combat start.`);
         }
     });
 
@@ -188,7 +197,10 @@ export const applyCombatEndRelics = (currentStats: CharacterStats, relics: Relic
             const oldHp = newStats.hp;
             newStats.hp = Math.min(newStats.maxHp, newStats.hp + healAmount);
             const actualHeal = newStats.hp - oldHp;
-            if (actualHeal > 0) messages.push(`${relic.name}: +${actualHeal} Runway`);
+            if (actualHeal > 0) {
+                messages.push(`${relic.name}: +${actualHeal} Runway`);
+                getGlobalLogger().log('RELIC_EFFECT', `${relic.name} healed ${actualHeal} HP at combat end.`);
+            }
         }
 
         // Second Wind: If HP ≤50%, heal 12
@@ -199,7 +211,10 @@ export const applyCombatEndRelics = (currentStats: CharacterStats, relics: Relic
                 const oldHp = newStats.hp;
                 newStats.hp = Math.min(newStats.maxHp, newStats.hp + healAmount);
                 const actualHeal = newStats.hp - oldHp;
-                if (actualHeal > 0) messages.push(`${relic.name}: +${actualHeal} Runway (Second Wind!)`);
+                if (actualHeal > 0) {
+                    messages.push(`${relic.name}: +${actualHeal} Runway (Second Wind!)`);
+                    getGlobalLogger().log('RELIC_EFFECT', `${relic.name} healed ${actualHeal} HP (conditional) at combat end.`);
+                }
             }
         }
     });
@@ -213,10 +228,12 @@ export const getTurnStartBandwidth = (relics: RelicData[], turn: number = 1): nu
         // Coffee Drip, Rate Limiter, Cutting Corners, No Rest, Aggressive Growth: +1 every turn
         if (relic.trigger === 'turn_start' && relic.effect.type === 'gain_bandwidth') {
             bandwidth += relic.effect.value || 0;
+            getGlobalLogger().log('RELIC_EFFECT', `${relic.name} granted ${relic.effect.value} bandwidth at turn start.`);
         }
         // Fresh Start: +1 on first turn only
         if (relic.trigger === 'first_turn' && relic.effect.type === 'gain_bandwidth' && turn === 1) {
             bandwidth += relic.effect.value || 0;
+            getGlobalLogger().log('RELIC_EFFECT', `${relic.name} granted ${relic.effect.value} bandwidth on first turn.`);
         }
     });
     return bandwidth;
@@ -232,6 +249,7 @@ export const applyTurnEndRelics = (currentStats: CharacterStats, relics: RelicDa
             if (newStats.mitigation === 0) {
                 newStats.mitigation += relic.effect.value || 6;
                 messages.push(`${relic.name}: +${relic.effect.value} Mitigation (fallback)`);
+                getGlobalLogger().log('RELIC_EFFECT', `${relic.name} granted ${relic.effect.value} block at turn end (conditional).`);
             }
         }
     });
@@ -250,6 +268,7 @@ export const applyOnAttackRelics = (relics: RelicData[], stats: CharacterStats):
             bonusDamage += relic.effect.value || 8;
             relic.usedThisCombat = true;
             messages.push(`${relic.name}: +${relic.effect.value} damage!`);
+            getGlobalLogger().log('RELIC_EFFECT', `${relic.name} granted ${relic.effect.value} bonus damage on first attack.`);
         }
 
         // Increment attack counter for attack-count based relics
@@ -263,13 +282,15 @@ export const applyOnAttackRelics = (relics: RelicData[], stats: CharacterStats):
                 // Momentum: +1 Strength every 3 attacks
                 if (relic.effect.type === 'strength_per_attacks') {
                     newStats.statuses.strength += relic.effect.value || 1;
-                    messages.push(`${relic.name}: +${relic.effect.value} Strength!`);
+                    messages.push(`${relic.name}: +${relic.effect.value} Execution Power!`);
+                    getGlobalLogger().log('RELIC_EFFECT', `${relic.name} granted ${relic.effect.value} Execution Power.`);
                 }
 
                 // Focus Mode: +4 Block every 3 attacks
                 if (relic.effect.type === 'block_per_attacks') {
                     newStats.mitigation += relic.effect.value || 4;
                     messages.push(`${relic.name}: +${relic.effect.value} Mitigation!`);
+                    getGlobalLogger().log('RELIC_EFFECT', `${relic.name} granted ${relic.effect.value} Mitigation.`);
                 }
             }
         }
@@ -289,6 +310,7 @@ export const applyOnEnemyDeathRelics = (relics: RelicData[], stats: CharacterSta
             newStats.bandwidth += relic.effect.value || 1;
             drawCards += relic.effect.value || 1;
             messages.push(`${relic.name}: +${relic.effect.value} Bandwidth, Draw ${relic.effect.value}!`);
+            getGlobalLogger().log('RELIC_EFFECT', `${relic.name} granted ${relic.effect.value} bandwidth and draw on enemy death.`);
         }
     });
 
@@ -305,6 +327,7 @@ export const applyOnDamagedRelics = (relics: RelicData[], damageAmount: number, 
             if (relic.trigger === 'on_damaged' && relic.effect.type === 'thorns') {
                 thornsDamage += relic.effect.value || 3;
                 messages.push(`${relic.name}: ${relic.effect.value} damage reflected!`);
+                getGlobalLogger().log('RELIC_EFFECT', `${relic.name} reflected ${relic.effect.value} damage.`);
             }
         });
     }
@@ -965,7 +988,7 @@ const getNextIntent = (enemy: EnemyData, turn: number, playerHp: number): EnemyI
             const dmg = 6 + enemy.statuses.strength;
             return { type: 'attack', value: dmg, icon: 'attack', description: "Skull Bash (Vuln)" };
         }
-        const dmg = 14 + enemy.statuses.strength;
+        const dmg = 12 + enemy.statuses.strength;
         return { type: 'attack', value: dmg, icon: 'attack', description: "Rush" };
     }
 
@@ -1026,15 +1049,37 @@ const getNextIntent = (enemy: EnemyData, turn: number, playerHp: number): EnemyI
 };
 
 export const resolveEndTurn = (prev: GameState): GameState => {
+    getGlobalLogger().log('TURN_END', 'Player Turn Ended');
+
     let nextPlayerStatuses = { ...prev.playerStats.statuses };
     let nextMitigation = prev.playerStats.mitigation;
     let endTurnMessage = 'Enemy is executing intent...';
 
-    if (nextPlayerStatuses.vulnerable > 0) nextPlayerStatuses.vulnerable--;
-    if (nextPlayerStatuses.weak > 0) nextPlayerStatuses.weak--;
-    if (nextPlayerStatuses.noDraw > 0) nextPlayerStatuses.noDraw = 0;
+    // Decrement player statuses
+    if (nextPlayerStatuses.vulnerable > 0) {
+        nextPlayerStatuses.vulnerable--;
+        if (nextPlayerStatuses.vulnerable === 0) getGlobalLogger().log('STATUS_EXPIRED', 'Exposed expired');
+    }
+    if (nextPlayerStatuses.weak > 0) {
+        nextPlayerStatuses.weak--;
+        if (nextPlayerStatuses.weak === 0) getGlobalLogger().log('STATUS_EXPIRED', 'Drained expired');
+    }
+    if (nextPlayerStatuses.frail > 0) {
+        nextPlayerStatuses.frail--;
+        if (nextPlayerStatuses.frail === 0) getGlobalLogger().log('STATUS_EXPIRED', 'Frail expired');
+    }
+    // Clear No Draw
+    if (nextPlayerStatuses.noDraw > 0) {
+        getGlobalLogger().log('STATUS_CLEARED', 'NoDraw cleared');
+        nextPlayerStatuses.noDraw = 0;
+    }
 
-    if (nextPlayerStatuses.metallicize > 0) nextMitigation += nextPlayerStatuses.metallicize;
+    // Apply Metallicize
+    if (nextPlayerStatuses.metallicize > 0) {
+        nextMitigation += nextPlayerStatuses.metallicize;
+        endTurnMessage += ` Metallicize: +${nextPlayerStatuses.metallicize} Mitigation.`;
+        getGlobalLogger().log('BLOCK_GAINED', `Metallicize triggered`, { amount: nextPlayerStatuses.metallicize });
+    }
 
     const cardsToDiscard: CardData[] = [];
     const cardsToExhaust: CardData[] = [];
@@ -1047,22 +1092,36 @@ export const resolveEndTurn = (prev: GameState): GameState => {
             const burnDamage = card.effects.find(e => e.type === 'lose_hp_turn_end')?.value || 0;
             currentHp = Math.max(0, currentHp - burnDamage);
             endTurnMessage += ` Burnout: -${burnDamage} Runway.`;
+            getGlobalLogger().log('CARD_EFFECT_END_TURN', `Burnout from ${card.name} dealt ${burnDamage} Burn.`, { cardName: card.name, damage: burnDamage });
 
             // Antifragile Trigger
             if (nextPlayerStatuses.antifragile > 0) {
                 nextPlayerStatuses.strength += nextPlayerStatuses.antifragile;
-                endTurnMessage += ` (Antifragile: +${nextPlayerStatuses.antifragile} STR)`;
+                endTurnMessage += ` (Antifragile: +${nextPlayerStatuses.antifragile} Execution Power)`;
+                getGlobalLogger().log('STATUS_EFFECT', `Antifragile triggered, gained ${nextPlayerStatuses.antifragile} Execution Power.`);
             }
         }
 
-        if (card.ethereal) cardsToExhaust.push(card);
-        else if (card.retain) cardsToRetain.push(card);
-        else cardsToDiscard.push(card);
+        if (card.ethereal) {
+            cardsToExhaust.push(card);
+            getGlobalLogger().log('CARD_EXHAUSTED', `${card.name} exhausted due to Ethereal.`);
+        }
+        else if (card.retain) {
+            cardsToRetain.push(card);
+            getGlobalLogger().log('CARD_RETAINED', `${card.name} retained.`);
+        }
+        else {
+            cardsToDiscard.push(card);
+            getGlobalLogger().log('CARD_DISCARDED', `${card.name} discarded.`);
+        }
     });
 
     if (cardsToExhaust.length > 0) {
         endTurnMessage += ` ${cardsToExhaust.length} card(s) faded away.`;
-        if (nextPlayerStatuses.feelNoPain > 0) nextMitigation += (nextPlayerStatuses.feelNoPain * cardsToExhaust.length);
+        if (nextPlayerStatuses.feelNoPain > 0) {
+            nextMitigation += (nextPlayerStatuses.feelNoPain * cardsToExhaust.length);
+            getGlobalLogger().log('STATUS_EFFECT', `Feel No Pain triggered, gained ${nextPlayerStatuses.feelNoPain * cardsToExhaust.length} block.`);
+        }
     }
     if (cardsToRetain.length > 0) endTurnMessage += ` Retained ${cardsToRetain.length} card(s).`;
 
@@ -1078,17 +1137,38 @@ export const resolveEndTurn = (prev: GameState): GameState => {
 };
 
 export const resolveEnemyTurn = (prev: GameState): GameState => {
+    getGlobalLogger().log('TURN_START', `Enemy Turn Started`);
+
     let newPlayerHp = prev.playerStats.hp;
     let newMitigation = prev.playerStats.mitigation;
     let newPlayerStatuses = { ...prev.playerStats.statuses };
     let newMessage = '';
     let newEnemies = prev.enemies.map(e => ({ ...e, statuses: { ...e.statuses } }));
-    let enemiesToSpawn: EnemyData[] = [];
+    const enemiesToSpawn: EnemyData[] = [];
     let nextDrawPile = [...prev.drawPile];
 
     newEnemies.forEach(enemy => {
         if (enemy.hp <= 0) return;
         const intent = enemy.currentIntent;
+
+        getGlobalLogger().log('ENEMY_ACTION', `${enemy.name} executing ${intent.type}`, { enemyName: enemy.name, intentType: intent.type, intentDescription: intent.description });
+
+        // Handle Slime Boss Split regardless of intent type (can be set to 'unknown' when triggered by thorns)
+        if (intent.description === 'Splitting...' && enemy.id === 'boss_the_monolith') {
+            const currentBossHp = Math.max(1, enemy.hp);
+
+            // Remove the main boss
+            enemy.hp = 0;
+
+            // Spawn the two medium slimes (Acid L / Spike L)
+            const acidSlimeL = { ...GAME_DATA.enemies.legacy_module, id: `legacy_module_${Date.now()}_A`, hp: currentBossHp, maxHp: currentBossHp };
+            const spikeSlimeL = { ...GAME_DATA.enemies.merge_conflict, id: `merge_conflict_${Date.now()}_B`, hp: currentBossHp, maxHp: currentBossHp };
+
+            enemiesToSpawn.push(acidSlimeL, spikeSlimeL);
+            newMessage += ` ${enemy.name} Split into two!`;
+            getGlobalLogger().log('BOSS_MECHANIC', `The Goliath split into ${acidSlimeL.name} and ${spikeSlimeL.name}.`);
+            return;
+        }
 
         if (intent.type === 'attack') {
             let attackValue = intent.value;
@@ -1097,128 +1177,181 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
                 const dmgPerHit = Math.floor(newPlayerHp / 12) + 1;
                 attackValue = dmgPerHit * hits;
                 newMessage += ` Divider dealt ${hits}x${dmgPerHit} damage!`;
+                getGlobalLogger().log('ENEMY_ATTACK_SPECIAL', `Boss Burn Rate Divider: ${hits} hits, ${dmgPerHit} per hit.`);
             }
 
             const damage = calculateDamage(attackValue, enemy.statuses, newPlayerStatuses);
             let unblockedDamage = damage;
 
             if (newPlayerStatuses.thorns > 0) {
-                enemy.hp -= newPlayerStatuses.thorns;
-                newMessage += ` Thorns dealt ${newPlayerStatuses.thorns} to ${enemy.name}.`;
+                const thornsDamage = newPlayerStatuses.thorns;
+                enemy.hp = Math.max(0, enemy.hp - thornsDamage);
+                newMessage += ` Thorns dealt ${thornsDamage} to ${enemy.name}.`;
+                getGlobalLogger().log('DAMAGE_DEALT', `Thorns dealt ${thornsDamage} to ${enemy.name}.`);
+
+                // Check for Split Trigger (Thorns Damage)
+                if (enemy.id === 'boss_the_monolith' && enemy.hp <= enemy.maxHp / 2 && enemy.currentIntent.type !== 'unknown') {
+                    enemy.currentIntent = {
+                        type: 'unknown',
+                        value: 0,
+                        icon: 'unknown',
+                        description: 'Splitting...'
+                    };
+                    newMessage += ` ${enemy.name} is preparing to split!`;
+                    getGlobalLogger().log('BOSS_MECHANIC', `${enemy.name} triggered Split from Thorns!`);
+                }
             }
 
             if (newMitigation > 0) {
                 const blocked = Math.min(newMitigation, unblockedDamage);
                 newMitigation -= blocked;
                 unblockedDamage -= blocked;
+                getGlobalLogger().log('DAMAGE_BLOCKED', `Blocked ${blocked} damage from ${enemy.name}.`);
             }
             newPlayerHp -= unblockedDamage;
-            if (unblockedDamage > 0) newMessage += ` ${enemy.name} caused ${unblockedDamage} Burn.`;
-            else newMessage += ` Blocked ${enemy.name}.`;
+            if (unblockedDamage > 0) {
+                newMessage += ` ${enemy.name} caused ${unblockedDamage} Burn.`;
+                getGlobalLogger().log('DAMAGE_TAKEN', `${enemy.name} hit player for ${unblockedDamage} unblocked Burn. Player HP: ${newPlayerHp}`);
+            } else {
+                newMessage += ` Blocked ${enemy.name}.`;
+            }
 
             // Handle combo attacks that deal damage + apply status
             if (intent.description.includes('Rake') || intent.description.includes('Spit Web')) {
                 newPlayerStatuses.weak += 2;
-                newMessage += ` Applied 2 Weak.`;
+                newMessage += ` Applied 2 Drained.`;
+                getGlobalLogger().log('STATUS_APPLIED', `Enemy applied 2 Drained.`);
             }
             if (intent.description.includes('Scrape')) {
                 newPlayerStatuses.vulnerable += 2;
-                newMessage += ` Applied 2 Vulnerable.`;
+                newMessage += ` Applied 2 Exposed.`;
+                getGlobalLogger().log('STATUS_APPLIED', `Enemy applied 2 Exposed.`);
             }
             if (intent.description.includes('Thrash')) {
                 enemy.mitigation += 5;
-                newMessage += ` ${enemy.name} gained 5 Block.`;
+                newMessage += ` ${enemy.name} Thrashed! (+5 Mitigation)`;
+                getGlobalLogger().log('ENEMY_BUFF', `${enemy.name} gained 5 Mitigation.`);
             }
             if (intent.description.includes('Skull Bash')) {
                 newPlayerStatuses.vulnerable += 2;
-                newMessage += ` Applied 2 Vulnerable.`;
+                newMessage += ` Applied 2 Exposed.`;
+                getGlobalLogger().log('STATUS_APPLIED', `Enemy applied 2 Exposed.`);
             }
             // Whirlwind (x4): 5*4 = 20 damage total
             if (intent.description.includes('Whirlwind')) {
                 // Multi-hit already factored into damage value
                 newMessage += ` (x4 hits)`;
+                getGlobalLogger().log('ENEMY_ATTACK_SPECIAL', `Whirlwind: 4 hits.`);
             }
             // Inferno (x6): 2*6 = 12 damage total
             if (intent.description.includes('Inferno')) {
                 newMessage += ` (x6 hits)`;
+                getGlobalLogger().log('ENEMY_ATTACK_SPECIAL', `Inferno: 6 hits.`);
             }
             // Twin Slam: Exit defensive mode for The Pivot
             if (intent.description.includes('Twin Slam') && enemy.id === 'boss_the_pivot') {
                 enemy.statuses.asleep = 0; // Exit defensive mode
                 enemy.statuses.thorns = 0; // Remove Sharp Hide
                 newMessage += ` Exited Defensive Mode!`;
+                getGlobalLogger().log('BOSS_MECHANIC', `The Pivot exited Defensive Mode.`);
             }
+
             // Vent Steam: Applies both Vuln and Weak
             if (intent.description.includes('Vent Steam')) {
                 newPlayerStatuses.vulnerable += 2;
                 newPlayerStatuses.weak += 2;
-                newMessage += ` Applied 2 Vuln + 2 Weak.`;
+                newMessage += ` Applied 2 Exposed + 2 Drained.`;
+                getGlobalLogger().log('STATUS_APPLIED', `Enemy applied 2 Exposed and 2 Drained.`);
             }
         } else if (intent.type === 'buff') {
             if (intent.description.includes('Growth') || intent.description.includes('Ritual') || intent.description.includes('Grow')) {
                 enemy.statuses.strength += intent.value;
-                newMessage += ` ${enemy.name} gained ${intent.value} Strength.`;
+                newMessage += ` ${enemy.name} gained ${intent.value} Execution Power.`;
+                getGlobalLogger().log('ENEMY_BUFF', `${enemy.name} gained ${intent.value} Execution Power.`);
             } else if (intent.description.includes('Bellow')) {
                 // Jaw Worm Bellow: +3 Str, +6 Block
                 enemy.statuses.strength += 3;
                 enemy.mitigation += 6;
-                newMessage += ` ${enemy.name} Bellowed! (+3 Str, +6 Block)`;
+                newMessage += ` ${enemy.name} Bellowed! (+3 Pwr, +6 Mitigation)`;
+                getGlobalLogger().log('ENEMY_BUFF', `${enemy.name} Bellowed (+3 Power, +6 Mitigation).`);
             } else if (intent.description.includes('Block') || intent.description.includes('Barricade') || intent.description.includes('Charging')) {
                 enemy.mitigation += intent.value;
-                newMessage += ` ${enemy.name} gained ${intent.value} Block.`;
+                newMessage += ` ${enemy.name} gained ${intent.value} Mitigation.`;
+                getGlobalLogger().log('ENEMY_BUFF', `${enemy.name} gained ${intent.value} Mitigation.`);
             } else if (intent.description.includes('Escape')) {
                 enemy.hp = 0;
                 enemy.maxHp = 0;
                 newMessage += ` ${enemy.name} Escaped with your capital!`;
+                getGlobalLogger().log('ENEMY_ACTION_SPECIAL', `${enemy.name} escaped.`);
             } else if (intent.description.includes('Split') && enemy.id === 'boss_the_monolith') {
                 const acidL = { ...GAME_DATA.enemies.legacy_module, id: `legacy_module_split_${Date.now()}_acid`, hp: 70, maxHp: 70 };
                 const spikeL = { ...GAME_DATA.enemies.merge_conflict, id: `merge_conflict_split_${Date.now()}_spike`, hp: 70, maxHp: 70 };
                 enemiesToSpawn.push(acidL, spikeL);
                 enemy.hp = 0;
                 newMessage += ` ${enemy.name} Split into two!`;
+                getGlobalLogger().log('BOSS_MECHANIC', `${enemy.name} split into two new enemies.`);
             } else if (intent.description.includes('Enrage')) {
                 // Gremlin Nob setup - Enrage is tracked, triggered when player plays skills
-                newMessage += ` ${enemy.name} is enraged! (+2 Str per skill)`;
+                newMessage += ` ${enemy.name} is enraged! (+2 Pwr per skill)`;
+                getGlobalLogger().log('ENEMY_BUFF', `${enemy.name} is enraged.`);
             }
         } else if (intent.type === 'debuff') {
             if (intent.description.includes('Entangle')) {
                 // Red Slaver Entangle - prevents playing attacks for 1 turn
                 newMessage += ` ${enemy.name} Entangled you! (Cannot play attacks this turn)`;
+                getGlobalLogger().log('STATUS_APPLIED', `Player entangled.`);
             } else if (enemy.id.startsWith('legacy_') && intent.description.includes('Shuffle Bugs')) {
                 const bugCard = GAME_DATA.cards.card_bug;
                 nextDrawPile.push({ ...bugCard, id: `card_bug_${Date.now()}_1` }, { ...bugCard, id: `card_bug_${Date.now()}_2` });
                 nextDrawPile = shuffle(nextDrawPile);
                 newMessage += ` ${enemy.name} shuffled 2 Bugs into your roadmap!`;
+                getGlobalLogger().log('CARD_EFFECT_ENEMY', `Enemy shuffled 2 Bugs into player's draw pile.`);
             } else if (intent.description.includes('Slimed')) {
                 const slime = { ...GAME_DATA.cards.status_scope_creep, id: `status_scope_creep_${Date.now()}` };
                 nextDrawPile.push(slime);
                 nextDrawPile = shuffle(nextDrawPile);
                 newMessage += ` ${enemy.name} Slimed you!`;
+                getGlobalLogger().log('CARD_EFFECT_ENEMY', `Enemy slimed player.`);
             } else if (intent.description.includes('Weak')) {
                 newPlayerStatuses.weak += intent.value;
-                newMessage += ` ${enemy.name} applied ${intent.value} Weak.`;
+                newMessage += ` ${enemy.name} applied ${intent.value} Drained.`;
+                getGlobalLogger().log('STATUS_APPLIED', `Enemy applied ${intent.value} Drained.`);
             } else if (intent.description.includes('Vulnerable')) {
                 newPlayerStatuses.vulnerable += intent.value;
-                newMessage += ` ${enemy.name} applied ${intent.value} Vulnerable.`;
+                newMessage += ` ${enemy.name} applied ${intent.value} Exposed.`;
+                getGlobalLogger().log('STATUS_APPLIED', `Enemy applied ${intent.value} Exposed.`);
             } else if (intent.description.includes('Frail')) {
                 newPlayerStatuses.frail += intent.value;
                 newMessage += ` ${enemy.name} applied ${intent.value} Frail.`;
+                getGlobalLogger().log('STATUS_APPLIED', `Enemy applied ${intent.value} Frail.`);
             } else if (intent.description.includes('Siphon')) {
                 // Over-Engineer Siphon: -1 Strength (can go negative)
                 newPlayerStatuses.strength -= 1;
-                newMessage += ` ${enemy.name} Siphoned! (-1 Strength)`;
+                getGlobalLogger().log('STATUS_APPLIED', `Enemy Siphoned 1 Execution Power.`);
             }
         }
 
-        if (enemy.statuses.vulnerable > 0) enemy.statuses.vulnerable--;
-        if (enemy.statuses.weak > 0) enemy.statuses.weak--;
-        if (enemy.statuses.growth > 0) enemy.statuses.strength += enemy.statuses.growth;
+        // Decrement enemy statuses
+        if (enemy.statuses.vulnerable > 0) {
+            enemy.statuses.vulnerable--;
+            if (enemy.statuses.vulnerable === 0) getGlobalLogger().log('STATUS_EXPIRED', `${enemy.name} Exposed expired.`);
+        }
+        if (enemy.statuses.weak > 0) {
+            enemy.statuses.weak--;
+            if (enemy.statuses.weak === 0) getGlobalLogger().log('STATUS_EXPIRED', `${enemy.name} Drained expired.`);
+        }
+        if (enemy.statuses.growth > 0) {
+            enemy.statuses.strength += enemy.statuses.growth;
+            getGlobalLogger().log('ENEMY_BUFF', `${enemy.name} gained ${enemy.statuses.growth} Execution Power from Momentum.`);
+        }
+
+        // Reset block then apply Metallicize at end of enemy turn
+        enemy.mitigation = 0;
         if (enemy.statuses.metallicize > 0) {
             enemy.mitigation += enemy.statuses.metallicize;
-            newMessage += ` ${enemy.name} hardened (+${enemy.statuses.metallicize} Blk).`;
+            newMessage += ` ${enemy.name} hardened (+${enemy.statuses.metallicize} Auto-Mitigation).`;
+            getGlobalLogger().log('ENEMY_BUFF', `${enemy.name} gained ${enemy.statuses.metallicize} Mitigation from Auto-Mitigation.`);
         }
-        enemy.mitigation = 0; // Clear block at start of enemy turn action
-        if (enemy.statuses.metallicize > 0) enemy.mitigation += enemy.statuses.metallicize;
     });
 
     if (enemiesToSpawn.length > 0) newEnemies = [...newEnemies, ...enemiesToSpawn];
@@ -1227,6 +1360,7 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
     if (newPlayerHp <= 0) {
         newStatus = 'GAME_OVER';
         newMessage = "RUNWAY DEPLETED. STARTUP FAILED.";
+        getGlobalLogger().log('GAME_OVER', 'Player HP reached 0.');
     }
 
     let earnedCapital = 0;
@@ -1236,21 +1370,26 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
     if (newEnemies.every(e => e.hp <= 0) && newStatus !== 'GAME_OVER') {
         newStatus = 'VICTORY';
         newMessage = "PROBLEM SOLVED.";
+        getGlobalLogger().log('COMBAT_VICTORY', 'All enemies defeated.');
         newEnemies.forEach(enemyData => {
             if (enemyData.maxHp === 0) return;
             if (enemyData.rewards) {
                 const { min, max } = enemyData.rewards.capital;
-                earnedCapital += Math.floor(Math.random() * (max - min + 1)) + min;
+                const capitalGained = Math.floor(Math.random() * (max - min + 1)) + min;
+                earnedCapital += capitalGained;
+                getGlobalLogger().log('REWARD_CAPITAL', `Gained ${capitalGained} capital from ${enemyData.name}.`);
                 if (enemyData.type === 'elite') {
                     const hasCoffee = prev.relics.some(r => r.id === 'relic_coffee_drip');
                     if (!hasCoffee && !earnedRelic) {
                         earnedRelic = GAME_DATA.relics.coffee_drip;
                         newRelics.push(earnedRelic);
                         newMessage += ` Found Relic: ${earnedRelic.name}.`;
+                        getGlobalLogger().log('REWARD_RELIC', `Found relic: ${earnedRelic.name}.`);
                     }
                 }
             } else {
                 earnedCapital += 15;
+                getGlobalLogger().log('REWARD_CAPITAL', `Gained 15 capital from ${enemyData.name} (default).`);
             }
         });
         newMessage += ` Earned $${earnedCapital}k Capital.`;
@@ -1260,6 +1399,7 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
     newEnemies.forEach(enemy => {
         if (enemy.hp > 0) {
             enemy.currentIntent = getNextIntent(enemy, nextTurn, newPlayerHp);
+            getGlobalLogger().log('ENEMY_INTENT_SET', `${enemy.name} intent set to ${enemy.currentIntent.type}.`);
         }
     });
 
@@ -1273,11 +1413,18 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
     };
 
     if (newStatus === 'VICTORY') {
-        nextPlayerStats.capital += earnedCapital;
+        // Don't auto-apply gold - player will claim it from reward screen
+        // nextPlayerStats.capital += earnedCapital;  // REMOVED - now handled in App.tsx
         const { stats: afterRelicStats, message: relicMsg } = applyCombatEndRelics(nextPlayerStats, newRelics);
         nextPlayerStats = afterRelicStats;
         if (relicMsg) newMessage += ` ${relicMsg}`;
     }
+
+    // Generate card rewards for victory
+    const cardRewards = newStatus === 'VICTORY' ? getRandomRewardCards(3) : [];
+
+    // Check if any enemy gives card rewards
+    const shouldGetCardReward = newStatus === 'VICTORY' && newEnemies.some(e => e.rewards?.card_reward !== false);
 
     let nextState = {
         ...prev,
@@ -1287,7 +1434,13 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
         turn: nextTurn,
         status: newStatus,
         message: newMessage,
-        lastVictoryReward: newStatus === 'VICTORY' ? { capital: earnedCapital, relic: earnedRelic } : undefined
+        lastVictoryReward: newStatus === 'VICTORY' ? {
+            capital: earnedCapital,
+            cardRewards: shouldGetCardReward ? cardRewards : [],
+            relic: earnedRelic,
+            goldCollected: false,
+            cardCollected: false
+        } : undefined
     };
 
     if (newStatus === 'PLAYING') {
@@ -1309,13 +1462,28 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
     const costPaid = card.cost === -1 ? prev.playerStats.bandwidth : card.cost;
 
     if (prev.playerStats.bandwidth < costPaid) {
+        getGlobalLogger().warn('CARD_PLAY_FAILED', `Not enough Bandwidth to play ${card.name}. Required: ${costPaid}, Available: ${prev.playerStats.bandwidth}`);
         return { ...prev, message: "Not enough Bandwidth to deploy component." };
     }
+
+    getGlobalLogger().log('CARD_PLAY', `Played ${card.name}`, {
+        cardName: card.name,
+        cardId: card.id,
+        cardCost: costPaid,
+        cardType: card.type,
+        target: target === 'enemy' && targetEnemyId ? targetEnemyId : 'Self'
+    });
 
     let newEnemies = prev.enemies.map(e => ({ ...e, statuses: { ...e.statuses } }));
     const targetId = targetEnemyId || prev.selectedEnemyId || (newEnemies.length > 0 ? newEnemies[0].id : undefined);
     const targetEnemyIndex = newEnemies.findIndex(e => e.id === targetId);
     let targetEnemy = targetEnemyIndex !== -1 ? newEnemies[targetEnemyIndex] : null;
+
+    if (!targetEnemy && target === 'enemy') {
+        console.log(`DEBUG: resolveCardEffect target missing/invalid. TargetID: ${targetId}, Enemies: ${newEnemies.map(e => e.id).join(', ')}`);
+    } else if (target === 'enemy') {
+        // console.log(`DEBUG: resolveCardEffect target found: ${targetEnemy?.id}`);
+    }
 
     let newMessage = `Deployed ${card.name}.`;
     let newStatus = prev.status;
@@ -1330,7 +1498,8 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
     let newDrawPile = [...prev.drawPile];
     let newDiscardPile = [...prev.discardPile];
     let newExhaustPile = [...prev.exhaustPile];
-    let currentHand = [...prev.hand.filter(c => c.id !== card.id)];
+    // Fix: Remove specific card instance by reference to avoid removing duplicates with same ID
+    let currentHand = prev.hand.filter(c => c !== card);
 
     const executeEffect = (effect: CardEffect, loops: number = 1) => {
         for (let i = 0; i < loops; i++) {
@@ -1341,38 +1510,56 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
 
                 targets.forEach(t => {
                     let finalDamage = calculateDamage(effect.value, prev.playerStats.statuses, t.statuses, effect.strengthMultiplier || 1);
-                    if (t.statuses.vulnerable > 0) newMessage += " (Vuln!)";
-                    if (prev.playerStats.statuses.weak > 0) newMessage += " (Weak...)";
+                    if (t.statuses.vulnerable > 0) newMessage += " (Exposed!)";
+                    if (prev.playerStats.statuses.weak > 0) newMessage += " (Drained...)";
 
                     if (t.mitigation > 0) {
                         const blocked = Math.min(t.mitigation, finalDamage);
                         t.mitigation -= blocked;
                         finalDamage -= blocked;
                         newMessage += ` (${blocked} Blocked)`;
+                        getGlobalLogger().log('DAMAGE_BLOCKED', `Blocked ${blocked} Burn to ${t.name}.`);
                     }
 
+                    const hpBefore = t.hp;
                     t.hp = Math.max(0, t.hp - finalDamage);
-                    newMessage += ` Dealt ${finalDamage} execution.`;
+                    newMessage += ` Dealt ${finalDamage} Burn.`;
+                    getGlobalLogger().log('DAMAGE_DEALT', `Dealt ${finalDamage} Burn to ${t.name}. HP: ${hpBefore} -> ${t.hp}`);
+
+                    // Check for Split Trigger (Direct Damage)
+                    if (t.id === 'boss_the_monolith' && t.hp <= t.maxHp / 2 && t.currentIntent.type !== 'unknown') {
+                        t.currentIntent = {
+                            type: 'unknown',
+                            value: 0,
+                            icon: 'unknown',
+                            description: 'Splitting...'
+                        };
+                        getGlobalLogger().log('BOSS_MECHANIC', `${t.name} triggered Split!`);
+                    }
 
                     if (t.statuses.curlUp > 0 && finalDamage > 0) {
                         t.mitigation += t.statuses.curlUp;
                         t.statuses.curlUp = 0;
-                        newMessage += ` ${t.name} Curled Up! (+${t.statuses.curlUp} Blk)`;
+                        newMessage += ` ${t.name} Curled Up! (+${t.statuses.curlUp} Mit)`;
+                        getGlobalLogger().log('ENEMY_STATUS_EFFECT', `${t.name} Curled Up, gained ${t.statuses.curlUp} Mitigation.`);
                     }
                     if (t.statuses.malleable > 0 && finalDamage > 0) {
                         t.mitigation += t.statuses.malleable;
                         t.statuses.malleable += 1;
-                        newMessage += ` ${t.name} is Malleable! (+${t.statuses.malleable} Blk)`;
+                        newMessage += ` ${t.name} is Malleable! (+${t.statuses.malleable} Mit)`;
+                        getGlobalLogger().log('ENEMY_STATUS_EFFECT', `${t.name} is Malleable, gained ${t.statuses.malleable} Mitigation.`);
                     }
                     if (t.statuses.asleep > 0 && finalDamage > 0) {
                         t.statuses.asleep = 0;
                         newMessage += ` ${t.name} Woke Up!`;
+                        getGlobalLogger().log('ENEMY_STATUS_EFFECT', `${t.name} Woke Up.`);
                     }
                 });
 
                 if (newEnemies.every(e => e.hp <= 0)) {
                     newStatus = 'VICTORY';
                     newMessage = "PROBLEM SOLVED. FEATURE DEPLOYED.";
+                    getGlobalLogger().log('COMBAT_VICTORY', 'All enemies defeated by card effect.');
                 }
             } else if (effect.type === 'damage_scale_mitigation') {
                 // Body Slam: Damage = Mitigation
@@ -1386,9 +1573,12 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                         const blocked = Math.min(t.mitigation, finalDamage);
                         t.mitigation -= blocked;
                         finalDamage -= blocked;
+                        getGlobalLogger().log('DAMAGE_BLOCKED', `Blocked ${blocked} damage to ${t.name}.`);
                     }
+                    const hpBefore = t.hp;
                     t.hp = Math.max(0, t.hp - finalDamage);
                     newMessage += ` Dealt ${finalDamage} (Mitigation-based).`;
+                    getGlobalLogger().log('DAMAGE_DEALT', `Dealt ${finalDamage} damage to ${t.name} (mitigation-based). HP: ${hpBefore} -> ${t.hp}`);
                 });
             } else if (effect.type === 'damage_scale_matches') {
                 // Perfected Strike: Damage scales with matches in deck
@@ -1398,6 +1588,7 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                 const matches = countCardsMatches(combatDeck, matchString);
                 const bonus = matches * (effect.value === 6 ? 2 : 2); // Hardcoded +2 per match for now based on description
                 const totalDmg = effect.value + bonus;
+                getGlobalLogger().log('CARD_EFFECT_SPECIAL', `Damage scaled by matches: ${matches} matches, total damage ${totalDmg}.`);
 
                 let targets: EnemyData[] = [];
                 if (target === 'enemy' && targetEnemy) targets = [targetEnemy];
@@ -1408,18 +1599,24 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                         const blocked = Math.min(t.mitigation, finalDamage);
                         t.mitigation -= blocked;
                         finalDamage -= blocked;
+                        getGlobalLogger().log('DAMAGE_BLOCKED', `Blocked ${blocked} damage to ${t.name}.`);
                     }
+                    const hpBefore = t.hp;
                     t.hp = Math.max(0, t.hp - finalDamage);
                     newMessage += ` Dealt ${finalDamage} (${matches} matches).`;
+                    getGlobalLogger().log('DAMAGE_DEALT', `Dealt ${finalDamage} damage to ${t.name} (scaled by matches). HP: ${hpBefore} -> ${t.hp}`);
                 });
             } else if (effect.type === 'block') {
                 let blockAmount = effect.value;
                 if (newPlayerStatuses.frail > 0) blockAmount = Math.floor(blockAmount * 0.75);
                 newMitigation += blockAmount;
                 newMessage += ` gained ${blockAmount} Mitigation.`;
+                getGlobalLogger().log('BLOCK_GAINED', `Gained ${blockAmount} Mitigation. Player total: ${newMitigation}`);
             } else if (effect.type === 'draw') {
-                if (newPlayerStatuses.noDraw > 0) newMessage += ` (Draw prevented)`;
-                else {
+                if (newPlayerStatuses.noDraw > 0) {
+                    newMessage += ` (Draw prevented)`;
+                    getGlobalLogger().log('CARD_EFFECT_BLOCKED', `Draw prevented by NoDraw status.`);
+                } else {
                     const result = drawCards(newDrawPile, newDiscardPile, effect.value);
 
                     const currentStats = { ...prev.playerStats, bandwidth: newBandwidth, statuses: newPlayerStatuses, mitigation: newMitigation };
@@ -1623,6 +1820,10 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
         }
     });
 
+    // Generate card rewards for victory
+    const cardRewards = newStatus === 'VICTORY' ? getRandomRewardCards(3) : [];
+    const shouldGetCardReward = newStatus === 'VICTORY' && prev.enemies.some(e => e.rewards?.card_reward !== false);
+
     return {
         ...prev,
         playerStats: {
@@ -1630,7 +1831,8 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
             mitigation: newMitigation,
             bandwidth: newBandwidth,
             statuses: newPlayerStatuses,
-            capital: prev.playerStats.capital + earnedCapital
+            // Don't auto-apply capital - player will claim from reward screen
+            capital: prev.playerStats.capital
         },
         hand: [...currentHand, ...drawnCards],
         drawPile: newDrawPile,
@@ -1642,6 +1844,12 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
         pendingDiscard: newPendingDiscard,
         pendingSelection: newPendingSelection,
         relics: newRelics,
-        lastVictoryReward: newStatus === 'VICTORY' ? { capital: earnedCapital, relic: earnedRelic } : undefined
+        lastVictoryReward: newStatus === 'VICTORY' ? {
+            capital: earnedCapital,
+            cardRewards: shouldGetCardReward ? cardRewards : [],
+            relic: earnedRelic,
+            goldCollected: false,
+            cardCollected: false
+        } : undefined
     };
 };

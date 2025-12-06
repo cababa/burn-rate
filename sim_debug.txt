@@ -1,0 +1,435 @@
+Running 5 simulations...
+Running 5 simulations...
+Unhandled State: MAP
+=== SIMULATION 0 LOG ===
+=== TURN 0 | FLOOR 1 ===
+[COMBAT_START] Starting Simulation #0
+[CARD_PLAY] Played Hotfix (2 energy) targeting Self
+[DAMAGE_DEALT] Dealt 8 Burn to The Hype Man. HP: 50 -> 42
+[CARD_PLAY] Played Commit (1 energy) targeting Self
+[DAMAGE_DEALT] Dealt 9 Burn to The Hype Man. HP: 42 -> 33
+[TURN_END] Player Turn Ended
+[CARD_DISCARDED] Rollback discarded.
+[CARD_DISCARDED] Commit discarded.
+[CARD_DISCARDED] Commit discarded.
+[TURN_START] Enemy Turn Started
+[ENEMY_ACTION] The Hype Man executing buff
+[ENEMY_INTENT_SET] The Hype Man intent set to attack.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 5
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 10
+[CARD_PLAY] Played Commit (1 energy) targeting Self
+[DAMAGE_DEALT] Dealt 9 Burn to The Hype Man. HP: 33 -> 24
+[TURN_END] Player Turn Ended
+[CARD_DISCARDED] Commit discarded.
+[CARD_DISCARDED] Rollback discarded.
+[TURN_START] Enemy Turn Started
+[ENEMY_ACTION] The Hype Man executing attack
+[DAMAGE_BLOCKED] Blocked 6 damage from The Hype Man.
+[STATUS_EXPIRED] The Hype Man Exposed expired.
+[ENEMY_INTENT_SET] The Hype Man intent set to attack.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 5
+[CARD_PLAY] Played Commit (1 energy) targeting Self
+[DAMAGE_DEALT] Dealt 6 Burn to The Hype Man. HP: 24 -> 18
+[CARD_PLAY] Played Commit (1 energy) targeting Self
+[DAMAGE_DEALT] Dealt 6 Burn to The Hype Man. HP: 18 -> 12
+[TURN_END] Player Turn Ended
+[CARD_DISCARDED] Commit discarded.
+[CARD_DISCARDED] Commit discarded.
+[TURN_START] Enemy Turn Started
+[ENEMY_ACTION] The Hype Man executing attack
+[DAMAGE_BLOCKED] Blocked 5 damage from The Hype Man.
+[DAMAGE_TAKEN] The Hype Man hit player for 1 unblocked Burn. Player HP: 74
+[ENEMY_INTENT_SET] The Hype Man intent set to attack.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Hotfix to hand.
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 5
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 10
+[CARD_PLAY] Played Commit (1 energy) targeting Self
+[DAMAGE_DEALT] Dealt 6 Burn to The Hype Man. HP: 12 -> 6
+[TURN_END] Player Turn Ended
+[CARD_DISCARDED] Rollback discarded.
+[CARD_DISCARDED] Hotfix discarded.
+[TURN_START] Enemy Turn Started
+[ENEMY_ACTION] The Hype Man executing attack
+[DAMAGE_BLOCKED] Blocked 6 damage from The Hype Man.
+[ENEMY_INTENT_SET] The Hype Man intent set to attack.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Hotfix to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 5
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 10
+[CARD_PLAY] Played Commit (1 energy) targeting Self
+[DAMAGE_DEALT] Dealt 6 Burn to The Hype Man. HP: 6 -> 0
+[COMBAT_VICTORY] All enemies defeated by card effect.
+[CARD_PLAY] Played Hotfix (2 energy) targeting Self
+[DAMAGE_DEALT] Dealt 8 Burn to The Hype Man. HP: 50 -> 42
+[CARD_PLAY] Played Commit (1 energy) targeting Self
+[DAMAGE_DEALT] Dealt 9 Burn to The Hype Man. HP: 42 -> 33
+[TURN_END] Player Turn Ended
+[CARD_DISCARDED] Rollback discarded.
+[CARD_DISCARDED] Rollback discarded.
+[CARD_DISCARDED] Commit discarded.
+[TURN_START] Enemy Turn Started
+[ENEMY_ACTION] The Hype Man executing buff
+[ENEMY_INTENT_SET] The Hype Man intent set to attack.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Root Cause to hand.
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 5
+[CARD_PLAY] Played Root Cause (2 energy) targeting Self
+[DAMAGE_DEALT] Dealt 19 Burn to The Hype Man. HP: 33 -> 14
+[TURN_END] Player Turn Ended
+[CARD_DISCARDED] Commit discarded.
+[CARD_DISCARDED] Commit discarded.
+[CARD_DISCARDED] Commit discarded.
+[TURN_START] Enemy Turn Started
+[ENEMY_ACTION] The Hype Man executing attack
+[DAMAGE_BLOCKED] Blocked 4 damage from The Hype Man.
+[STATUS_EXPIRED] The Hype Man Drained expired.
+[ENEMY_INTENT_SET] The Hype Man intent set to attack.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Hotfix to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 5
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 10
+[CARD_PLAY] Played Commit (1 energy) targeting Self
+[DAMAGE_DEALT] Dealt 9 Burn to The Hype Man. HP: 14 -> 5
+[TURN_END] Player Turn Ended
+[CARD_DISCARDED] Hotfix discarded.
+[CARD_DISCARDED] Rollback discarded.
+[TURN_START] Enemy Turn Started
+[ENEMY_ACTION] The Hype Man executing attack
+[DAMAGE_BLOCKED] Blocked 6 damage from The Hype Man.
+[STATUS_EXPIRED] The Hype Man Exposed expired.
+[ENEMY_INTENT_SET] The Hype Man intent set to attack.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Root Cause to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 5
+[CARD_PLAY] Played Root Cause (2 energy) targeting Self
+[DAMAGE_DEALT] Dealt 13 Burn to The Hype Man. HP: 5 -> 0
+[COMBAT_VICTORY] All enemies defeated by card effect.
+[CARD_PLAY] Played Hotfix (2 energy) targeting Self
+[DAMAGE_DEALT] Dealt 8 Burn to The Hype Man. HP: 50 -> 42
+[CARD_PLAY] Played Commit (1 energy) targeting Self
+[DAMAGE_DEALT] Dealt 9 Burn to The Hype Man. HP: 42 -> 33
+[TURN_END] Player Turn Ended
+[CARD_DISCARDED] Rollback discarded.
+[CARD_DISCARDED] Commit discarded.
+[CARD_DISCARDED] Commit discarded.
+[TURN_START] Enemy Turn Started
+[ENEMY_ACTION] The Hype Man executing buff
+[ENEMY_INTENT_SET] The Hype Man intent set to attack.
+[CARD_ADDED_TO_HAND] Added YOLO Deploy to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Root Cause to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 5
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 10
+[CARD_PLAY] Played YOLO Deploy (1 energy) targeting Self
+[TURN_END] Player Turn Ended
+[CARD_DISCARDED] Commit discarded.
+[TURN_START] Enemy Turn Started
+[ENEMY_ACTION] The Hype Man executing attack
+[DAMAGE_BLOCKED] Blocked 6 damage from The Hype Man.
+[STATUS_EXPIRED] The Hype Man Exposed expired.
+[ENEMY_INTENT_SET] The Hype Man intent set to attack.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 5
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 10
+[CARD_PLAY] Played Commit (1 energy) targeting Self
+[DAMAGE_DEALT] Dealt 6 Burn to The Hype Man. HP: 33 -> 27
+[TURN_END] Player Turn Ended
+[CARD_DISCARDED] Commit discarded.
+[CARD_DISCARDED] Commit discarded.
+[TURN_START] Enemy Turn Started
+[ENEMY_ACTION] The Hype Man executing attack
+[DAMAGE_BLOCKED] Blocked 6 damage from The Hype Man.
+[ENEMY_INTENT_SET] The Hype Man intent set to attack.
+[CARD_ADDED_TO_HAND] Added YOLO Deploy to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Legacy Code to hand.
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 5
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 10
+[CARD_PLAY] Played YOLO Deploy (1 energy) targeting Self
+[TURN_END] Player Turn Ended
+[CARD_DISCARDED] Commit discarded.
+[CARD_RETAINED] Legacy Code retained.
+[TURN_START] Enemy Turn Started
+[ENEMY_ACTION] The Hype Man executing attack
+[DAMAGE_BLOCKED] Blocked 6 damage from The Hype Man.
+[ENEMY_INTENT_SET] The Hype Man intent set to attack.
+[CARD_ADDED_TO_HAND] Added Hotfix to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Legacy Code to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 5
+[CARD_PLAY] Played Hotfix (2 energy) targeting Self
+[DAMAGE_DEALT] Dealt 8 Burn to The Hype Man. HP: 27 -> 19
+[TURN_END] Player Turn Ended
+[CARD_RETAINED] Legacy Code retained.
+[CARD_DISCARDED] Commit discarded.
+[CARD_RETAINED] Legacy Code retained.
+[CARD_DISCARDED] Commit discarded.
+[TURN_START] Enemy Turn Started
+[ENEMY_ACTION] The Hype Man executing attack
+[DAMAGE_BLOCKED] Blocked 5 damage from The Hype Man.
+[DAMAGE_TAKEN] The Hype Man hit player for 1 unblocked Burn. Player HP: 73
+[ENEMY_INTENT_SET] The Hype Man intent set to attack.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added YOLO Deploy to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 5
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 10
+[CARD_PLAY] Played Commit (1 energy) targeting Self
+[DAMAGE_DEALT] Dealt 9 Burn to The Hype Man. HP: 19 -> 10
+[TURN_END] Player Turn Ended
+[CARD_RETAINED] Legacy Code retained.
+[CARD_RETAINED] Legacy Code retained.
+[CARD_DISCARDED] YOLO Deploy discarded.
+[CARD_DISCARDED] Commit discarded.
+[TURN_START] Enemy Turn Started
+[ENEMY_ACTION] The Hype Man executing attack
+[DAMAGE_BLOCKED] Blocked 6 damage from The Hype Man.
+[STATUS_EXPIRED] The Hype Man Exposed expired.
+[ENEMY_INTENT_SET] The Hype Man intent set to attack.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 5
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 10
+[CARD_PLAY] Played Commit (1 energy) targeting Self
+[DAMAGE_DEALT] Dealt 6 Burn to The Hype Man. HP: 10 -> 4
+[TURN_END] Player Turn Ended
+[CARD_RETAINED] Legacy Code retained.
+[CARD_RETAINED] Legacy Code retained.
+[CARD_DISCARDED] Commit discarded.
+[CARD_DISCARDED] Commit discarded.
+[TURN_START] Enemy Turn Started
+[ENEMY_ACTION] The Hype Man executing attack
+[DAMAGE_BLOCKED] Blocked 6 damage from The Hype Man.
+[ENEMY_INTENT_SET] The Hype Man intent set to attack.
+[CARD_ADDED_TO_HAND] Added Hotfix to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added YOLO Deploy to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 5
+[CARD_PLAY] Played Hotfix (2 energy) targeting Self
+[DAMAGE_DEALT] Dealt 8 Burn to The Hype Man. HP: 4 -> 0
+[COMBAT_VICTORY] All enemies defeated by card effect.
+[CARD_PLAY] Played Root Cause (2 energy) targeting Self
+[DAMAGE_DEALT] Dealt 13 Burn to The Hype Man. HP: 50 -> 37
+[CARD_PLAY] Played Talent Poach (1 energy) targeting Self
+[TURN_END] Player Turn Ended
+[CARD_DISCARDED] Rollback discarded.
+[CARD_DISCARDED] Commit discarded.
+[CARD_DISCARDED] Rollback discarded.
+[TURN_START] Enemy Turn Started
+[ENEMY_ACTION] The Hype Man executing buff
+[STATUS_EXPIRED] The Hype Man Exposed expired.
+[STATUS_EXPIRED] The Hype Man Drained expired.
+[ENEMY_INTENT_SET] The Hype Man intent set to attack.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 5
+[CARD_PLAY] Played Commit (1 energy) targeting Self
+[DAMAGE_DEALT] Dealt 6 Burn to The Hype Man. HP: 37 -> 31
+[CARD_PLAY] Played Commit (1 energy) targeting Self
+[DAMAGE_DEALT] Dealt 6 Burn to The Hype Man. HP: 31 -> 25
+[TURN_END] Player Turn Ended
+[CARD_DISCARDED] Commit discarded.
+[CARD_DISCARDED] Commit discarded.
+[TURN_START] Enemy Turn Started
+[ENEMY_ACTION] The Hype Man executing attack
+[DAMAGE_BLOCKED] Blocked 2 damage from The Hype Man.
+[ENEMY_INTENT_SET] The Hype Man intent set to attack.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added YOLO Deploy to hand.
+[CARD_ADDED_TO_HAND] Added Hotfix to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Root Cause to hand.
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 5
+[CARD_PLAY] Played Hotfix (2 energy) targeting Self
+[DAMAGE_DEALT] Dealt 8 Burn to The Hype Man. HP: 25 -> 17
+[TURN_END] Player Turn Ended
+[CARD_DISCARDED] YOLO Deploy discarded.
+[CARD_DISCARDED] Commit discarded.
+[CARD_DISCARDED] Root Cause discarded.
+[TURN_START] Enemy Turn Started
+[ENEMY_ACTION] The Hype Man executing attack
+[DAMAGE_BLOCKED] Blocked 2 damage from The Hype Man.
+[ENEMY_INTENT_SET] The Hype Man intent set to attack.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 5
+[CARD_PLAY] Played Commit (1 energy) targeting Self
+[DAMAGE_DEALT] Dealt 9 Burn to The Hype Man. HP: 17 -> 8
+[CARD_PLAY] Played Commit (1 energy) targeting Self
+[DAMAGE_DEALT] Dealt 9 Burn to The Hype Man. HP: 8 -> 0
+[COMBAT_VICTORY] All enemies defeated by card effect.
+[CARD_PLAY] Played YOLO Deploy (1 energy) targeting Self
+[CARD_PLAY] Played Commit (1 energy) targeting Self
+[DAMAGE_DEALT] Dealt 6 Burn to The Hype Man. HP: 50 -> 44
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 10
+[TURN_END] Player Turn Ended
+[CARD_DISCARDED] Rollback discarded.
+[CARD_DISCARDED] Dual Track discarded.
+[TURN_START] Enemy Turn Started
+[ENEMY_ACTION] The Hype Man executing buff
+[ENEMY_INTENT_SET] The Hype Man intent set to attack.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Root Cause to hand.
+[CARD_ADDED_TO_HAND] Added Talent Poach to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 5
+[CARD_PLAY] Played Root Cause (2 energy) targeting Self
+[DAMAGE_DEALT] Dealt 13 Burn to The Hype Man. HP: 44 -> 31
+[TURN_END] Player Turn Ended
+[CARD_DISCARDED] Talent Poach discarded.
+[CARD_DISCARDED] Commit discarded.
+[CARD_DISCARDED] Commit discarded.
+[TURN_START] Enemy Turn Started
+[ENEMY_ACTION] The Hype Man executing attack
+[DAMAGE_BLOCKED] Blocked 4 damage from The Hype Man.
+[STATUS_EXPIRED] The Hype Man Exposed expired.
+[STATUS_EXPIRED] The Hype Man Drained expired.
+[ENEMY_INTENT_SET] The Hype Man intent set to attack.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Hotfix to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 5
+[CARD_PLAY] Played Hotfix (2 energy) targeting Self
+[DAMAGE_DEALT] Dealt 8 Burn to The Hype Man. HP: 31 -> 23
+[TURN_END] Player Turn Ended
+[CARD_DISCARDED] Commit discarded.
+[CARD_DISCARDED] Commit discarded.
+[CARD_DISCARDED] Commit discarded.
+[TURN_START] Enemy Turn Started
+[ENEMY_ACTION] The Hype Man executing attack
+[DAMAGE_BLOCKED] Blocked 5 damage from The Hype Man.
+[DAMAGE_TAKEN] The Hype Man hit player for 1 unblocked Burn. Player HP: 72
+[ENEMY_INTENT_SET] The Hype Man intent set to attack.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Talent Poach to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_ADDED_TO_HAND] Added Dual Track to hand.
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 5
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 10
+[CARD_PLAY] Played Commit (1 energy) targeting Self
+[DAMAGE_DEALT] Dealt 9 Burn to The Hype Man. HP: 23 -> 14
+[TURN_END] Player Turn Ended
+[CARD_DISCARDED] Talent Poach discarded.
+[CARD_DISCARDED] Dual Track discarded.
+[TURN_START] Enemy Turn Started
+[ENEMY_ACTION] The Hype Man executing attack
+[DAMAGE_BLOCKED] Blocked 6 damage from The Hype Man.
+[STATUS_EXPIRED] The Hype Man Exposed expired.
+[ENEMY_INTENT_SET] The Hype Man intent set to attack.
+[CARD_ADDED_TO_HAND] Added YOLO Deploy to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Root Cause to hand.
+[CARD_ADDED_TO_HAND] Added Legacy Code to hand.
+[CARD_ADDED_TO_HAND] Added Rollback to hand.
+[CARD_PLAY] Played Rollback (1 energy) targeting Self
+[BLOCK_GAINED] Gained 5 Mitigation. Player total: 5
+[CARD_PLAY] Played Root Cause (2 energy) targeting Self
+[DAMAGE_DEALT] Dealt 13 Burn to The Hype Man. HP: 14 -> 1
+[TURN_END] Player Turn Ended
+[CARD_DISCARDED] Commit discarded.
+[CARD_RETAINED] Legacy Code retained.
+[TURN_START] Enemy Turn Started
+[ENEMY_ACTION] The Hype Man executing attack
+[DAMAGE_BLOCKED] Blocked 4 damage from The Hype Man.
+[STATUS_EXPIRED] The Hype Man Exposed expired.
+[STATUS_EXPIRED] The Hype Man Drained expired.
+[ENEMY_INTENT_SET] The Hype Man intent set to attack.
+[CARD_ADDED_TO_HAND] Added Root Cause to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_ADDED_TO_HAND] Added Commit to hand.
+[CARD_PLAY] Played Root Cause (2 energy) targeting Self
+[DAMAGE_DEALT] Dealt 13 Burn to The Hype Man. HP: 1 -> 0
+[COMBAT_VICTORY] All enemies defeated by card effect.
+========================
+Unhandled State: MAP
+Unhandled State: MAP
+Unhandled State: DISCARD_SELECTION
+Unhandled State: MAP
+Results: 0/5 Wins.
+Max Floor Reached: 7

@@ -83,9 +83,13 @@ const App: React.FC = () => {
         setGameState(prev => {
             const nextRelics = earnedRelic ? [...prev.relics, earnedRelic] : prev.relics;
 
-            let nextStats = { ...prev.playerStats, capital: prev.playerStats.capital + earnedCapital };
+            // Don't auto-apply capital - use new reward system
+            let nextStats = { ...prev.playerStats };
             // Apply combat end relics (Heal)
             const { stats: afterRelicStats, message: relicMsg } = applyCombatEndRelics(nextStats, nextRelics);
+
+            // Generate card rewards
+            const cardRewards = getRandomRewardCards(3);
 
             return {
                 ...prev,
@@ -93,7 +97,13 @@ const App: React.FC = () => {
                 status: 'VICTORY',
                 message: `DEV: Force Kill Executed. ${relicMsg}`,
                 playerStats: afterRelicStats,
-                lastVictoryReward: { capital: earnedCapital, relic: earnedRelic },
+                lastVictoryReward: {
+                    capital: earnedCapital,
+                    cardRewards: cardRewards,
+                    relic: earnedRelic,
+                    goldCollected: false,
+                    cardCollected: false
+                },
                 relics: nextRelics
             };
         });
@@ -397,28 +407,46 @@ const App: React.FC = () => {
     };
 
 
-    // --- Transition Logic ---
+    // --- Reward Collection Handlers (StS-style) ---
 
-    const handleVictoryProceed = () => {
-        setGameState(prev => ({
-            ...prev,
-            status: 'REWARD_SELECTION',
-            rewardOptions: getRandomRewardCards(3),
-            message: "Select a component to add to your stack.",
-            lastVictoryReward: undefined
-        }));
+    const handleTakeGold = () => {
+        setGameState(prev => {
+            if (!prev.lastVictoryReward || prev.lastVictoryReward.goldCollected) return prev;
+            return {
+                ...prev,
+                playerStats: { ...prev.playerStats, capital: prev.playerStats.capital + prev.lastVictoryReward.capital },
+                lastVictoryReward: { ...prev.lastVictoryReward, goldCollected: true },
+                message: `Collected $${prev.lastVictoryReward.capital}k Capital!`
+            };
+        });
     };
 
-    const handleSelectReward = (card: CardData | null) => {
+    const handleTakeCard = (card: CardData) => {
         setGameState(prev => {
-            let newDeck = [...prev.deck]; // Use Master Deck
-            let newMessage = "Reward skipped.";
+            if (!prev.lastVictoryReward || prev.lastVictoryReward.cardCollected) return prev;
+            return {
+                ...prev,
+                deck: [...prev.deck, card],
+                lastVictoryReward: { ...prev.lastVictoryReward, cardCollected: true },
+                message: `Added ${card.name} to deck!`
+            };
+        });
+    };
 
-            if (card) {
-                newDeck.push(card);
-                newMessage = `Added ${card.name} to deck.`;
-            }
+    const handleSkipCard = () => {
+        setGameState(prev => {
+            if (!prev.lastVictoryReward) return prev;
+            return {
+                ...prev,
+                lastVictoryReward: { ...prev.lastVictoryReward, cardCollected: true },
+                message: 'Skipped card reward.'
+            };
+        });
+    };
 
+    const handleVictoryProceed = () => {
+        setGameState(prev => {
+            // Mark current node as completed
             let newMap = [...prev.map];
             if (prev.currentMapPosition) {
                 const { floor, nodeId } = prev.currentMapPosition;
@@ -429,18 +457,23 @@ const App: React.FC = () => {
 
             return {
                 ...prev,
-                deck: newDeck,
                 map: newMap,
                 status: 'MAP',
-                message: newMessage,
+                message: 'Returning to map...',
+                lastVictoryReward: undefined,
                 rewardOptions: [],
-                // Reset piles for safety, though handleNodeSelect does it too
                 hand: [],
                 drawPile: [],
                 discardPile: [],
                 exhaustPile: []
             };
         });
+    };
+
+    // Legacy handler kept for compatibility
+    const handleSelectReward = (card: CardData | null) => {
+        if (card) handleTakeCard(card);
+        else handleSkipCard();
     };
 
     const handleNodeSelect = (node: MapNode) => {
@@ -1438,35 +1471,92 @@ const App: React.FC = () => {
 
                 {gameState.status === 'VICTORY' && (
                     <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                        <div className="relative z-50 bg-surface border border-primary p-8 rounded-2xl flex flex-col items-center text-center max-w-md shadow-[0_0_50px_rgba(0,255,136,0.1)]">
+                        <div className="relative z-50 bg-surface border border-primary p-8 rounded-2xl flex flex-col items-center text-center max-w-2xl shadow-[0_0_50px_rgba(0,255,136,0.1)]">
                             <CheckCircle2 size={48} className="text-primary mb-4" />
                             <h2 className="text-3xl font-display font-bold text-white mb-2">Problem Solved</h2>
                             <p className="text-gray-400 mb-6">The bug has been fixed and deployed to production.</p>
 
-                            {/* Rewards Summary */}
+                            {/* Rewards Section */}
                             {gameState.lastVictoryReward && (
-                                <div className="bg-black/40 p-4 rounded-lg w-full mb-6 flex flex-col gap-2">
-                                    <div className="text-xs text-gray-500 font-mono uppercase tracking-widest text-left">Rewards Acquired</div>
-                                    <div className="flex items-center gap-2 text-warning font-mono font-bold">
-                                        <DollarSign size={16} />
-                                        <span>${gameState.lastVictoryReward.capital}k Capital</span>
+                                <div className="w-full space-y-4 mb-6">
+                                    {/* Gold Reward */}
+                                    <div className={`bg-black/40 p-4 rounded-lg flex items-center justify-between ${gameState.lastVictoryReward.goldCollected ? 'opacity-50' : ''}`}>
+                                        <div className="flex items-center gap-3">
+                                            <DollarSign size={24} className="text-warning" />
+                                            <div className="text-left">
+                                                <div className="text-warning font-mono font-bold text-lg">${gameState.lastVictoryReward.capital}k Capital</div>
+                                                <div className="text-xs text-gray-500">Funding from problem resolution</div>
+                                            </div>
+                                        </div>
+                                        {!gameState.lastVictoryReward.goldCollected ? (
+                                            <button
+                                                onClick={handleTakeGold}
+                                                className="bg-warning/20 border border-warning text-warning px-4 py-2 rounded font-mono text-sm hover:bg-warning hover:text-black transition-colors"
+                                            >
+                                                Take Gold
+                                            </button>
+                                        ) : (
+                                            <span className="text-primary font-mono text-sm">✓ Collected</span>
+                                        )}
                                     </div>
-                                    {gameState.lastVictoryReward.relic && (
-                                        <div className="relative group flex items-center gap-2 text-purple-400 font-mono font-bold animate-pulse cursor-help">
-                                            <Gem size={16} />
-                                            <span>Relic: {gameState.lastVictoryReward.relic.name}</span>
 
-                                            {/* Tooltip */}
-                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 p-3 bg-gray-900 border border-purple-500/50 rounded shadow-2xl hidden group-hover:block z-[100] text-left pointer-events-none">
-                                                <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/10">
-                                                    <span className="text-2xl">{gameState.lastVictoryReward.relic.icon}</span>
-                                                    <div>
-                                                        <div className="text-purple-400 font-bold text-sm">{gameState.lastVictoryReward.relic.name}</div>
-                                                        <div className="text-[10px] text-gray-500 uppercase">{gameState.lastVictoryReward.relic.rarity} Relic</div>
+                                    {/* Card Reward */}
+                                    {gameState.lastVictoryReward.cardRewards.length > 0 && (
+                                        <div className={`bg-black/40 p-4 rounded-lg ${gameState.lastVictoryReward.cardCollected ? 'opacity-50' : ''}`}>
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <Gift size={20} className="text-primary" />
+                                                <span className="text-white font-mono">Card Reward</span>
+                                                {gameState.lastVictoryReward.cardCollected && (
+                                                    <span className="text-primary font-mono text-sm ml-auto">✓ Collected</span>
+                                                )}
+                                            </div>
+                                            {!gameState.lastVictoryReward.cardCollected ? (
+                                                <>
+                                                    <div className="flex gap-4 justify-center mb-3">
+                                                        {gameState.lastVictoryReward.cardRewards.map((card) => (
+                                                            <div
+                                                                key={card.id}
+                                                                onClick={() => handleTakeCard(card)}
+                                                                className="cursor-pointer hover:scale-105 transition-transform duration-150"
+                                                            >
+                                                                <Card card={card} onDragStart={() => { }} disabled={false} />
+                                                            </div>
+                                                        ))}
                                                     </div>
+                                                    <button
+                                                        onClick={handleSkipCard}
+                                                        className="text-gray-500 hover:text-white font-mono text-xs flex items-center gap-1 mx-auto"
+                                                    >
+                                                        Skip Card <ArrowRight size={12} />
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <div className="text-gray-500 text-sm italic">Card selected</div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Relic Reward - Full Display */}
+                                    {gameState.lastVictoryReward.relic && (
+                                        <div className="bg-gradient-to-r from-purple-900/40 to-purple-800/20 border border-purple-500/50 p-5 rounded-lg">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <Gem size={18} className="text-purple-400" />
+                                                <span className="text-purple-300 font-mono text-sm uppercase tracking-wider">New Relic Acquired!</span>
+                                            </div>
+                                            <div className="flex items-start gap-4">
+                                                <div className="text-4xl bg-purple-900/50 p-3 rounded-lg border border-purple-500/30">
+                                                    {gameState.lastVictoryReward.relic.icon}
                                                 </div>
-                                                <div className="text-xs text-gray-300 leading-relaxed font-sans font-normal opacity-100 animate-none whitespace-normal break-words">
-                                                    {gameState.lastVictoryReward.relic.description}
+                                                <div className="flex-1 text-left">
+                                                    <div className="text-purple-300 font-bold text-lg mb-1">
+                                                        {gameState.lastVictoryReward.relic.name}
+                                                    </div>
+                                                    <div className="text-[10px] text-purple-500 uppercase tracking-wider mb-2 font-mono">
+                                                        {gameState.lastVictoryReward.relic.rarity} Relic
+                                                    </div>
+                                                    <div className="text-sm text-gray-300 leading-relaxed">
+                                                        {gameState.lastVictoryReward.relic.description}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -1479,7 +1569,7 @@ const App: React.FC = () => {
                                 className="bg-primary text-black font-bold py-3 px-8 rounded hover:bg-white transition-colors font-mono text-sm uppercase tracking-wider flex items-center gap-2"
                             >
                                 <RefreshCw size={16} />
-                                Next Sprint
+                                {gameState.lastVictoryReward?.goldCollected || !gameState.lastVictoryReward ? 'Next Sprint' : 'Skip Remaining & Proceed'}
                             </button>
                         </div>
                     </div>

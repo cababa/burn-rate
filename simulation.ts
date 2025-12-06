@@ -12,11 +12,22 @@ import {
     applyCombatStartRelics,
     getRandomRewardCards
 } from './gameLogic.ts';
+import { getGlobalLogger, GameLogger } from './logger.ts';
 
-const SIMULATION_COUNT = 100;
+// CLI Args
+const args = process.argv.slice(2);
+const SIMULATION_COUNT = parseInt(args[0]) || 100;
+
+// Run Simulations
+console.log(`Running ${SIMULATION_COUNT} simulations...`);
 
 const runSimulation = (simId: number): { win: boolean, floor: number, reason: string } => {
     // 1. Initialize
+    getGlobalLogger().setEnabled(simId === 0); // Only log the first one
+    if (simId === 0) getGlobalLogger().clear();
+
+    getGlobalLogger().log('COMBAT_START', `Starting Simulation #${simId}`);
+
     const initialDeck = shuffle(generateStarterDeck());
     let gameState: GameState = {
         playerStats: { ...GAME_DATA.character.stats },
@@ -40,10 +51,15 @@ const runSimulation = (simId: number): { win: boolean, floor: number, reason: st
 
     // Loop through floors
     while (gameState.status !== 'GAME_OVER' && gameState.status !== 'VICTORY_ALL') {
+        // Infinite Loop Guard
+        if (gameState.turn > 60) { // 60 Turn hard limit
+            return { win: false, floor: gameState.floor, reason: 'Turn Limit Exceeded' };
+        }
+
         // Map Logic
         if (gameState.status === 'MAP') {
             const nextFloor = gameState.floor;
-            if (nextFloor > 5) {
+            if (nextFloor > 16) { // Act 1 is 16 floors
                 return { win: true, floor: nextFloor, reason: 'Beat Boss' };
             }
 
@@ -155,16 +171,36 @@ const runSimulation = (simId: number): { win: boolean, floor: number, reason: st
             const rewards = getRandomRewardCards(1);
             gameState.deck.push(rewards[0]);
         } else if (gameState.status === 'CARD_SELECTION') {
-            // Handle Selection (e.g. Exhaust)
-            // Just pick first available
+            // Unconditional exit to prevent loop
             if (gameState.pendingSelection?.context === 'hand') {
                 // Logic to resolve selection (not fully implemented in gameLogic yet, need a helper)
                 // For simulation, just cancel or pick random.
+            } else {
+                console.log(`Skipping selection context: ${gameState.pendingSelection?.context}`);
+            }
+            gameState.status = 'PLAYING';
+            gameState.pendingSelection = undefined;
+        } else if (gameState.status === 'DISCARD_SELECTION') {
+            // Just discard the first card
+            if (gameState.pendingDiscard > 0 && gameState.hand.length > 0) {
+                const card = gameState.hand[0];
+                gameState.discardPile.push(card);
+                gameState.hand.shift();
+                gameState.pendingDiscard--;
+            }
+            if (gameState.pendingDiscard === 0 || gameState.hand.length === 0) {
                 gameState.status = 'PLAYING';
-                gameState.pendingSelection = undefined;
+                gameState.pendingDiscard = 0;
+            }
+        } else {
+            // Catch-all for unhandled states
+            if (gameState.status !== 'MAP') {
+                console.log(`Unhandled State: ${gameState.status}`);
+                return { win: false, floor: gameState.floor, reason: `Stuck in ${gameState.status}` };
             }
         }
     }
+
 
     return { win: false, floor: gameState.floor, reason: 'Died' };
 };
@@ -175,7 +211,13 @@ let wins = 0;
 let maxFloor = 0;
 
 for (let i = 0; i < SIMULATION_COUNT; i++) {
+    if (i > 0 && i % 100 === 0) console.log(`Processed ${i} / ${SIMULATION_COUNT} runs...`);
     const result = runSimulation(i);
+    if (i === 0) {
+        console.log("=== SIMULATION 0 LOG ===");
+        console.log(getGlobalLogger().toNarrativeText());
+        console.log("========================");
+    }
     if (result.win) wins++;
     if (result.floor > maxFloor) maxFloor = result.floor;
 }

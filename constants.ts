@@ -5,25 +5,25 @@ export const MAX_HAND_SIZE = 10;
 
 export const CARD_TYPE_CONFIG = {
     attack: {
-        label: "Attack",
+        label: "Execution",
         icon: "⚔️",
         textColor: "text-danger",
         borderColor: "border-danger/50 hover:border-danger"
     },
     skill: {
-        label: "Skill",
+        label: "Tactic",
         icon: "🛡️",
         textColor: "text-info",
         borderColor: "border-info/50 hover:border-info"
     },
     power: {
-        label: "Power",
+        label: "Strategy",
         icon: "⚡",
         textColor: "text-warning",
         borderColor: "border-warning/50 hover:border-warning"
     },
     status: {
-        label: "Status",
+        label: "Setback",
         icon: "💀",
         textColor: "text-gray-400",
         borderColor: "border-gray-500/50 hover:border-gray-500"
@@ -956,20 +956,20 @@ export const GAME_DATA = {
         // --- COMMON ---
         fanboy: { // Cultist
             id: "fanboy",
-            name: "The Fanboy",
+            name: "The Hype Man",
             act: 1,
             type: "normal",
             hp: 50, // 48-54
             maxHp: 50,
             mitigation: 0,
-            emoji: "🤓",
-            description: "Obsessed with new tech. Hype grows every turn.",
+            emoji: "📣",
+            description: "Promises the world. Gets louder every turn.",
             statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'buff',
                 value: 3,
                 icon: 'buff',
-                description: "Ritual (Hype)"
+                description: "Build Hype"
             },
             rewards: {
                 capital: { min: 10, max: 15 },
@@ -978,20 +978,20 @@ export const GAME_DATA = {
         } as EnemyData,
         spaghetti_code: { // Jaw Worm
             id: "spaghetti_code",
-            name: "Spaghetti Code",
+            name: "The Copycat",
             act: 1,
             type: "normal",
             hp: 42, // 40-44
             maxHp: 42,
             mitigation: 0,
-            emoji: "🍝",
-            description: "Messy, redundant code that grows more complex over time.",
+            emoji: "🦜",
+            description: "Imitates your moves. Bites back.",
             statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'attack',
                 value: 11,
                 icon: 'attack',
-                description: "Chomp"
+                description: "Mimic"
             },
             rewards: {
                 capital: { min: 12, max: 18 },
@@ -1000,20 +1000,20 @@ export const GAME_DATA = {
         } as EnemyData,
         critical_bug: { // Louse Red
             id: "critical_bug",
-            name: "Critical Bug",
+            name: "The Doubter",
             act: 1,
             type: "normal",
             hp: 13, // 10-15
             maxHp: 13,
             mitigation: 0,
-            emoji: "🐞",
-            description: "A high-priority bug. Grows stronger if not fixed.",
+            emoji: "🤨",
+            description: "Questions everything. Doubt compounds.",
             statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 5, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'buff',
                 value: 3,
                 icon: 'buff',
-                description: "Grow (Severity)"
+                description: "Raise Doubt"
             },
             rewards: {
                 capital: { min: 5, max: 10 },
@@ -1022,20 +1022,20 @@ export const GAME_DATA = {
         } as EnemyData,
         minor_bug: { // Louse Green
             id: "minor_bug",
-            name: "Minor Bug",
+            name: "The Naysayer",
             act: 1,
             type: "normal",
             hp: 13, // 10-15
             maxHp: 13,
             mitigation: 0,
-            emoji: "🪲",
-            description: "A nagging issue that slows you down.",
+            emoji: "👎",
+            description: "Says 'it won't work.' Slows you down.",
             statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 5, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'debuff',
                 value: 2,
                 icon: 'debuff',
-                description: "Spit Web (Weak)"
+                description: "Discourage"
             },
             rewards: {
                 capital: { min: 5, max: 10 },
@@ -1044,20 +1044,20 @@ export const GAME_DATA = {
         } as EnemyData,
         quick_hack: { // Acid Slime S
             id: "quick_hack",
-            name: "Quick Hack",
+            name: "The Shortcut Taker",
             act: 1,
             type: "normal",
             hp: 10, // 8-12
             maxHp: 10,
             mitigation: 0,
-            emoji: "🧪",
-            description: "A small, sloppy fix. Easy to kill but annoying.",
+            emoji: "✂️",
+            description: "Cuts corners. Weakens foundations.",
             statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'debuff',
                 value: 1,
                 icon: 'debuff',
-                description: "Lick (Weak)"
+                description: "Cut Corners"
             },
             rewards: {
                 capital: { min: 3, max: 7 },
@@ -1066,20 +1066,20 @@ export const GAME_DATA = {
         } as EnemyData,
         tech_debt: { // Acid Slime M
             id: "tech_debt",
-            name: "Tech Debt",
+            name: "The Procrastinator",
             act: 1,
             type: "normal",
             hp: 30, // 28-32
             maxHp: 30,
             mitigation: 0,
-            emoji: "📉",
-            description: "A moderate chunk of bad code. Adds 'Slimed' to discard.",
+            emoji: "😴",
+            description: "Avoids responsibility. Creates baggage.",
             statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'debuff',
                 value: 1,
                 icon: 'debuff',
-                description: "Corrosive Spit (Slimed)"
+                description: "Delay"
             },
             rewards: {
                 capital: { min: 8, max: 12 },
@@ -1088,20 +1088,20 @@ export const GAME_DATA = {
         } as EnemyData,
         legacy_module: { // Acid Slime L
             id: "legacy_module",
-            name: "Legacy Module",
+            name: "The Old Guard",
             act: 1,
             type: "normal",
             hp: 67, // 65-69
             maxHp: 67,
             mitigation: 0,
-            emoji: "🏗️",
-            description: "A large, outdated system. Splits into Tech Debt when killed.",
+            emoji: "👴",
+            description: "Stuck in old ways. Splits into cronies.",
             statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'debuff',
                 value: 2,
                 icon: 'debuff',
-                description: "Corrosive Spit (Slimed)"
+                description: "Resist Change"
             },
             rewards: {
                 capital: { min: 15, max: 20 },
@@ -1110,20 +1110,20 @@ export const GAME_DATA = {
         } as EnemyData,
         hotfix: { // Spike Slime S
             id: "hotfix",
-            name: "Hotfix",
+            name: "The Gambler",
             act: 1,
             type: "normal",
             hp: 12, // 10-14
             maxHp: 12,
             mitigation: 0,
-            emoji: "🩹",
-            description: "A tiny patch that might break something else.",
+            emoji: "🎲",
+            description: "Takes risky bets. Might hurt you.",
             statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'attack',
                 value: 5,
                 icon: 'attack',
-                description: "Tackle"
+                description: "Roll Dice"
             },
             rewards: {
                 capital: { min: 3, max: 7 },
@@ -1132,20 +1132,20 @@ export const GAME_DATA = {
         } as EnemyData,
         bad_merge: { // Spike Slime M
             id: "bad_merge",
-            name: "Bad Merge",
+            name: "The Gossip",
             act: 1,
             type: "normal",
             hp: 30, // 28-32
             maxHp: 30,
             mitigation: 0,
-            emoji: "🔀",
-            description: "A merge conflict that hurts.",
+            emoji: "🗣️",
+            description: "Spreads rumors. Hurts morale.",
             statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'debuff',
                 value: 1,
                 icon: 'debuff',
-                description: "Lick (Frail)"
+                description: "Spread Rumors"
             },
             rewards: {
                 capital: { min: 8, max: 12 },
@@ -1154,20 +1154,20 @@ export const GAME_DATA = {
         } as EnemyData,
         merge_conflict: { // Spike Slime L
             id: "merge_conflict",
-            name: "Merge Conflict",
+            name: "The Politician",
             act: 1,
             type: "normal",
             hp: 67, // 64-70
             maxHp: 67,
             mitigation: 0,
-            emoji: "💥",
-            description: "A massive integration issue. Splits into Bad Merges.",
+            emoji: "🎭",
+            description: "Plays both sides. Causes division.",
             statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'debuff',
                 value: 2,
                 icon: 'debuff',
-                description: "Flame Tackle (Slimed)"
+                description: "Play Politics"
             },
             rewards: {
                 capital: { min: 15, max: 20 },
@@ -1176,20 +1176,20 @@ export const GAME_DATA = {
         } as EnemyData,
         micromanager: { // Blue Slaver
             id: "micromanager",
-            name: "Micromanager",
+            name: "The Micromanager",
             act: 1,
             type: "normal",
             hp: 48, // 46-50
             maxHp: 48,
             mitigation: 0,
             emoji: "👔",
-            description: "Stabs you with tasks and weakens your autonomy.",
+            description: "Nitpicks every detail. Stabs you with tasks.",
             statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'attack',
                 value: 12,
                 icon: 'attack',
-                description: "Stab"
+                description: "Nitpick"
             },
             rewards: {
                 capital: { min: 12, max: 18 },
@@ -1198,20 +1198,20 @@ export const GAME_DATA = {
         } as EnemyData,
         feature_pusher: { // Red Slaver
             id: "feature_pusher",
-            name: "Feature Pusher",
+            name: "The Dreamer",
             act: 1,
             type: "normal",
             hp: 48, // 46-50
             maxHp: 48,
             mitigation: 0,
-            emoji: "📢",
-            description: "Demands features, making you Vulnerable to bugs.",
+            emoji: "💭",
+            description: "Always wants more. Never satisfied.",
             statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'attack',
                 value: 13,
                 icon: 'attack',
-                description: "Stab"
+                description: "Demand More"
             },
             rewards: {
                 capital: { min: 12, max: 18 },
@@ -1220,20 +1220,20 @@ export const GAME_DATA = {
         } as EnemyData,
         headhunter: { // Looter
             id: "headhunter",
-            name: "Headhunter",
+            name: "The Poacher",
             act: 1,
             type: "normal",
             hp: 46, // 44-48
             maxHp: 46,
             mitigation: 0,
-            emoji: "🕵️",
-            description: "Tries to steal your capital (budget/talent).",
+            emoji: "🦊",
+            description: "Tries to steal your best people.",
             statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'attack',
                 value: 10,
                 icon: 'attack',
-                description: "Mug (Steal Capital)"
+                description: "Steal Talent"
             },
             rewards: {
                 capital: { min: 15, max: 25 },
@@ -1242,20 +1242,20 @@ export const GAME_DATA = {
         } as EnemyData,
         memory_leak: { // Fungi Beast
             id: "memory_leak",
-            name: "Memory Leak",
+            name: "The Energy Vampire",
             act: 1,
             type: "normal",
             hp: 25, // 22-28
             maxHp: 25,
             mitigation: 0,
-            emoji: "🍄",
-            description: "Grows over time. Explodes if you kill the wrong part first.",
+            emoji: "🧛",
+            description: "Drains your resources over time.",
             statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'buff',
                 value: 3,
                 icon: 'buff',
-                description: "Grow (Strength)"
+                description: "Drain"
             },
             rewards: {
                 capital: { min: 8, max: 12 },
@@ -1266,20 +1266,20 @@ export const GAME_DATA = {
         // --- ELITES ---
         scope_creep: { // Gremlin Nob
             id: "scope_creep",
-            name: "Scope Creep",
+            name: "The Scope Creep",
             act: 1,
             type: "elite",
-            hp: 86, // 82-90
-            maxHp: 86,
+            hp: 76,
+            maxHp: 76,
             mitigation: 0,
             emoji: "🐙",
-            description: "Elite: Grows stronger when you use Skills.",
+            description: "Elite: Arms reach for more. Grows stronger when you defend.",
             statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'buff',
                 value: 1,
                 icon: 'buff',
-                description: "Bellow (Enrage)"
+                description: "Expand Scope"
             },
             rewards: {
                 capital: { min: 25, max: 35 },
@@ -1288,20 +1288,20 @@ export const GAME_DATA = {
         } as EnemyData,
         over_engineer: { // Lagavulin
             id: "over_engineer",
-            name: "The Over-Engineer",
+            name: "The Perfectionist",
             act: 1,
             type: "elite",
             hp: 110, // 109-111
             maxHp: 110,
             mitigation: 0,
-            emoji: "🐚",
-            description: "Asleep at first. Wakes up with massive complexity costs.",
+            emoji: "🎯",
+            description: "Sleeps on decisions. Wakes up demanding perfection.",
             statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 8, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 1, frail: 0 },
             currentIntent: {
                 type: 'debuff',
                 value: 1,
                 icon: 'debuff',
-                description: "Siphon (Str/Dex)"
+                description: "Overthink"
             },
             rewards: {
                 capital: { min: 25, max: 35 },
@@ -1310,20 +1310,20 @@ export const GAME_DATA = {
         } as EnemyData,
         legacy_monolith: { // Sentry 1
             id: "legacy_monolith",
-            name: "Legacy Monolith",
+            name: "The Gatekeeper",
             act: 1,
             type: "elite",
             hp: 42, // 38-42
             maxHp: 42,
             mitigation: 0,
-            emoji: "🗿",
-            description: "The core of the legacy system. Resistant to change.",
-            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 1, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
+            emoji: "🚪",
+            description: "Blocks progress. Protected by red tape.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'debuff',
                 value: 2,
                 icon: 'debuff',
-                description: "Bolt (Shuffle Bugs)"
+                description: "Reject"
             },
             rewards: {
                 capital: { min: 10, max: 15 },
@@ -1332,20 +1332,20 @@ export const GAME_DATA = {
         } as EnemyData,
         legacy_hack: { // Sentry 2
             id: "legacy_hack",
-            name: "Legacy Hack",
+            name: "The Critic",
             act: 1,
             type: "elite",
             hp: 42,
             maxHp: 42,
             mitigation: 0,
-            emoji: "💾",
-            description: "A quick fix that creates bugs.",
-            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 1, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
+            emoji: "📝",
+            description: "Attacks every idea.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'attack',
                 value: 9,
                 icon: 'attack',
-                description: "Beam"
+                description: "Criticize"
             },
             rewards: {
                 capital: { min: 10, max: 15 },
@@ -1354,20 +1354,20 @@ export const GAME_DATA = {
         } as EnemyData,
         legacy_patch: { // Sentry 3
             id: "legacy_patch",
-            name: "Legacy Patch",
+            name: "The Bureaucrat",
             act: 1,
             type: "elite",
             hp: 42,
             maxHp: 42,
             mitigation: 0,
-            emoji: "🩹",
-            description: "A band-aid solution that creates bugs.",
-            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 1, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
+            emoji: "📋",
+            description: "Creates paperwork. Adds obstacles.",
+            statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'debuff',
                 value: 2,
                 icon: 'debuff',
-                description: "Bolt (Shuffle Bugs)"
+                description: "File Report"
             },
             rewards: {
                 capital: { min: 10, max: 15 },
@@ -1384,7 +1384,7 @@ export const GAME_DATA = {
             hp: 240,
             maxHp: 240,
             mitigation: 0,
-            emoji: "🛡️",
+            emoji: "🔄",
             description: "Existential crisis. Can you survive the change?",
             statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
@@ -1422,20 +1422,20 @@ export const GAME_DATA = {
         } as EnemyData,
         boss_the_monolith: { // Slime Boss
             id: "boss_the_monolith",
-            name: "The Monolith",
+            name: "The Goliath",
             act: 1,
             type: "boss",
             hp: 140, // Splits at 50% (70)
             maxHp: 140,
             mitigation: 0,
-            emoji: "🏗️",
-            description: "A massive, unmaintainable codebase. Splits into microservices.",
+            emoji: "🏆",
+            description: "The big competitor. Splits into smaller rivals.",
             statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'debuff',
                 value: 3,
                 icon: 'debuff',
-                description: "Goop Spray (Slimed)"
+                description: "Crush"
             },
             rewards: {
                 capital: { min: 100, max: 100 },
@@ -1445,23 +1445,60 @@ export const GAME_DATA = {
     }
 };
 
+// Status effect icons and labels for startup theme
+export const STATUS_CONFIG = {
+    vulnerable: { icon: "🎯", label: "Exposed", description: "Takes 50% more damage" },
+    weak: { icon: "😓", label: "Drained", description: "Deals 25% less damage" },
+    strength: { icon: "💪", label: "Execution Power", descPositive: "+{0} to all Execution", descNegative: "{0} to all Execution" },
+    frail: { icon: "🩹", label: "Fragile", description: "Mitigation reduced by 25%" },
+    metallicize: { icon: "🛡️", label: "Auto-Mitigation", description: "Gain {0} Mitigation at end of turn" },
+    thorns: { icon: "⚡", label: "Counterattack", description: "Deal {0} damage when hit" },
+    artifact: { icon: "💎", label: "Buffer", description: "Negates next {0} debuff(s)" },
+    evolve: { icon: "📖", label: "Troubleshoot", description: "Draw {0} card(s) when drawing Status cards" },
+    feelNoPain: { icon: "🧘", label: "Lean Ops", description: "Gain {0} Mitigation when a card is Exhausted" },
+    noDraw: { icon: "🚫", label: "Flow State Lock", description: "Cannot draw cards this turn" },
+    antifragile: { icon: "📈", label: "Antifragile", description: "Gain +{0} Strength when losing HP from cards" },
+    growth: { icon: "📊", label: "Momentum", description: "Gains +{0} Strength each turn" },
+    curlUp: { icon: "🥚", label: "Defensive", description: "Gains {0} Mitigation when first attacked" },
+    malleable: { icon: "🍃", label: "Adaptive", description: "Gains {0}+ Mitigation when attacked" },
+    asleep: { icon: "😴", label: "Dormant", description: "Inactive until damaged" },
+};
+
+// Intent icons for enemy actions
+export const INTENT_ICONS = {
+    attack: { icon: "⚔️", label: "Execution", color: "danger" },
+    buff: { icon: "⬆️", label: "Empower", color: "warning" },
+    debuff: { icon: "⬇️", label: "Sabotage", color: "purple-400" },
+    defend: { icon: "🛡️", label: "Fortify", color: "info" },
+    unknown: { icon: "❓", label: "Planning", color: "gray-400" },
+};
+
+// Status card icons  
+export const STATUS_CARD_ICONS = {
+    bug: "🐛",
+    burnout: "🔥",
+    legacy_code: "🏚️",
+    scope_creep: "🐙",
+    context_switch: "🔀",
+};
+
 // Act 1 Encounter Templates
 export const ENCOUNTER_TEMPLATES: EncounterTemplate[] = [
     // Easy Pool (Floors 1-2) - "Day 1 Problems"
-    { id: 'solo_fanboy', name: 'The Fanboy', enemies: [{ enemyId: 'fanboy', count: [1, 1] }], weight: 10, pool: 'easy' },
-    { id: 'solo_spaghetti', name: 'Spaghetti Code', enemies: [{ enemyId: 'spaghetti_code', count: [1, 1] }], weight: 10, pool: 'easy' },
-    { id: 'bug_duo', name: 'Bug Report', enemies: [{ enemyId: 'minor_bug', count: [2, 2] }], weight: 8, pool: 'easy' },
-    { id: 'bug_trio', name: 'Critical Path', enemies: [{ enemyId: 'critical_bug', count: [1, 1] }, { enemyId: 'minor_bug', count: [1, 2] }], weight: 8, pool: 'easy' },
-    { id: 'quick_patches', name: 'Quick Patches', enemies: [{ enemyId: 'quick_hack', count: [2, 2] }], weight: 6, pool: 'easy' },
+    { id: 'solo_fanboy', name: 'The Hype Man', enemies: [{ enemyId: 'fanboy', count: [1, 1] }], weight: 10, pool: 'easy' },
+    { id: 'solo_spaghetti', name: 'The Copycat', enemies: [{ enemyId: 'spaghetti_code', count: [1, 1] }], weight: 10, pool: 'easy' },
+    { id: 'bug_duo', name: 'The Naysayers', enemies: [{ enemyId: 'minor_bug', count: [2, 2] }], weight: 8, pool: 'easy' },
+    { id: 'bug_trio', name: 'Crisis of Confidence', enemies: [{ enemyId: 'critical_bug', count: [1, 1] }, { enemyId: 'minor_bug', count: [1, 2] }], weight: 8, pool: 'easy' },
+    { id: 'quick_patches', name: 'Corner Cutters', enemies: [{ enemyId: 'quick_hack', count: [2, 2] }], weight: 6, pool: 'easy' },
 
     // Hard Pool (Floors 3-13) - "Growth Pains"
-    { id: 'tech_debt_solo', name: 'Debt Collection', enemies: [{ enemyId: 'tech_debt', count: [1, 1] }], weight: 8, pool: 'hard' },
-    { id: 'merge_hell', name: 'Merge Hell', enemies: [{ enemyId: 'bad_merge', count: [1, 1] }, { enemyId: 'tech_debt', count: [1, 1] }], weight: 6, pool: 'hard' },
-    { id: 'stakeholder_sync', name: 'Stakeholder Sync', enemies: [{ enemyId: 'micromanager', count: [1, 1] }, { enemyId: 'feature_pusher', count: [1, 1] }], weight: 6, pool: 'hard' },
-    { id: 'dependency', name: 'The Dependency', enemies: [{ enemyId: 'legacy_module', count: [1, 1] }], weight: 5, pool: 'hard' },
-    { id: 'talent_war', name: 'Talent War', enemies: [{ enemyId: 'headhunter', count: [1, 1] }], weight: 7, pool: 'hard' },
-    { id: 'memory_leak', name: 'Memory Leak', enemies: [{ enemyId: 'memory_leak', count: [1, 1] }, { enemyId: 'quick_hack', count: [1, 2] }], weight: 5, pool: 'hard' },
-    { id: 'infestation', name: 'Infestation', enemies: [{ enemyId: 'minor_bug', count: [3, 4] }], weight: 4, pool: 'hard' },
+    { id: 'tech_debt_solo', name: 'The Procrastinator', enemies: [{ enemyId: 'tech_debt', count: [1, 1] }], weight: 8, pool: 'hard' },
+    { id: 'merge_hell', name: 'Office Politics', enemies: [{ enemyId: 'bad_merge', count: [1, 1] }, { enemyId: 'tech_debt', count: [1, 1] }], weight: 6, pool: 'hard' },
+    { id: 'stakeholder_sync', name: 'Management Meeting', enemies: [{ enemyId: 'micromanager', count: [1, 1] }, { enemyId: 'feature_pusher', count: [1, 1] }], weight: 6, pool: 'hard' },
+    { id: 'dependency', name: 'The Old Guard', enemies: [{ enemyId: 'legacy_module', count: [1, 1] }], weight: 5, pool: 'hard' },
+    { id: 'talent_war', name: 'Poacher Attack', enemies: [{ enemyId: 'headhunter', count: [1, 1] }], weight: 7, pool: 'hard' },
+    { id: 'memory_leak', name: 'Energy Vampires', enemies: [{ enemyId: 'memory_leak', count: [1, 1] }, { enemyId: 'quick_hack', count: [1, 2] }], weight: 5, pool: 'hard' },
+    { id: 'infestation', name: 'Mob of Doubters', enemies: [{ enemyId: 'minor_bug', count: [3, 4] }], weight: 4, pool: 'hard' },
 ];
 
 // Act 1 Events - "The Incubator"

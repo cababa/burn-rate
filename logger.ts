@@ -6,13 +6,14 @@
 // Log categories for filtering and organization
 export type LogCategory =
     | 'TURN_START' | 'TURN_END'
-    | 'CARD_PLAY' | 'CARD_DRAW' | 'CARD_EXHAUST' | 'CARD_BURN' | 'CARD_DISCARD'
-    | 'DAMAGE_DEALT' | 'DAMAGE_TAKEN' | 'BLOCK_GAINED' | 'BLOCK_USED'
-    | 'STATUS_APPLIED' | 'STATUS_EXPIRED' | 'STATUS_TRIGGERED'
-    | 'ENEMY_INTENT' | 'ENEMY_ACTION' | 'ENEMY_SPAWN' | 'ENEMY_DEATH'
-    | 'COMBAT_START' | 'COMBAT_END' | 'VICTORY' | 'DEFEAT'
-    | 'MAP_NODE' | 'REWARD' | 'RELIC' | 'RELIC_ACQUIRED' | 'RELIC_TRIGGER'
-    | 'ENERGY' | 'HEAL' | 'SHUFFLE';
+    | 'CARD_PLAY' | 'CARD_DRAW' | 'CARD_EXHAUST' | 'CARD_BURN' | 'CARD_DISCARD' | 'CARD_ADDED_TO_HAND' | 'CARD_RETAINED' | 'CARD_PLAY_FAILED' | 'CARD_BURNED' | 'CARD_DISCARDED'
+    | 'DAMAGE_DEALT' | 'DAMAGE_TAKEN' | 'BLOCK_GAINED' | 'BLOCK_USED' | 'DAMAGE_BLOCKED'
+    | 'STATUS_APPLIED' | 'STATUS_EXPIRED' | 'STATUS_TRIGGERED' | 'STATUS_CLEARED' | 'STATUS_EFFECT'
+    | 'ENEMY_INTENT' | 'ENEMY_ACTION' | 'ENEMY_SPAWN' | 'ENEMY_DEATH' | 'ENEMY_BUFF' | 'ENEMY_STATUS_EFFECT' | 'ENEMY_ATTACK_SPECIAL' | 'ENEMY_ACTION_SPECIAL' | 'ENEMY_INTENT_SET'
+    | 'COMBAT_START' | 'COMBAT_END' | 'VICTORY' | 'DEFEAT' | 'GAME_OVER' | 'COMBAT_VICTORY'
+    | 'MAP_NODE' | 'REWARD' | 'RELIC' | 'RELIC_ACQUIRED' | 'RELIC_TRIGGER' | 'RELIC_EFFECT' | 'REWARD_CAPITAL' | 'REWARD_RELIC'
+    | 'ENERGY' | 'HEAL' | 'SHUFFLE' | 'WARNING'
+    | 'LEGACY_CODE_EFFECT' | 'EVOLVE_TRIGGER' | 'CARD_EFFECT_END_TURN' | 'CARD_EXHAUSTED' | 'BOSS_MECHANIC' | 'CARD_EFFECT_ENEMY' | 'CARD_EFFECT_SPECIAL' | 'CARD_EFFECT_BLOCKED';
 
 export interface LogContext {
     // Card-related
@@ -127,6 +128,13 @@ export class GameLogger {
         };
 
         this.entries.push(entry);
+    }
+
+    /**
+     * Log a warning
+     */
+    warn(category: LogCategory, message: string, context: LogContext = {}): void {
+        this.log('WARNING', `[${category}] ${message}`, context);
     }
 
     /**

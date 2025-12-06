@@ -2,6 +2,7 @@
 import React from 'react';
 import { Terminal, Sword, TrendingUp, ShieldAlert, HelpCircle, Shield, AlertTriangle, Zap, BarChart3, TrendingDown, ArrowUpCircle, ShieldOff, Moon, Layers, Hexagon, Sprout, Ban, RefreshCw, Heart } from 'lucide-react';
 import { EnemyIntent, EntityStatus, EnemyStatuses } from '../types';
+import { STATUS_CONFIG, INTENT_ICONS } from '../constants';
 
 interface UnitProps {
   name: string;
@@ -20,26 +21,54 @@ interface UnitProps {
 }
 
 const StatusIcon: React.FC<{
-  icon: React.ReactNode;
+  config: typeof STATUS_CONFIG[keyof typeof STATUS_CONFIG];
   value: number;
-  color: string;
-  borderColor: string;
-  label: string;
-  description: React.ReactNode;
   subtext?: string;
-}> = ({ icon, value, color, borderColor, label, description, subtext }) => (
-  <div className={`group/status relative flex items-center gap-1 bg-black/80 border ${borderColor} ${color} px-2 py-1 rounded text-xs shadow-lg cursor-help`}>
-    {icon}
-    <span className="font-bold">{value}</span>
+}> = ({ config, value, subtext }) => {
+  // Determine description
+  let desc = config.description;
+  if ('descPositive' in config && value > 0) desc = config.descPositive;
+  if ('descNegative' in config && value < 0) desc = config.descNegative;
 
-    {/* Tooltip */}
-    <div className={`absolute bottom-full right-0 mb-2 w-56 p-3 bg-gray-900 border ${borderColor.replace('/50', '')} rounded text-xs text-left shadow-xl hidden group-hover/status:block z-[100] whitespace-normal break-words`}>
-      <div className={`${color} font-bold mb-1 uppercase tracking-wider`}>{label}</div>
-      <div className="text-gray-300">{description}</div>
-      {subtext && <div className="text-gray-500 mt-1 italic">{subtext}</div>}
+  // Replace placeholder {0} with value
+  const formattedDesc = desc.replace('{0}', Math.abs(value).toString());
+
+  // Determine color (default to text-gray-300 if not specified involved logic)
+  // For simplicity, we mapped colors in constants or we infer here. 
+  // To keep it clean, let's map some common colors based on label or add color to config later.
+  // For now, we'll keep the styles here or map them dynamically.
+
+  const getColors = (label: string, val: number) => {
+    if (label === 'Exposed') return { text: 'text-danger', border: 'border-danger/50' };
+    if (label === 'Drained') return { text: 'text-purple-400', border: 'border-purple-500/50' };
+    if (label === 'Execution Power') return { text: val > 0 ? 'text-warning' : 'text-blue-400', border: val > 0 ? 'border-warning/50' : 'border-blue-400/50' };
+    if (label === 'Fragile') return { text: 'text-orange-400', border: 'border-orange-500/50' };
+    if (label === 'Auto-Mitigation') return { text: 'text-gray-300', border: 'border-gray-400/50' };
+    if (label === 'Counterattack') return { text: 'text-green-400', border: 'border-green-500/50' };
+    if (label === 'Buffer') return { text: 'text-cyan-400', border: 'border-cyan-500/50' };
+    if (label === 'Antifragile') return { text: 'text-pink-400', border: 'border-pink-500/50' };
+    if (label === 'Momentum') return { text: 'text-info', border: 'border-info/50' };
+    if (label === 'Adaptive') return { text: 'text-indigo-400', border: 'border-indigo-500/50' };
+    if (label === 'Flow State Lock') return { text: 'text-red-500', border: 'border-red-500/50' };
+    return { text: 'text-gray-300', border: 'border-gray-500/50' };
+  };
+
+  const colors = getColors(config.label, value);
+
+  return (
+    <div className={`group/status relative flex items-center gap-1 bg-black/80 border ${colors.border} ${colors.text} px-2 py-1 rounded text-xs shadow-lg cursor-help`}>
+      <span className="text-sm border-r border-white/10 pr-1 mr-1">{config.icon}</span>
+      <span className="font-bold">{value}</span>
+
+      {/* Tooltip */}
+      <div className={`absolute bottom-full right-0 mb-2 w-56 p-3 bg-gray-900 border ${colors.border.replace('/50', '')} rounded text-xs text-left shadow-xl hidden group-hover/status:block z-[100] whitespace-normal break-words`}>
+        <div className={`${colors.text} font-bold mb-1 uppercase tracking-wider`}>{config.label}</div>
+        <div className="text-gray-300">{formattedDesc}</div>
+        {subtext && <div className="text-gray-500 mt-1 italic">{subtext}</div>}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export const Unit: React.FC<UnitProps> = ({
   name,
@@ -66,15 +95,6 @@ export const Unit: React.FC<UnitProps> = ({
 
   const isDead = currentHp <= 0;
 
-  const getIntentIcon = (type: string) => {
-    switch (type) {
-      case 'attack': return <Sword size={14} />;
-      case 'buff': return <TrendingUp size={14} />;
-      case 'debuff': return <ShieldAlert size={14} />;
-      default: return <HelpCircle size={14} />;
-    }
-  };
-
   // Helper to safely access enemy-specific statuses
   const getEnemyStatus = (key: keyof EnemyStatuses) => {
     if (statuses && key in statuses) return (statuses as EnemyStatuses)[key];
@@ -85,6 +105,12 @@ export const Unit: React.FC<UnitProps> = ({
   const calculateIntentDamage = () => {
     if (!intent || intent.type !== 'attack' || !statuses) return intent?.value || 0;
     let dmg = intent.value + statuses.strength;
+
+    // Check for Weak (Drained)
+    if (statuses.weak > 0) {
+      dmg = Math.floor(dmg * 0.75);
+    }
+
     const finalDmg = Math.max(0, dmg);
 
     // Check for multi-hit in description (e.g. "Divider (x6)")
@@ -94,6 +120,8 @@ export const Unit: React.FC<UnitProps> = ({
     }
     return finalDmg;
   };
+
+  const intentConfig = intent ? (INTENT_ICONS[intent.type as keyof typeof INTENT_ICONS] || INTENT_ICONS.unknown) : INTENT_ICONS.unknown;
 
   return (
     <div
@@ -130,154 +158,21 @@ export const Unit: React.FC<UnitProps> = ({
       {statuses && (
         <div className={`absolute top-0 ${isEnemy ? 'right-0 justify-end' : 'left-0 justify-start'} -mt-8 flex gap-2 min-w-[200px] flex-wrap`}>
 
-          {/* Vulnerable */}
-          {statuses.vulnerable > 0 && (
-            <StatusIcon
-              icon={<AlertTriangle size={12} />}
-              value={statuses.vulnerable}
-              color="text-danger"
-              borderColor="border-danger/50"
-              label="Vulnerable"
-              description={<span>Incoming damage is multiplied by <b className="text-white">1.5x</b>.</span>}
-              subtext={`Lasts ${statuses.vulnerable} more turn(s).`}
-            />
-          )}
+          {statuses.vulnerable > 0 && <StatusIcon config={STATUS_CONFIG.vulnerable} value={statuses.vulnerable} subtext={`Lasts ${statuses.vulnerable} turn(s)`} />}
+          {statuses.weak > 0 && <StatusIcon config={STATUS_CONFIG.weak} value={statuses.weak} subtext={`Lasts ${statuses.weak} turn(s)`} />}
+          {statuses.frail > 0 && <StatusIcon config={STATUS_CONFIG.frail} value={statuses.frail} subtext={`Lasts ${statuses.frail} turn(s)`} />}
+          {statuses.strength !== 0 && <StatusIcon config={STATUS_CONFIG.strength} value={statuses.strength} />}
+          {statuses.metallicize > 0 && <StatusIcon config={STATUS_CONFIG.metallicize} value={statuses.metallicize} />}
+          {statuses.thorns > 0 && <StatusIcon config={STATUS_CONFIG.thorns} value={statuses.thorns} />}
+          {statuses.artifact > 0 && <StatusIcon config={STATUS_CONFIG.artifact} value={statuses.artifact} />}
+          {statuses.antifragile > 0 && <StatusIcon config={STATUS_CONFIG.antifragile} value={statuses.antifragile} />}
+          {statuses.noDraw > 0 && <StatusIcon config={STATUS_CONFIG.noDraw} value={0} />}
 
-          {/* Weak */}
-          {statuses.weak > 0 && (
-            <StatusIcon
-              icon={<TrendingDown size={12} />}
-              value={statuses.weak}
-              color="text-purple-400"
-              borderColor="border-purple-500/50"
-              label="Weak"
-              description={<span>Attacks deal <b className="text-white">25% less damage</b>.</span>}
-              subtext={`Lasts ${statuses.weak} more turn(s).`}
-            />
-          )}
-
-          {/* Frail */}
-          {statuses.frail > 0 && (
-            <StatusIcon
-              icon={<ShieldOff size={12} />}
-              value={statuses.frail}
-              color="text-orange-400"
-              borderColor="border-orange-500/50"
-              label="Frail"
-              description={<span>Block gained from cards is reduced by <b className="text-white">25%</b>.</span>}
-              subtext={`Lasts ${statuses.frail} more turn(s).`}
-            />
-          )}
-
-          {/* Strength */}
-          {statuses.strength !== 0 && (
-            <StatusIcon
-              icon={statuses.strength > 0 ? <Zap size={12} className="fill-current" /> : <TrendingDown size={12} />}
-              value={statuses.strength}
-              color={statuses.strength > 0 ? 'text-warning' : 'text-blue-400'}
-              borderColor={statuses.strength > 0 ? 'border-warning/50' : 'border-blue-400/50'}
-              label={`${isEnemy ? 'Complexity' : 'Execution Power'} (Strength)`}
-              description={<span>Attacks deal <b className="text-white">{statuses.strength > 0 ? '+' : ''}{statuses.strength} damage</b>.</span>}
-            />
-          )}
-
-          {/* Metallicize */}
-          {statuses.metallicize > 0 && (
-            <StatusIcon
-              icon={<Shield size={12} />}
-              value={statuses.metallicize}
-              color="text-gray-300"
-              borderColor="border-gray-400/50"
-              label="Metallicize"
-              description={<span>At the end of turn, gain <b className="text-white">{statuses.metallicize} Block</b>.</span>}
-            />
-          )}
-
-          {/* Thorns */}
-          {statuses.thorns > 0 && (
-            <StatusIcon
-              icon={<Sprout size={12} />}
-              value={statuses.thorns}
-              color="text-green-400"
-              borderColor="border-green-500/50"
-              label="Thorns"
-              description={<span>When attacked, deal <b className="text-white">{statuses.thorns} damage</b> back.</span>}
-            />
-          )}
-
-          {/* Artifact */}
-          {statuses.artifact > 0 && (
-            <StatusIcon
-              icon={<Hexagon size={12} />}
-              value={statuses.artifact}
-              color="text-cyan-400"
-              borderColor="border-cyan-500/50"
-              label="Artifact"
-              description={<span>Negates the next <b className="text-white">{statuses.artifact} debuff(s)</b>.</span>}
-            />
-          )}
-
-          {/* Antifragile */}
-          {statuses.antifragile > 0 && (
-            <StatusIcon
-              icon={<ArrowUpCircle size={12} />}
-              value={statuses.antifragile}
-              color="text-pink-400"
-              borderColor="border-pink-500/50"
-              label="Antifragile"
-              description={<span>At start of turn, gain <b className="text-white">+{statuses.antifragile} Strength</b>.</span>}
-            />
-          )}
-
-          {/* --- ENEMY SPECIFIC --- */}
-
-          {/* Growth */}
-          {getEnemyStatus('growth') > 0 && (
-            <StatusIcon
-              icon={<BarChart3 size={12} />}
-              value={getEnemyStatus('growth')}
-              color="text-info"
-              borderColor="border-info/50"
-              label="Growth"
-              description={<span>Gains <b className="text-white">+{getEnemyStatus('growth')} Strength</b> per turn.</span>}
-            />
-          )}
-
-          {/* Curl Up */}
-          {getEnemyStatus('curlUp') > 0 && (
-            <StatusIcon
-              icon={<Shield size={12} />}
-              value={getEnemyStatus('curlUp')}
-              color="text-blue-300"
-              borderColor="border-blue-300/50"
-              label="Curl Up"
-              description={<span>On taking damage, gain <b className="text-white">{getEnemyStatus('curlUp')} Block</b>. (Once per combat)</span>}
-            />
-          )}
-
-          {/* Malleable */}
-          {getEnemyStatus('malleable') > 0 && (
-            <StatusIcon
-              icon={<Layers size={12} />}
-              value={getEnemyStatus('malleable')}
-              color="text-indigo-400"
-              borderColor="border-indigo-500/50"
-              label="Malleable"
-              description={<span>On taking damage, gain <b className="text-white">{getEnemyStatus('malleable')} Block</b>. Increases by 1 each time.</span>}
-            />
-          )}
-
-          {/* Asleep */}
-          {getEnemyStatus('asleep') > 0 && (
-            <StatusIcon
-              icon={<Moon size={12} />}
-              value={0} // Value doesn't matter much, maybe show nothing or just icon
-              color="text-purple-300"
-              borderColor="border-purple-300/50"
-              label="Asleep"
-              description={<span>This enemy is asleep. Wakes up if it takes damage.</span>}
-            />
-          )}
+          {/* Enemy Specific */}
+          {getEnemyStatus('growth') > 0 && <StatusIcon config={STATUS_CONFIG.growth} value={getEnemyStatus('growth')} />}
+          {getEnemyStatus('curlUp') > 0 && <StatusIcon config={STATUS_CONFIG.curlUp} value={getEnemyStatus('curlUp')} />}
+          {getEnemyStatus('malleable') > 0 && <StatusIcon config={STATUS_CONFIG.malleable} value={getEnemyStatus('malleable')} />}
+          {getEnemyStatus('asleep') > 0 && <StatusIcon config={STATUS_CONFIG.asleep} value={0} />}
 
         </div>
       )}
@@ -320,23 +215,25 @@ export const Unit: React.FC<UnitProps> = ({
       {isEnemy && !isDead && intent && (
         <div className={`
             group/intent relative mt-2 px-3 py-1.5 rounded text-xs font-mono flex items-center gap-2 border shadow-lg cursor-help
-            ${intent.type === 'attack' ? 'bg-black/80 border-danger/50 text-danger' :
-            intent.type === 'buff' ? 'bg-black/80 border-warning/50 text-warning' :
-              intent.type === 'debuff' ? 'bg-black/80 border-purple-500/50 text-purple-400' :
-                'bg-black/50 border-white/20 text-white'}
+            bg-black/80
+            ${intent.type === 'attack' ? 'border-danger/50 text-danger' :
+            intent.type === 'buff' ? 'border-warning/50 text-warning' :
+              intent.type === 'debuff' ? 'border-purple-500/50 text-purple-400' : 'border-white/20 text-white'}
         `}>
-          {getIntentIcon(intent.type)}
+          <span className="text-base">{intentConfig.icon}</span>
           <span className="font-bold">{intent.type === 'attack' ? calculateIntentDamage() : (intent.value > 0 ? intent.value : '')}</span>
           <span className="opacity-80">{intent.description || 'Unknown Intent'}</span>
 
           {/* Tooltip */}
           <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 p-3 bg-gray-900 border border-gray-600 rounded text-xs text-left shadow-xl hidden group-hover/intent:block z-[100] text-white whitespace-normal break-words">
-            <div className="font-bold mb-2 border-b border-gray-700 pb-1 uppercase tracking-wider text-gray-400">Forecast</div>
+            <div className={`font-bold mb-2 border-b border-gray-700 pb-1 uppercase tracking-wider text-${intentConfig.color === 'gray-400' ? 'gray-400' : intentConfig.color}`}>
+              Forecast: {intentConfig.label}
+            </div>
 
             {intent.type === 'attack' && (
               <div>
                 <p className="text-white mb-1">
-                  Intends to deal <b className="text-danger text-sm">{calculateIntentDamage()} Damage</b>.
+                  Intends to deal <b className="text-danger text-sm">{calculateIntentDamage()} Burn</b>.
                 </p>
                 {statuses && statuses.strength !== 0 && (
                   <p className="text-gray-500 italic text-[10px] mt-1">
@@ -345,7 +242,7 @@ export const Unit: React.FC<UnitProps> = ({
                 )}
                 {statuses && statuses.weak > 0 && (
                   <p className="text-purple-400 italic text-[10px] mt-1">
-                    (Reduced by Weak: -25%)
+                    (Reduced by Drained: -25%)
                   </p>
                 )}
               </div>
@@ -355,7 +252,7 @@ export const Unit: React.FC<UnitProps> = ({
               <div>
                 <p className="text-warning font-bold mb-1">{intent.description}</p>
                 <div className="text-gray-300">
-                  {intent.description.includes('Growth') ? 'Gains Strength per turn.' : 'Buffs self.'}
+                  {intent.description.includes('Momentum') ? 'Gains Complexity per turn.' : 'Scales up.'}
                 </div>
               </div>
             )}

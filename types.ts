@@ -6,7 +6,7 @@ export interface CardEffect {
   type: 'damage' | 'block' | 'draw' | 'heal' | 'apply_status' | 'add_card' | 'discard' | 'lose_bandwidth' | 'add_copy' | 'exhaust_random' | 'exhaust_targeted' | 'conditional_strength' | 'upgrade_hand' | 'damage_scale_mitigation' | 'damage_scale_matches' | 'retrieve_discard' | 'gain_bandwidth' | 'conditional_refund' | 'lose_hp_turn_end' | 'steal_capital' | 'escape' | 'split' | 'siphon';
   value: number;
   target?: 'enemy' | 'self' | 'all_enemies';
-  status?: 'vulnerable' | 'weak' | 'strength' | 'metallicize' | 'evolve' | 'feelNoPain' | 'noDraw' | 'thorns' | 'antifragile';
+  status?: 'vulnerable' | 'weak' | 'strength' | 'metallicize' | 'evolve' | 'feelNoPain' | 'noDraw' | 'thorns' | 'antifragile' | 'artifact' | 'frail';
   cardId?: string;
   matchString?: string; // For scaling damage based on card names (e.g. Commit)
   strengthMultiplier?: number; // For Heavy Blade mechanics
@@ -278,13 +278,19 @@ export interface GameState {
   relics: RelicData[];
   turn: number;
   floor: number;
-  status: 'MENU' | 'CHARACTER_SELECT' | 'PLAYING' | 'VICTORY' | 'GAME_OVER' | 'ENEMY_TURN' | 'REWARD_SELECTION' | 'MAP' | 'RETROSPECTIVE' | 'VENDOR' | 'DISCARD_SELECTION' | 'CARD_SELECTION' | 'EVENT';
+  status: 'MENU' | 'CHARACTER_SELECT' | 'PLAYING' | 'VICTORY' | 'GAME_OVER' | 'ENEMY_TURN' | 'REWARD_SELECTION' | 'MAP' | 'RETROSPECTIVE' | 'VENDOR' | 'DISCARD_SELECTION' | 'CARD_SELECTION' | 'EVENT' | 'VICTORY_ALL';
   rewardOptions: CardData[];
   message: string;
   map: MapLayer[];
   currentMapPosition: { floor: number; nodeId: string } | null;
   vendorStock?: CardData[];
-  lastVictoryReward?: { capital: number; relic?: RelicData };
+  lastVictoryReward?: {
+    capital: number;           // Pending gold to claim
+    cardRewards: CardData[];   // 3 card choices
+    relic?: RelicData;
+    goldCollected: boolean;    // Has player taken gold?
+    cardCollected: boolean;    // Has player taken/skipped card?
+  };
   pendingDiscard: number;
   deck: CardData[]; // Permanent deck
   pendingSelection?: {
