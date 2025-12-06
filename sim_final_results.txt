@@ -1,7 +1,0 @@
-Running 1500 simulations with Balanced AI...
-
-=== Balanced AI Summary ===
-Win Rate: 99.7% (1495/1500)
-Avg Floor: 17.0, Max Floor: 17
-Avg Turns: 38.9
-Death Reasons: { 'Combat timeout': 2, 'Died in combat': 3 }
