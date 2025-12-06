@@ -97,8 +97,8 @@ export const processDrawnCards = (
 
         // Legacy Code (Void)
         if (card.effects?.some(e => e.type === 'lose_bandwidth') && card.unplayable) {
-             nextStats.bandwidth = Math.max(0, nextStats.bandwidth - 1);
-             newMessage += ` (Legacy Code drained 1 Bandwidth!)`;
+            nextStats.bandwidth = Math.max(0, nextStats.bandwidth - 1);
+            newMessage += ` (Legacy Code drained 1 Bandwidth!)`;
         }
 
         // Evolve
@@ -110,7 +110,7 @@ export const processDrawnCards = (
             evolveResult.drawn.forEach(c => cardsToProcess.push(c));
         }
     }
-    
+
     return { hand: nextHand, discard: nextDiscard, drawPile: currentDrawPile, stats: nextStats, message: newMessage, drawnCards: actualDrawn };
 };
 
@@ -135,40 +135,293 @@ export const upgradeCard = (card: CardData): CardData => {
 
 // --- Relic Helpers ---
 
-export const applyCombatStartRelics = (currentStats: CharacterStats, relics: RelicData[]): { stats: CharacterStats, message: string } => {
-    let newStats = { ...currentStats };
-    let message = '';
+export const applyCombatStartRelics = (currentStats: CharacterStats, relics: RelicData[], enemies: EnemyData[]): { stats: CharacterStats, enemies: EnemyData[], message: string } => {
+    let newStats = { ...currentStats, statuses: { ...currentStats.statuses } };
+    let newEnemies = enemies.map(e => ({ ...e, statuses: { ...e.statuses } }));
+    let messages: string[] = [];
+
     relics.forEach(relic => {
+        // Reset combat-specific relic state
+        relic.attackCounter = 0;
+        relic.usedThisCombat = false;
+
+        // Safety Net: Start with 10 Block
         if (relic.trigger === 'combat_start' && relic.effect.type === 'block') {
-            newStats.mitigation += relic.effect.value;
-            message = `Relic Active: ${relic.name} (+${relic.effect.value} Mitigation)`;
+            newStats.mitigation += relic.effect.value || 0;
+            messages.push(`${relic.name}: +${relic.effect.value} Mitigation`);
+        }
+
+        // Sticky Note: Apply 1 Vulnerable to ALL enemies
+        if (relic.trigger === 'combat_start' && relic.effect.type === 'apply_vulnerable_all') {
+            newEnemies.forEach(e => {
+                e.statuses.vulnerable += relic.effect.value || 1;
+            });
+            messages.push(`${relic.name}: All enemies Vulnerable!`);
+        }
+
+        // Fresh Eyes: Passive +1 Strength (applied at combat start)
+        if (relic.trigger === 'passive' && relic.effect.type === 'strength') {
+            newStats.statuses.strength += relic.effect.value || 1;
+            messages.push(`${relic.name}: +${relic.effect.value} Strength`);
+        }
+
+        // Aggressive Growth: Enemies start with +1 Strength
+        if (relic.effect.enemy_strength) {
+            newEnemies.forEach(e => {
+                e.statuses.strength += relic.effect.enemy_strength || 0;
+            });
+            messages.push(`${relic.name}: Enemies have +${relic.effect.enemy_strength} Strength`);
         }
     });
-    return { stats: newStats, message };
+
+    return { stats: newStats, enemies: newEnemies, message: messages.join(' ') };
 };
 
 export const applyCombatEndRelics = (currentStats: CharacterStats, relics: RelicData[]): { stats: CharacterStats, message: string } => {
     let newStats = { ...currentStats };
-    let message = '';
+    let messages: string[] = [];
+
     relics.forEach(relic => {
+        // Git Repository: Heal 6 at end of combat
         if (relic.trigger === 'combat_end' && relic.effect.type === 'heal') {
-            const healAmount = relic.effect.value;
+            const healAmount = relic.effect.value || 0;
             const oldHp = newStats.hp;
             newStats.hp = Math.min(newStats.maxHp, newStats.hp + healAmount);
             const actualHeal = newStats.hp - oldHp;
-            if (actualHeal > 0) message = `${relic.name}: Recovered ${actualHeal} Runway.`;
+            if (actualHeal > 0) messages.push(`${relic.name}: +${actualHeal} Runway`);
+        }
+
+        // Second Wind: If HP ≤50%, heal 12
+        if (relic.trigger === 'combat_end_conditional' && relic.effect.type === 'heal_if_low') {
+            const threshold = (relic.effect.threshold || 50) / 100;
+            if (newStats.hp <= newStats.maxHp * threshold) {
+                const healAmount = relic.effect.value || 12;
+                const oldHp = newStats.hp;
+                newStats.hp = Math.min(newStats.maxHp, newStats.hp + healAmount);
+                const actualHeal = newStats.hp - oldHp;
+                if (actualHeal > 0) messages.push(`${relic.name}: +${actualHeal} Runway (Second Wind!)`);
+            }
         }
     });
-    return { stats: newStats, message };
+
+    return { stats: newStats, message: messages.join(' ') };
 };
 
-export const getTurnStartBandwidth = (relics: RelicData[]): number => {
+export const getTurnStartBandwidth = (relics: RelicData[], turn: number = 1): number => {
     let bandwidth = 3;
     relics.forEach(relic => {
-        if (relic.trigger === 'turn_start' && relic.effect.type === 'gain_bandwidth') bandwidth += relic.effect.value;
+        // Coffee Drip, Rate Limiter, Cutting Corners, No Rest, Aggressive Growth: +1 every turn
+        if (relic.trigger === 'turn_start' && relic.effect.type === 'gain_bandwidth') {
+            bandwidth += relic.effect.value || 0;
+        }
+        // Fresh Start: +1 on first turn only
+        if (relic.trigger === 'first_turn' && relic.effect.type === 'gain_bandwidth' && turn === 1) {
+            bandwidth += relic.effect.value || 0;
+        }
     });
     return bandwidth;
-}
+};
+
+export const applyTurnEndRelics = (currentStats: CharacterStats, relics: RelicData[]): { stats: CharacterStats, message: string } => {
+    let newStats = { ...currentStats };
+    let messages: string[] = [];
+
+    relics.forEach(relic => {
+        // Fallback Position: If no block, gain 6
+        if (relic.trigger === 'turn_end_conditional' && relic.effect.type === 'block_if_zero') {
+            if (newStats.mitigation === 0) {
+                newStats.mitigation += relic.effect.value || 6;
+                messages.push(`${relic.name}: +${relic.effect.value} Mitigation (fallback)`);
+            }
+        }
+    });
+
+    return { stats: newStats, message: messages.join(' ') };
+};
+
+export const applyOnAttackRelics = (relics: RelicData[], stats: CharacterStats): { stats: CharacterStats, bonusDamage: number, messages: string[] } => {
+    let newStats = { ...stats, statuses: { ...stats.statuses } };
+    let bonusDamage = 0;
+    let messages: string[] = [];
+
+    relics.forEach(relic => {
+        // Opening Move: First attack deals +8 damage
+        if (relic.trigger === 'first_attack' && relic.effect.type === 'bonus_damage' && !relic.usedThisCombat) {
+            bonusDamage += relic.effect.value || 8;
+            relic.usedThisCombat = true;
+            messages.push(`${relic.name}: +${relic.effect.value} damage!`);
+        }
+
+        // Increment attack counter for attack-count based relics
+        if (relic.trigger === 'on_attack_count') {
+            relic.attackCounter = (relic.attackCounter || 0) + 1;
+            const threshold = relic.effect.threshold || 3;
+
+            if (relic.attackCounter >= threshold) {
+                relic.attackCounter = 0;
+
+                // Momentum: +1 Strength every 3 attacks
+                if (relic.effect.type === 'strength_per_attacks') {
+                    newStats.statuses.strength += relic.effect.value || 1;
+                    messages.push(`${relic.name}: +${relic.effect.value} Strength!`);
+                }
+
+                // Focus Mode: +4 Block every 3 attacks
+                if (relic.effect.type === 'block_per_attacks') {
+                    newStats.mitigation += relic.effect.value || 4;
+                    messages.push(`${relic.name}: +${relic.effect.value} Mitigation!`);
+                }
+            }
+        }
+    });
+
+    return { stats: newStats, bonusDamage, messages };
+};
+
+export const applyOnEnemyDeathRelics = (relics: RelicData[], stats: CharacterStats): { stats: CharacterStats, drawCards: number, messages: string[] } => {
+    let newStats = { ...stats };
+    let drawCards = 0;
+    let messages: string[] = [];
+
+    relics.forEach(relic => {
+        // Force Multiplier: +1 Energy and draw 1 when enemy dies
+        if (relic.trigger === 'on_enemy_death' && relic.effect.type === 'energy_and_draw') {
+            newStats.bandwidth += relic.effect.value || 1;
+            drawCards += relic.effect.value || 1;
+            messages.push(`${relic.name}: +${relic.effect.value} Bandwidth, Draw ${relic.effect.value}!`);
+        }
+    });
+
+    return { stats: newStats, drawCards, messages };
+};
+
+export const applyOnDamagedRelics = (relics: RelicData[], damageAmount: number, attackerId: string): { thornsDamage: number, messages: string[] } => {
+    let thornsDamage = 0;
+    let messages: string[] = [];
+
+    if (damageAmount > 0) {
+        relics.forEach(relic => {
+            // Thick Skin: Deal 3 damage back when hit
+            if (relic.trigger === 'on_damaged' && relic.effect.type === 'thorns') {
+                thornsDamage += relic.effect.value || 3;
+                messages.push(`${relic.name}: ${relic.effect.value} damage reflected!`);
+            }
+        });
+    }
+
+    return { thornsDamage, messages };
+};
+
+export const hasRelic = (relics: RelicData[], relicId: string): boolean => {
+    return relics.some(r => r.id === relicId);
+};
+
+export const canRestAtSite = (relics: RelicData[]): boolean => {
+    return !relics.some(r => r.effect.disable_rest === true);
+};
+
+export const getCardLimit = (relics: RelicData[]): number | null => {
+    for (const relic of relics) {
+        if (relic.effect.card_limit) return relic.effect.card_limit;
+    }
+    return null;
+};
+
+export const getDrawBonus = (relics: RelicData[]): number => {
+    let bonus = 0;
+    relics.forEach(relic => {
+        if (relic.effect.draw_bonus) bonus += relic.effect.draw_bonus;
+    });
+    return bonus;
+};
+
+export const hasSneckoEffect = (relics: RelicData[]): boolean => {
+    return relics.some(r => r.effect.type === 'snecko');
+};
+
+export const hasRetainHand = (relics: RelicData[]): boolean => {
+    return relics.some(r => r.effect.type === 'retain_hand');
+};
+
+export const getRelicsByRarity = (rarity: 'common' | 'uncommon' | 'rare' | 'boss'): RelicData[] => {
+    return Object.values(GAME_DATA.relics).filter(r => r.rarity === rarity);
+};
+
+export const getRandomRelic = (rarity: 'common' | 'uncommon' | 'rare' | 'boss', excludeIds: string[] = []): RelicData | null => {
+    const available = getRelicsByRarity(rarity).filter(r => !excludeIds.includes(r.id));
+    if (available.length === 0) return null;
+    return { ...available[Math.floor(Math.random() * available.length)] };
+};
+
+// === StS-ACCURATE RELIC DROP SYSTEM ===
+
+/**
+ * Get a relic from treasure chest (StS rates: 50% common, 33% uncommon, 17% rare)
+ * Falls back to lower rarity if pool is empty
+ */
+export const getTreasureRelic = (excludeIds: string[] = []): RelicData | null => {
+    const roll = Math.random() * 100;
+
+    // StS treasure relic rates
+    if (roll < 50) {
+        // 50% common
+        return getRandomRelic('common', excludeIds) || getRandomRelic('uncommon', excludeIds);
+    } else if (roll < 83) {
+        // 33% uncommon
+        return getRandomRelic('uncommon', excludeIds) || getRandomRelic('common', excludeIds);
+    } else {
+        // 17% rare (we use uncommon as fallback since no rare tier yet)
+        return getRandomRelic('uncommon', excludeIds) || getRandomRelic('common', excludeIds);
+    }
+};
+
+/**
+ * Get a relic from elite victory (StS: higher uncommon/rare weight)
+ * Elite relics are typically uncommon with rare chance
+ */
+export const getEliteRelic = (excludeIds: string[] = []): RelicData | null => {
+    const roll = Math.random() * 100;
+
+    // StS elite rates favor uncommon/rare
+    if (roll < 25) {
+        // 25% common
+        return getRandomRelic('common', excludeIds) || getRandomRelic('uncommon', excludeIds);
+    } else {
+        // 75% uncommon (would be uncommon/rare split in full StS)
+        return getRandomRelic('uncommon', excludeIds) || getRandomRelic('common', excludeIds);
+    }
+};
+
+/**
+ * Get 3 boss relic choices (StS boss relic selection)
+ * Returns array of 3 unique boss relics for player to choose from
+ */
+export const getBossRelicChoices = (excludeIds: string[] = []): RelicData[] => {
+    const available = getRelicsByRarity('boss').filter(r => !excludeIds.includes(r.id));
+    const choices: RelicData[] = [];
+    const used = new Set<string>();
+
+    // Pick up to 3 unique boss relics
+    while (choices.length < 3 && choices.length < available.length) {
+        const idx = Math.floor(Math.random() * available.length);
+        const relic = available[idx];
+        if (!used.has(relic.id)) {
+            used.add(relic.id);
+            choices.push({ ...relic });
+        }
+    }
+
+    return choices;
+};
+
+/**
+ * Get gold reward instead of boss relic (StS skip option)
+ * Returns amount of gold player receives for skipping
+ */
+export const getBossRelicSkipGold = (): number => {
+    // StS gives ~250 gold for skipping boss relic
+    return 150 + Math.floor(Math.random() * 100); // 150-250 gold
+};
 
 // --- Map Generation (Exact Slay the Spire Algorithm) ---
 
@@ -624,14 +877,14 @@ export const getBossEncounter = (): EnemyData[] => {
 
 const getNextIntent = (enemy: EnemyData, turn: number, playerHp: number): EnemyIntent => {
     const roll = Math.random() * 100;
-    
+
     // --- COMMON ---
     if (enemy.id === 'fanboy') {
         if (turn === 1) return { type: 'buff', value: 3, icon: 'buff', description: "Ritual (Hype)" };
         const dmg = 6 + enemy.statuses.strength;
         return { type: 'attack', value: dmg, icon: 'attack', description: `${dmg} Dark Strike` };
     }
-    
+
     if (enemy.id === 'spaghetti_code') {
         if (roll < 25) return { type: 'buff', value: 3, icon: 'buff', description: "Bellow (Block+Str)" };
         if (roll < 55) return { type: 'attack', value: 7, icon: 'attack', description: "Thrash (7 Dmg + 5 Blk)" };
@@ -649,7 +902,7 @@ const getNextIntent = (enemy: EnemyData, turn: number, playerHp: number): EnemyI
         const dmg = 5 + enemy.statuses.strength;
         return { type: 'attack', value: dmg, icon: 'attack', description: "Bite" };
     }
-    
+
     if (enemy.id === 'quick_hack' || enemy.id === 'hotfix') {
         if (roll < 50) return { type: 'attack', value: 3, icon: 'attack', description: "Tackle" };
         return { type: 'debuff', value: 1, icon: 'debuff', description: "Lick (Weak)" };
@@ -665,11 +918,55 @@ const getNextIntent = (enemy: EnemyData, turn: number, playerHp: number): EnemyI
         return { type: 'attack', value: 16, icon: 'attack', description: "Tackle" };
     }
 
+    // Micromanager (Blue Slaver) - Stab 13, Rake (7 + Weak)
+    if (enemy.id === 'micromanager') {
+        if (roll < 40) {
+            const dmg = 7 + enemy.statuses.strength;
+            return { type: 'attack', value: dmg, icon: 'attack', description: "Rake (Weak)" };
+        }
+        const dmg = 13 + enemy.statuses.strength;
+        return { type: 'attack', value: dmg, icon: 'attack', description: "Stab" };
+    }
+
+    // Feature Pusher (Red Slaver) - Stab 14, Scrape (9 + Vuln), Entangle
+    if (enemy.id === 'feature_pusher') {
+        if (turn === 1) return { type: 'debuff', value: 1, icon: 'debuff', description: "Entangle" };
+        if (roll < 45) {
+            const dmg = 9 + enemy.statuses.strength;
+            return { type: 'attack', value: dmg, icon: 'attack', description: "Scrape (Vuln)" };
+        }
+        const dmg = 14 + enemy.statuses.strength;
+        return { type: 'attack', value: dmg, icon: 'attack', description: "Stab" };
+    }
+
+    // Headhunter (Looter) - Mug 10-12, Lunge 12, Escape
+    if (enemy.id === 'headhunter') {
+        if (turn >= 3 && roll < 15) return { type: 'buff', value: 0, icon: 'buff', description: "Escape (Flee)" };
+        if (roll < 50) {
+            const dmg = 10 + enemy.statuses.strength;
+            return { type: 'attack', value: dmg, icon: 'attack', description: "Mug (Steal Capital)" };
+        }
+        const dmg = 12 + enemy.statuses.strength;
+        return { type: 'attack', value: dmg, icon: 'attack', description: "Lunge" };
+    }
+
+    // Memory Leak (Fungi Beast) - Bite 6, Grow (Strength)
+    if (enemy.id === 'memory_leak') {
+        if (roll < 40) return { type: 'buff', value: 3, icon: 'buff', description: "Grow (Strength)" };
+        const dmg = 6 + enemy.statuses.strength;
+        return { type: 'attack', value: dmg, icon: 'attack', description: "Bite" };
+    }
+
     // --- ELITES ---
+    // Scope Creep (Gremlin Nob) - Enrage on skills, Skull Bash 6+Vuln, Rush 14
     if (enemy.id === 'scope_creep') {
-        if (turn === 1) return { type: 'buff', value: 0, icon: 'buff', description: "Bellow (Enrage)" };
-        if (turn === 2) return { type: 'debuff', value: 2, icon: 'debuff', description: "Skull Bash (Vuln)" };
-        return { type: 'attack', value: 14, icon: 'attack', description: "Rush" };
+        if (turn === 1) return { type: 'buff', value: 2, icon: 'buff', description: "Bellow (Enrage)" };
+        if (roll < 33) {
+            const dmg = 6 + enemy.statuses.strength;
+            return { type: 'attack', value: dmg, icon: 'attack', description: "Skull Bash (Vuln)" };
+        }
+        const dmg = 14 + enemy.statuses.strength;
+        return { type: 'attack', value: dmg, icon: 'attack', description: "Rush" };
     }
 
     if (enemy.id === 'the_over_engineer') {
@@ -686,12 +983,26 @@ const getNextIntent = (enemy: EnemyData, turn: number, playerHp: number): EnemyI
     }
 
     // --- BOSSES ---
+    // The Pivot (Guardian) - Mode Shift between Offensive/Defensive
     if (enemy.id === 'boss_the_pivot') {
-        const cycle = turn % 4;
-        if (cycle === 1) return { type: 'buff', value: 9, icon: 'buff', description: "Charging Up (Block)" };
-        if (cycle === 2) return { type: 'attack', value: 32, icon: 'attack', description: "Fierce Bash" };
-        if (cycle === 3) return { type: 'debuff', value: 2, icon: 'debuff', description: "Vent Steam (Vuln)" };
-        return { type: 'attack', value: 5, icon: 'attack', description: "Whirlwind (x4)" };
+        // Track mode using asleep status as mode flag (0=offensive, 1+=defensive)
+        const isDefensive = enemy.statuses.asleep > 0;
+
+        if (isDefensive) {
+            // Defensive Mode: Roll Attack (9), then Twin Slam (8x2) to exit
+            if (enemy.statuses.asleep >= 3) {
+                // Twin Slam exits defensive mode
+                return { type: 'attack', value: 16, icon: 'attack', description: "Twin Slam (x2, Exit Defensive)" };
+            }
+            return { type: 'attack', value: 9, icon: 'attack', description: "Roll Attack" };
+        } else {
+            // Offensive Mode: Charging Up, Fierce Bash, Vent Steam, Whirlwind
+            const cycle = turn % 4;
+            if (cycle === 1) return { type: 'buff', value: 9, icon: 'buff', description: "Charging Up (Block)" };
+            if (cycle === 2) return { type: 'attack', value: 32, icon: 'attack', description: "Fierce Bash" };
+            if (cycle === 3) return { type: 'debuff', value: 2, icon: 'debuff', description: "Vent Steam (Vuln+Weak)" };
+            return { type: 'attack', value: 20, icon: 'attack', description: "Whirlwind (x4)" };
+        }
     }
 
     if (enemy.id === 'boss_burn_rate') {
@@ -804,11 +1115,55 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
             newPlayerHp -= unblockedDamage;
             if (unblockedDamage > 0) newMessage += ` ${enemy.name} caused ${unblockedDamage} Burn.`;
             else newMessage += ` Blocked ${enemy.name}.`;
+
+            // Handle combo attacks that deal damage + apply status
+            if (intent.description.includes('Rake') || intent.description.includes('Spit Web')) {
+                newPlayerStatuses.weak += 2;
+                newMessage += ` Applied 2 Weak.`;
+            }
+            if (intent.description.includes('Scrape')) {
+                newPlayerStatuses.vulnerable += 2;
+                newMessage += ` Applied 2 Vulnerable.`;
+            }
+            if (intent.description.includes('Thrash')) {
+                enemy.mitigation += 5;
+                newMessage += ` ${enemy.name} gained 5 Block.`;
+            }
+            if (intent.description.includes('Skull Bash')) {
+                newPlayerStatuses.vulnerable += 2;
+                newMessage += ` Applied 2 Vulnerable.`;
+            }
+            // Whirlwind (x4): 5*4 = 20 damage total
+            if (intent.description.includes('Whirlwind')) {
+                // Multi-hit already factored into damage value
+                newMessage += ` (x4 hits)`;
+            }
+            // Inferno (x6): 2*6 = 12 damage total
+            if (intent.description.includes('Inferno')) {
+                newMessage += ` (x6 hits)`;
+            }
+            // Twin Slam: Exit defensive mode for The Pivot
+            if (intent.description.includes('Twin Slam') && enemy.id === 'boss_the_pivot') {
+                enemy.statuses.asleep = 0; // Exit defensive mode
+                enemy.statuses.thorns = 0; // Remove Sharp Hide
+                newMessage += ` Exited Defensive Mode!`;
+            }
+            // Vent Steam: Applies both Vuln and Weak
+            if (intent.description.includes('Vent Steam')) {
+                newPlayerStatuses.vulnerable += 2;
+                newPlayerStatuses.weak += 2;
+                newMessage += ` Applied 2 Vuln + 2 Weak.`;
+            }
         } else if (intent.type === 'buff') {
-            if (intent.description.includes('Growth') || intent.description.includes('Ritual')) {
+            if (intent.description.includes('Growth') || intent.description.includes('Ritual') || intent.description.includes('Grow')) {
                 enemy.statuses.strength += intent.value;
                 newMessage += ` ${enemy.name} gained ${intent.value} Strength.`;
-            } else if (intent.description.includes('Block') || intent.description.includes('Barricade')) {
+            } else if (intent.description.includes('Bellow')) {
+                // Jaw Worm Bellow: +3 Str, +6 Block
+                enemy.statuses.strength += 3;
+                enemy.mitigation += 6;
+                newMessage += ` ${enemy.name} Bellowed! (+3 Str, +6 Block)`;
+            } else if (intent.description.includes('Block') || intent.description.includes('Barricade') || intent.description.includes('Charging')) {
                 enemy.mitigation += intent.value;
                 newMessage += ` ${enemy.name} gained ${intent.value} Block.`;
             } else if (intent.description.includes('Escape')) {
@@ -821,9 +1176,15 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
                 enemiesToSpawn.push(acidL, spikeL);
                 enemy.hp = 0;
                 newMessage += ` ${enemy.name} Split into two!`;
+            } else if (intent.description.includes('Enrage')) {
+                // Gremlin Nob setup - Enrage is tracked, triggered when player plays skills
+                newMessage += ` ${enemy.name} is enraged! (+2 Str per skill)`;
             }
         } else if (intent.type === 'debuff') {
-            if (enemy.id.startsWith('legacy_') && intent.description.includes('Shuffle Bugs')) {
+            if (intent.description.includes('Entangle')) {
+                // Red Slaver Entangle - prevents playing attacks for 1 turn
+                newMessage += ` ${enemy.name} Entangled you! (Cannot play attacks this turn)`;
+            } else if (enemy.id.startsWith('legacy_') && intent.description.includes('Shuffle Bugs')) {
                 const bugCard = GAME_DATA.cards.card_bug;
                 nextDrawPile.push({ ...bugCard, id: `card_bug_${Date.now()}_1` }, { ...bugCard, id: `card_bug_${Date.now()}_2` });
                 nextDrawPile = shuffle(nextDrawPile);
@@ -842,6 +1203,10 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
             } else if (intent.description.includes('Frail')) {
                 newPlayerStatuses.frail += intent.value;
                 newMessage += ` ${enemy.name} applied ${intent.value} Frail.`;
+            } else if (intent.description.includes('Siphon')) {
+                // Over-Engineer Siphon: -1 Strength (can go negative)
+                newPlayerStatuses.strength -= 1;
+                newMessage += ` ${enemy.name} Siphoned! (-1 Strength)`;
             }
         }
 
@@ -894,7 +1259,7 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
     const nextTurn = prev.turn + 1;
     newEnemies.forEach(enemy => {
         if (enemy.hp > 0) {
-             enemy.currentIntent = getNextIntent(enemy, nextTurn, newPlayerHp);
+            enemy.currentIntent = getNextIntent(enemy, nextTurn, newPlayerHp);
         }
     });
 
@@ -927,9 +1292,9 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
 
     if (newStatus === 'PLAYING') {
         const { drawn, newDraw, newDiscard } = drawCards(nextDrawPile, prev.discardPile, 5);
-        
+
         const processed = processDrawnCards(drawn, prev.hand, newDiscard, newDraw, nextPlayerStats, newMessage);
-        
+
         nextState.hand = processed.hand;
         nextState.drawPile = processed.drawPile;
         nextState.discardPile = processed.discard;
@@ -1014,7 +1379,7 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                 const dmg = prev.playerStats.mitigation;
                 let targets: EnemyData[] = [];
                 if (target === 'enemy' && targetEnemy) targets = [targetEnemy];
-                
+
                 targets.forEach(t => {
                     let finalDamage = calculateDamage(dmg, prev.playerStats.statuses, t.statuses);
                     if (t.mitigation > 0) {
@@ -1033,10 +1398,10 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                 const matches = countCardsMatches(combatDeck, matchString);
                 const bonus = matches * (effect.value === 6 ? 2 : 2); // Hardcoded +2 per match for now based on description
                 const totalDmg = effect.value + bonus;
-                
+
                 let targets: EnemyData[] = [];
                 if (target === 'enemy' && targetEnemy) targets = [targetEnemy];
-                
+
                 targets.forEach(t => {
                     let finalDamage = calculateDamage(totalDmg, prev.playerStats.statuses, t.statuses);
                     if (t.mitigation > 0) {
@@ -1056,17 +1421,17 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                 if (newPlayerStatuses.noDraw > 0) newMessage += ` (Draw prevented)`;
                 else {
                     const result = drawCards(newDrawPile, newDiscardPile, effect.value);
-                    
+
                     const currentStats = { ...prev.playerStats, bandwidth: newBandwidth, statuses: newPlayerStatuses, mitigation: newMitigation };
                     const processed = processDrawnCards(result.drawn, currentHand, newDiscardPile, result.newDraw, currentStats, newMessage);
-                    
+
                     currentHand = processed.hand;
                     newDiscardPile = processed.discard;
                     newDrawPile = processed.drawPile;
                     newMessage = processed.message;
                     newBandwidth = processed.stats.bandwidth;
                     newPlayerStatuses = processed.stats.statuses;
-                    
+
                     newMessage += ` Drew ${result.drawn.length} cards.`;
                 }
             } else if (effect.type === 'apply_status') {
@@ -1149,17 +1514,17 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                 if (targetEnemy && targetEnemy.statuses.vulnerable > 0) {
                     newBandwidth += effect.value;
                     const result = drawCards(newDrawPile, newDiscardPile, 1);
-                    
+
                     const currentStats = { ...prev.playerStats, bandwidth: newBandwidth, statuses: newPlayerStatuses, mitigation: newMitigation };
                     const processed = processDrawnCards(result.drawn, currentHand, newDiscardPile, result.newDraw, currentStats, newMessage);
-                    
+
                     currentHand = processed.hand;
                     newDiscardPile = processed.discard;
                     newDrawPile = processed.drawPile;
                     newMessage = processed.message;
                     newBandwidth = processed.stats.bandwidth;
                     newPlayerStatuses = processed.stats.statuses;
-                    
+
                     newMessage += ` Refunded Energy & Draw.`;
                 }
             } else if (effect.type === 'exhaust_random') {
@@ -1180,7 +1545,7 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                     newMessage += ` Hand is empty.`;
                 }
             } else if (effect.type === 'discard') {
-                 if (currentHand.length > 0) {
+                if (currentHand.length > 0) {
                     newStatus = 'DISCARD_SELECTION';
                     newPendingDiscard = effect.value;
                     newMessage += ` Select ${effect.value} card(s) to discard.`;
@@ -1223,9 +1588,9 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
         // Calculate Capital
         prev.enemies.forEach(e => {
             if (e.rewards && e.rewards.capital) {
-                 const min = e.rewards.capital.min;
-                 const max = e.rewards.capital.max;
-                 earnedCapital += Math.floor(Math.random() * (max - min + 1)) + min;
+                const min = e.rewards.capital.min;
+                const max = e.rewards.capital.max;
+                earnedCapital += Math.floor(Math.random() * (max - min + 1)) + min;
             }
         });
 
@@ -1239,6 +1604,24 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
             }
         }
     }
+
+    // Scope Creep (Gremlin Nob) ENRAGE: Gains +2 Strength each time player plays a Skill
+    if (card.type === 'skill') {
+        newEnemies.forEach(e => {
+            if (e.id === 'scope_creep' && e.hp > 0) {
+                e.statuses.strength += 2;
+                newMessage += ` Scope Creep Enraged! (+2 Str)`;
+            }
+        });
+    }
+
+    // Over-Engineer (Lagavulin): Wake up if damaged
+    newEnemies.forEach(e => {
+        if (e.id === 'over_engineer' && e.statuses.asleep > 0 && e.hp < e.maxHp) {
+            e.statuses.asleep = 0;
+            newMessage += ` ${e.name} woke up!`;
+        }
+    });
 
     return {
         ...prev,

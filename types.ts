@@ -159,16 +159,47 @@ export interface EnemyData {
   currentIntent: EnemyIntent;
 }
 
+export type RelicTrigger =
+  | 'turn_start'
+  | 'turn_end'
+  | 'combat_start'
+  | 'combat_end'
+  | 'on_play'
+  | 'on_draw'
+  | 'passive'
+  | 'first_attack'
+  | 'first_turn'
+  | 'turn_end_conditional'
+  | 'on_damaged'
+  | 'on_card_reward'
+  | 'on_attack_count'
+  | 'combat_end_conditional'
+  | 'on_enemy_death';
+
+export interface RelicEffect {
+  type: string;  // Flexible type for various relic effects
+  value?: number;
+  threshold?: number;
+  draw_bonus?: number;
+  card_limit?: number;
+  add_wounds?: number;
+  disable_rest?: boolean;
+  enemy_strength?: number;
+}
+
 export interface RelicData {
   id: string;
   character: 'cto' | 'ceo' | 'coo' | 'shared';
   name: string;
   rarity: 'starter' | 'common' | 'uncommon' | 'rare' | 'boss' | 'event';
-  trigger: 'turn_start' | 'turn_end' | 'combat_start' | 'combat_end' | 'on_play' | 'on_draw' | 'passive';
-  effect: CardEffect;
+  trigger: RelicTrigger;
+  effect: RelicEffect;
   description: string;
   icon: string;
   tooltip?: TooltipData;
+  // Runtime state for counter-based relics
+  attackCounter?: number;
+  usedThisCombat?: boolean;
 }
 
 export type MapNodeType = 'problem' | 'elite' | 'retrospective' | 'vendor' | 'opportunity' | 'treasure' | 'boss';
@@ -215,9 +246,9 @@ export interface EventChoice {
 
 export interface EventEffect {
   type: 'gain_gold' | 'lose_gold' | 'gain_hp' | 'lose_hp' | 'lose_max_hp' |
-        'gain_card' | 'remove_card' | 'upgrade_card' | 'transform_card' |
-        'exhaust_card' | 'add_status_card' | 'gain_relic' | 'gain_strength' |
-        'apply_status' | 'fight_elite' | 'random_chance' | 'nothing';
+  'gain_card' | 'remove_card' | 'upgrade_card' | 'transform_card' |
+  'exhaust_card' | 'add_status_card' | 'gain_relic' | 'gain_strength' |
+  'apply_status' | 'fight_elite' | 'random_chance' | 'nothing';
   value?: number;
   cardRarity?: 'common' | 'uncommon' | 'rare' | 'random';
   statusId?: string;

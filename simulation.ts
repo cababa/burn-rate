@@ -67,12 +67,12 @@ const runSimulation = (simId: number): { win: boolean, floor: number, reason: st
                 }
 
                 // Apply Combat Start Relics
-                const { stats, message } = applyCombatStartRelics(gameState.playerStats, gameState.relics);
+                const { stats, enemies: modifiedEnemies, message } = applyCombatStartRelics(gameState.playerStats, gameState.relics, enemies);
 
                 gameState = {
                     ...gameState,
                     status: 'PLAYING',
-                    enemies: enemies,
+                    enemies: modifiedEnemies,
                     playerStats: { ...stats, bandwidth: getTurnStartBandwidth(gameState.relics) },
                     turn: 1,
                     drawPile: shuffle([...gameState.deck]), // Reset Deck

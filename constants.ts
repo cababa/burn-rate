@@ -46,6 +46,7 @@ export const GAME_DATA = {
         } as CharacterStats
     },
     relics: {
+        // --- STARTER RELIC ---
         git_repository: {
             id: "relic_git_repository",
             character: "cto",
@@ -60,6 +61,234 @@ export const GAME_DATA = {
                 definition: "A system that records changes to a file or set of files over time so that you can recall specific versions later."
             }
         } as RelicData,
+
+        // --- COMMON RELICS (8) ---
+        sticky_note: {
+            id: "relic_sticky_note",
+            character: "shared",
+            name: "Sticky Note",
+            rarity: "common",
+            trigger: "combat_start",
+            effect: { type: "apply_vulnerable_all", value: 1 },
+            description: "At the start of combat, apply 1 Vulnerable to ALL enemies.",
+            icon: "📝",
+            tooltip: { term: "Focus", definition: "A simple tool for keeping priorities clear." }
+        } as RelicData,
+        opening_move: {
+            id: "relic_opening_move",
+            character: "shared",
+            name: "Opening Move",
+            rarity: "common",
+            trigger: "first_attack",
+            effect: { type: "bonus_damage", value: 8 },
+            description: "Your first attack each combat deals +8 damage.",
+            icon: "🎯",
+            tooltip: { term: "First Mover", definition: "The advantage of being first to act." }
+        } as RelicData,
+        safety_net: {
+            id: "relic_safety_net",
+            character: "shared",
+            name: "Safety Net",
+            rarity: "common",
+            trigger: "combat_start",
+            effect: { type: "block", value: 10 },
+            description: "Start each combat with 10 Mitigation.",
+            icon: "🛡️",
+            tooltip: { term: "Preparation", definition: "Having backup plans ready." }
+        } as RelicData,
+        fresh_eyes: {
+            id: "relic_fresh_eyes",
+            character: "shared",
+            name: "Fresh Eyes",
+            rarity: "common",
+            trigger: "passive",
+            effect: { type: "strength", value: 1 },
+            description: "Gain +1 Execution Power (Strength).",
+            icon: "👀",
+            tooltip: { term: "Perspective", definition: "New viewpoints reveal hidden solutions." }
+        } as RelicData,
+        fresh_start: {
+            id: "relic_fresh_start",
+            character: "shared",
+            name: "Fresh Start",
+            rarity: "common",
+            trigger: "first_turn",
+            effect: { type: "gain_bandwidth", value: 1 },
+            description: "Gain +1 Bandwidth on the first turn of combat.",
+            icon: "⚡",
+            tooltip: { term: "New Beginnings", definition: "Extra energy when starting fresh." }
+        } as RelicData,
+        fallback_position: {
+            id: "relic_fallback_position",
+            character: "shared",
+            name: "Fallback Position",
+            rarity: "common",
+            trigger: "turn_end_conditional",
+            effect: { type: "block_if_zero", value: 6 },
+            description: "If you end your turn with 0 Mitigation, gain 6.",
+            icon: "🏠",
+            tooltip: { term: "Safety", definition: "Automatic protection when exposed." }
+        } as RelicData,
+        thick_skin: {
+            id: "relic_thick_skin",
+            character: "shared",
+            name: "Thick Skin",
+            rarity: "common",
+            trigger: "on_damaged",
+            effect: { type: "thorns", value: 3 },
+            description: "When you take damage, deal 3 damage back to the attacker.",
+            icon: "🦔",
+            tooltip: { term: "Resilience", definition: "Pushing back against setbacks." }
+        } as RelicData,
+        smart_money: {
+            id: "relic_smart_money",
+            character: "shared",
+            name: "Smart Money",
+            rarity: "common",
+            trigger: "on_card_reward",
+            effect: { type: "bonus_capital", value: 8 },
+            description: "Gain +$8k whenever you receive a card reward.",
+            icon: "💰",
+            tooltip: { term: "Investment", definition: "Those who believe in you multiply your gains." }
+        } as RelicData,
+
+        // --- UNCOMMON RELICS (6) ---
+        momentum: {
+            id: "relic_momentum",
+            character: "shared",
+            name: "Momentum",
+            rarity: "uncommon",
+            trigger: "on_attack_count",
+            effect: { type: "strength_per_attacks", value: 1, threshold: 3 },
+            description: "Every 3 attacks you play, gain +1 Strength.",
+            icon: "🚀",
+            tooltip: { term: "Acceleration", definition: "Building speed compounds over time." }
+        } as RelicData,
+        quick_learner: {
+            id: "relic_quick_learner",
+            character: "shared",
+            name: "Quick Learner",
+            rarity: "uncommon",
+            trigger: "on_attack_count",
+            effect: { type: "dexterity_per_attacks", value: 1, threshold: 3 },
+            description: "Every 3 attacks you play, gain +1 Dexterity (Block bonus).",
+            icon: "📚",
+            tooltip: { term: "Adaptation", definition: "Learning fast improves your defenses." }
+        } as RelicData,
+        second_wind: {
+            id: "relic_second_wind",
+            character: "shared",
+            name: "Second Wind",
+            rarity: "uncommon",
+            trigger: "combat_end_conditional",
+            effect: { type: "heal_if_low", value: 12, threshold: 50 },
+            description: "If your HP is ≤50% after combat, heal 12 HP.",
+            icon: "💨",
+            tooltip: { term: "Recovery", definition: "The ability to bounce back from near-failure." }
+        } as RelicData,
+        force_multiplier: {
+            id: "relic_force_multiplier",
+            character: "shared",
+            name: "Force Multiplier",
+            rarity: "uncommon",
+            trigger: "on_enemy_death",
+            effect: { type: "energy_and_draw", value: 1 },
+            description: "When an enemy dies, gain 1 Bandwidth and draw 1 card.",
+            icon: "🤝",
+            tooltip: { term: "Leverage", definition: "Victories snowball with the right approach." }
+        } as RelicData,
+        focus_mode: {
+            id: "relic_focus_mode",
+            character: "shared",
+            name: "Focus Mode",
+            rarity: "uncommon",
+            trigger: "on_attack_count",
+            effect: { type: "block_per_attacks", value: 4, threshold: 3 },
+            description: "Every 3 attacks you play, gain 4 Mitigation.",
+            icon: "🎯",
+            tooltip: { term: "Concentration", definition: "Focus creates protection." }
+        } as RelicData,
+        secret_weapon: {
+            id: "relic_secret_weapon",
+            character: "shared",
+            name: "Secret Weapon",
+            rarity: "uncommon",
+            trigger: "combat_start",
+            effect: { type: "start_with_card", value: 1 },
+            description: "Choose a skill card. Start each combat with it in hand.",
+            icon: "🃏",
+            tooltip: { term: "Reliability", definition: "Your go-to tool, always ready." }
+        } as RelicData,
+
+        // --- BOSS RELICS (6) ---
+        pivoting_power: {
+            id: "relic_pivoting_power",
+            character: "shared",
+            name: "Pivoting Power",
+            rarity: "boss",
+            trigger: "passive",
+            effect: { type: "snecko", draw_bonus: 2 },
+            description: "Draw 2 extra cards per turn. Card costs are randomized (0-3).",
+            icon: "🔀",
+            tooltip: { term: "Chaos", definition: "Changing direction opens options but adds uncertainty." }
+        } as RelicData,
+        memory_bank: {
+            id: "relic_memory_bank",
+            character: "shared",
+            name: "Memory Bank",
+            rarity: "boss",
+            trigger: "passive",
+            effect: { type: "retain_hand" },
+            description: "Cards are not discarded at the end of your turn.",
+            icon: "🧠",
+            tooltip: { term: "Retention", definition: "Saving resources for the right moment." }
+        } as RelicData,
+        rate_limiter: {
+            id: "relic_rate_limiter",
+            character: "shared",
+            name: "Rate Limiter",
+            rarity: "boss",
+            trigger: "turn_start",
+            effect: { type: "gain_bandwidth", value: 1, card_limit: 6 },
+            description: "+1 Bandwidth per turn. You can only play 6 cards per turn.",
+            icon: "⏱️",
+            tooltip: { term: "Focus", definition: "Focus over frenzy - quality over quantity." }
+        } as RelicData,
+        cutting_corners: {
+            id: "relic_cutting_corners",
+            character: "shared",
+            name: "Cutting Corners",
+            rarity: "boss",
+            trigger: "combat_start",
+            effect: { type: "gain_bandwidth", value: 1, add_wounds: 2 },
+            description: "+1 Bandwidth per turn. Add 2 Bug cards to your deck.",
+            icon: "✂️",
+            tooltip: { term: "Tradeoff", definition: "Short-term gains with long-term costs." }
+        } as RelicData,
+        no_rest_for_the_bold: {
+            id: "relic_no_rest_for_bold",
+            character: "shared",
+            name: "No Rest for the Bold",
+            rarity: "boss",
+            trigger: "turn_start",
+            effect: { type: "gain_bandwidth", value: 1, disable_rest: true },
+            description: "+1 Bandwidth per turn. You cannot rest at Retrospective nodes.",
+            icon: "🌙",
+            tooltip: { term: "Hustle", definition: "The grind never stops for those who want to win." }
+        } as RelicData,
+        aggressive_growth: {
+            id: "relic_aggressive_growth",
+            character: "shared",
+            name: "Aggressive Growth",
+            rarity: "boss",
+            trigger: "turn_start",
+            effect: { type: "gain_bandwidth", value: 1, enemy_strength: 1 },
+            description: "+1 Bandwidth per turn. Enemies start combat with +1 Strength.",
+            icon: "📈",
+            tooltip: { term: "Risk", definition: "Moving fast, but facing tougher opposition." }
+        } as RelicData,
+
+        // --- EXISTING RARE (keep for compatibility) ---
         coffee_drip: {
             id: "relic_coffee_drip",
             character: "shared",
