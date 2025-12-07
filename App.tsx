@@ -9,7 +9,8 @@ import { Battery, DollarSign, CheckCircle2, AlertOctagon, RefreshCw, Play, Layer
 import {
     calculateDamage, countCardsMatches, generateStarterDeck, getRandomRewardCards, shuffle, drawCards, upgradeCard,
     applyCombatStartRelics, applyCombatEndRelics, getTurnStartBandwidth, generateMap, resolveCardEffect, resolveEnemyTurn, resolveEndTurn, processDrawnCards,
-    getEncounterForFloor, getEliteEncounter, getBossEncounter
+    applyOnAttackRelics, applyOnEnemyDeathRelics, applyTurnEndRelics, hasRetainHand, getCardLimit, canRestAtSite,
+    getRelicWoundsToAdd, applyOnCardReward, getSecretWeaponCard, getEncounterForFloor, getEliteEncounter, getBossEncounter
 } from './gameLogic';
 
 const App: React.FC = () => {
@@ -40,6 +41,9 @@ const App: React.FC = () => {
     // Deck/pile viewer modal state
     const [viewingPile, setViewingPile] = useState<'deck' | 'draw' | 'discard' | 'exhaust' | 'remove' | null>(null);
     const [pendingRemovalPrice, setPendingRemovalPrice] = useState(0);
+
+    // Secret Weapon relic: pending relic that needs skill card selection before being added
+    const [pendingSecretWeaponRelic, setPendingSecretWeaponRelic] = useState<RelicData | null>(null);
 
 
     // --- START GAME LOGIC ---
@@ -456,11 +460,17 @@ const App: React.FC = () => {
     const handleTakeCard = (card: CardData) => {
         setGameState(prev => {
             if (!prev.lastVictoryReward || prev.lastVictoryReward.cardCollected) return prev;
+
+            // Apply Smart Money relic (bonus capital on card reward)
+            const { stats: newStats, messages: relicMessages } = applyOnCardReward(prev.relics, prev.playerStats);
+            const bonusMsg = relicMessages.length > 0 ? ` ${relicMessages.join(' ')}` : '';
+
             return {
                 ...prev,
                 deck: [...prev.deck, card],
+                playerStats: newStats,
                 lastVictoryReward: { ...prev.lastVictoryReward, cardCollected: true },
-                message: `Added ${card.name} to deck!`
+                message: `Added ${card.name} to deck!${bonusMsg}`
             };
         });
     };
@@ -479,13 +489,44 @@ const App: React.FC = () => {
     const handleTakeRelic = () => {
         setGameState(prev => {
             if (!prev.lastVictoryReward || !prev.lastVictoryReward.relic || prev.lastVictoryReward.relicCollected) return prev;
+
+            const relic = prev.lastVictoryReward.relic;
+
+            // Secret Weapon requires skill card selection before adding
+            if (relic.effect.type === 'start_with_card') {
+                // Store the relic and wait for card selection
+                setPendingSecretWeaponRelic({ ...relic });
+                return {
+                    ...prev,
+                    lastVictoryReward: { ...prev.lastVictoryReward, relicCollected: true },
+                    message: `Select a skill card for ${relic.name}...`
+                };
+            }
+
+            // Normal relic acquisition
             return {
                 ...prev,
-                relics: [...prev.relics, prev.lastVictoryReward.relic],
+                relics: [...prev.relics, relic],
                 lastVictoryReward: { ...prev.lastVictoryReward, relicCollected: true },
-                message: `Acquired ${prev.lastVictoryReward.relic.name}!`
+                message: `Acquired ${relic.name}!`
             };
         });
+    };
+
+    // Handler for Secret Weapon skill card selection
+    const handleSecretWeaponCardSelect = (card: CardData) => {
+        if (!pendingSecretWeaponRelic) return;
+
+        // Store the chosen card ID on the relic and add it
+        const relicWithCard = { ...pendingSecretWeaponRelic, chosenCardId: card.id };
+
+        setGameState(prev => ({
+            ...prev,
+            relics: [...prev.relics, relicWithCard],
+            message: `${pendingSecretWeaponRelic.name}: Will start each combat with ${card.name}!`
+        }));
+
+        setPendingSecretWeaponRelic(null);
     };
 
 
@@ -604,11 +645,29 @@ const App: React.FC = () => {
         // Apply Combat Start Relics
         const { stats: startStats, enemies: modifiedEnemies, message: relicMsg } = applyCombatStartRelics(newState.playerStats, newState.relics, nextEnemies);
 
-        // Reset Deck for Combat
-        const combatDeck = shuffle([...prev.deck]);
+        // Get wound cards to add from relics like Cutting Corners
+        const woundCards = getRelicWoundsToAdd(newState.relics);
+
+        // Reset Deck for Combat (including any wound cards from relics)
+        const combatDeck = shuffle([...prev.deck, ...woundCards]);
 
         // Draw Initial Hand
-        const { drawn, newDraw, newDiscard } = drawCards(combatDeck, [], 5);
+        const drawCount = 5;
+        const { drawn, newDraw, newDiscard } = drawCards(combatDeck, [], drawCount);
+
+        // Check for Secret Weapon relic (start with a skill card in hand)
+        const secretWeaponCard = getSecretWeaponCard(newState.relics, combatDeck);
+        let finalHand = [...drawn];
+        let finalDraw = [...newDraw];
+
+        if (secretWeaponCard) {
+            // Find and remove the card from draw pile, add to hand
+            const idx = finalDraw.findIndex(c => c.id === secretWeaponCard.id);
+            if (idx !== -1) {
+                finalDraw.splice(idx, 1);
+                finalHand.push(secretWeaponCard);
+            }
+        }
 
         // Process Initial Draw (e.g. Legacy Code)
         const startStatsWithRelics = {
@@ -616,7 +675,7 @@ const App: React.FC = () => {
             bandwidth: getTurnStartBandwidth(prev.relics),
         };
 
-        const processed = processDrawnCards(drawn, [], newDiscard, newDraw, startStatsWithRelics, relicMsg ? `${encounterMessage} ${relicMsg}` : encounterMessage);
+        const processed = processDrawnCards(finalHand, [], newDiscard, finalDraw, startStatsWithRelics, relicMsg ? `${encounterMessage} ${relicMsg}` : encounterMessage);
 
         return {
             ...newState,
@@ -1950,6 +2009,19 @@ const App: React.FC = () => {
                     onClose={() => setViewingPile(null)}
                     icon="deck"
                     emptyMessage="No cards in deck"
+                />
+            )}
+
+            {/* Secret Weapon Card Selection Modal */}
+            {pendingSecretWeaponRelic && (
+                <DeckViewer
+                    title="Secret Weapon: Choose a Skill Card"
+                    cards={gameState.deck.filter(c => c.type === 'skill')}
+                    onClose={() => setPendingSecretWeaponRelic(null)}
+                    icon="deck"
+                    emptyMessage="No skill cards in deck"
+                    selectable={true}
+                    onSelect={handleSecretWeaponCardSelect}
                 />
             )}
 

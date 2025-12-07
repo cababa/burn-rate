@@ -186,6 +186,73 @@ export const applyCombatStartRelics = (currentStats: CharacterStats, relics: Rel
     return { stats: newStats, enemies: newEnemies, message: messages.join(' ') };
 };
 
+// Get wound cards to add to deck for relics like Cutting Corners
+export const getRelicWoundsToAdd = (relics: RelicData[]): CardData[] => {
+    const wounds: CardData[] = [];
+    relics.forEach(relic => {
+        if (relic.effect.add_wounds && relic.effect.add_wounds > 0) {
+            const bugCard = GAME_DATA.cards.card_bug;
+            if (bugCard) {
+                for (let i = 0; i < relic.effect.add_wounds; i++) {
+                    wounds.push({ ...bugCard, id: `wound_${relic.id}_${i}_${Date.now()}` });
+                }
+                getGlobalLogger().log('RELIC_EFFECT', `${relic.name} added ${relic.effect.add_wounds} Bug cards to deck.`);
+            }
+        }
+    });
+    return wounds;
+};
+
+// Apply Smart Money (on_card_reward relic)
+export const applyOnCardReward = (relics: RelicData[], currentStats: CharacterStats): { stats: CharacterStats, messages: string[] } => {
+    let newStats = { ...currentStats };
+    const messages: string[] = [];
+
+    relics.forEach(relic => {
+        if (relic.trigger === 'on_card_reward' && relic.effect.type === 'bonus_capital') {
+            newStats.capital += relic.effect.value || 0;
+            messages.push(`${relic.name}: +$${relic.effect.value}k!`);
+            getGlobalLogger().log('RELIC_EFFECT', `${relic.name} granted ${relic.effect.value} capital on card reward.`);
+        }
+    });
+
+    return { stats: newStats, messages };
+};
+
+// Secret Weapon: Get a skill card from deck to start with in hand
+export const getSecretWeaponCard = (relics: RelicData[], deck: CardData[]): CardData | null => {
+    const secretWeapon = relics.find(r => r.effect.type === 'start_with_card');
+    if (!secretWeapon) return null;
+
+    // If player chose a specific card, use the base card ID to find a matching card in deck
+    // (card.id changes each run, but the base ID like 'cto_rollback' stays the same)
+    if (secretWeapon.chosenCardId) {
+        // First try exact match
+        let chosen = deck.find(c => c.id === secretWeapon.chosenCardId);
+
+        // If not found, try to find by base card name (same card type)
+        if (!chosen) {
+            // Extract base card type from ID (e.g., 'rollback_2_abc123' -> 'rollback')
+            const chosenBase = secretWeapon.chosenCardId.split('_')[0];
+            chosen = deck.find(c => c.id.startsWith(chosenBase) && c.type === 'skill');
+        }
+
+        if (chosen) {
+            getGlobalLogger().log('RELIC_EFFECT', `${secretWeapon.name} added ${chosen.name} to starting hand.`);
+            return chosen;
+        }
+    }
+
+    // Fallback: Find any skill card in the deck
+    const skillCards = deck.filter(c => c.type === 'skill');
+    if (skillCards.length === 0) return null;
+
+    // Pick a random skill card as fallback
+    const chosen = skillCards[Math.floor(Math.random() * skillCards.length)];
+    getGlobalLogger().log('RELIC_EFFECT', `${secretWeapon.name} added ${chosen.name} to starting hand (random fallback).`);
+    return chosen;
+};
+
 export const applyCombatEndRelics = (currentStats: CharacterStats, relics: RelicData[]): { stats: CharacterStats, message: string } => {
     let newStats = { ...currentStats };
     let messages: string[] = [];
@@ -291,6 +358,13 @@ export const applyOnAttackRelics = (relics: RelicData[], stats: CharacterStats):
                     newStats.mitigation += relic.effect.value || 4;
                     messages.push(`${relic.name}: +${relic.effect.value} Mitigation!`);
                     getGlobalLogger().log('RELIC_EFFECT', `${relic.name} granted ${relic.effect.value} Mitigation.`);
+                }
+
+                // Quick Learner: +1 Dexterity every 3 attacks
+                if (relic.effect.type === 'dexterity_per_attacks') {
+                    newStats.statuses.dexterity = (newStats.statuses.dexterity || 0) + (relic.effect.value || 1);
+                    messages.push(`${relic.name}: +${relic.effect.value} Dexterity!`);
+                    getGlobalLogger().log('RELIC_EFFECT', `${relic.name} granted ${relic.effect.value} Dexterity.`);
                 }
             }
         }

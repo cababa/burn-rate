@@ -47,6 +47,7 @@ export interface PlayerStatuses {
   vulnerable: number;
   weak: number;
   strength: number;
+  dexterity: number;   // Block bonus
   // New Powers
   metallicize: number; // Block at end of turn
   evolve: number;      // Draw when status drawn
@@ -202,6 +203,8 @@ export interface RelicData {
   // Runtime state for counter-based relics
   attackCounter?: number;
   usedThisCombat?: boolean;
+  // For Secret Weapon: the chosen skill card ID
+  chosenCardId?: string;
 }
 
 export type MapNodeType = 'problem' | 'elite' | 'retrospective' | 'vendor' | 'opportunity' | 'treasure' | 'boss';

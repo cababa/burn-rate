@@ -70,7 +70,7 @@ export const GAME_DATA = {
             bandwidth: 3,
             capital: 99,
             mitigation: 0,
-            statuses: { vulnerable: 0, weak: 0, strength: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, frail: 0, growth: 0, corruption: 0 }
+            statuses: { vulnerable: 0, weak: 0, strength: 0, dexterity: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, frail: 0, growth: 0, corruption: 0 }
         } as CharacterStats
     },
     relics: {
