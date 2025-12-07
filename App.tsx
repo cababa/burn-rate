@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Unit } from './components/Unit';
 import { Card } from './components/Card';
 import { MapScreen } from './components/MapScreen';
+import { DeckViewer } from './components/DeckViewer';
 import { GAME_DATA, MAX_HAND_SIZE, ACT1_EVENTS } from './constants';
 import { CardData, GameState, EnemyIntent, MapLayer, MapNode, CharacterStats, RelicData, EntityStatus, EnemyData, CardEffect, EventData, EventChoice, EventEffect } from './types';
 import { Battery, DollarSign, CheckCircle2, AlertOctagon, RefreshCw, Play, Layers, Archive, Gift, ArrowRight, Coffee, Hammer, Store, Trash2, Gem, Wrench, FastForward, Heart, Plus, Bug, Ghost, Rocket, Lock, User, Briefcase, ChevronRight, Zap, X, HelpCircle } from 'lucide-react';
@@ -35,6 +36,11 @@ const App: React.FC = () => {
 
     const [viewingDeckForUpgrade, setViewingDeckForUpgrade] = useState(false);
     const [showDevPanel, setShowDevPanel] = useState(false);
+
+    // Deck/pile viewer modal state
+    const [viewingPile, setViewingPile] = useState<'deck' | 'draw' | 'discard' | 'exhaust' | 'remove' | null>(null);
+    const [pendingRemovalPrice, setPendingRemovalPrice] = useState(0);
+
 
     // --- START GAME LOGIC ---
 
@@ -74,14 +80,30 @@ const App: React.FC = () => {
         let earnedCapital = 50;
         let earnedRelic: RelicData | undefined;
 
-        // Check if any enemy is elite
-        const isElite = gameState.enemies.some(e => e.id === 'enemy_scope_creep') || gameState.map.flat().find(n => n.id === gameState.currentMapPosition?.nodeId)?.type === 'milestone';
-        if (isElite) {
-            earnedRelic = GAME_DATA.relics.coffee_drip;
+        // Check if any enemy is elite or boss by their type property
+        const isEliteOrBoss = gameState.enemies.some(e => e.type === 'elite' || e.type === 'boss');
+        console.log('DEV KILL: isEliteOrBoss =', isEliteOrBoss, 'enemy types =', gameState.enemies.map(e => e.type));
+
+        if (isEliteOrBoss) {
+            // Get random relic from pool (not already owned)
+            const ownedRelicIds = gameState.relics.map(r => r.id);
+            const isBoss = gameState.enemies.some(e => e.type === 'boss');
+            const availableRelics = Object.values(GAME_DATA.relics).filter(r =>
+                !ownedRelicIds.includes(r.id) &&
+                r.rarity !== 'starter' &&
+                (isBoss ? true : r.rarity !== 'boss')
+            );
+
+            console.log('DEV KILL: availableRelics.length =', availableRelics.length);
+
+            if (availableRelics.length > 0) {
+                earnedRelic = availableRelics[Math.floor(Math.random() * availableRelics.length)];
+            }
         }
 
         setGameState(prev => {
-            const nextRelics = earnedRelic ? [...prev.relics, earnedRelic] : prev.relics;
+            // Don't auto-add relic to relics - player must take it from reward screen
+            const nextRelics = [...prev.relics];
 
             // Don't auto-apply capital - use new reward system
             let nextStats = { ...prev.playerStats };
@@ -102,7 +124,8 @@ const App: React.FC = () => {
                     cardRewards: cardRewards,
                     relic: earnedRelic,
                     goldCollected: false,
-                    cardCollected: false
+                    cardCollected: false,
+                    relicCollected: false
                 },
                 relics: nextRelics
             };
@@ -453,6 +476,19 @@ const App: React.FC = () => {
         });
     };
 
+    const handleTakeRelic = () => {
+        setGameState(prev => {
+            if (!prev.lastVictoryReward || !prev.lastVictoryReward.relic || prev.lastVictoryReward.relicCollected) return prev;
+            return {
+                ...prev,
+                relics: [...prev.relics, prev.lastVictoryReward.relic],
+                lastVictoryReward: { ...prev.lastVictoryReward, relicCollected: true },
+                message: `Acquired ${prev.lastVictoryReward.relic.name}!`
+            };
+        });
+    };
+
+
     const handleVictoryProceed = () => {
         setGameState(prev => {
             // Mark current node as completed
@@ -669,25 +705,22 @@ const App: React.FC = () => {
         });
     };
     const handleRemoveCardService = (price: number) => {
-        setGameState(prev => {
-            if (prev.playerStats.capital < price) return prev;
-
-            // Remove a random 'Commit' or basic card for MVP, or open removal UI
-            // For MVP: Remove first 'Commit' found
-            const indexToRemove = prev.deck.findIndex(c => c.name === 'Commit');
-            if (indexToRemove === -1) return { ...prev, message: "No basic Commit cards found to remove." };
-
-            const newDeck = [...prev.deck];
-            newDeck.splice(indexToRemove, 1);
-
-            return {
-                ...prev,
-                playerStats: { ...prev.playerStats, capital: prev.playerStats.capital - price },
-                deck: newDeck,
-                message: "Removed 1 'Commit' (Technical Debt) from codebase."
-            };
-        });
+        if (gameState.playerStats.capital < price) return;
+        setPendingRemovalPrice(price);
+        setViewingPile('remove');
     };
+
+    const handleConfirmCardRemoval = (card: CardData) => {
+        setGameState(prev => ({
+            ...prev,
+            playerStats: { ...prev.playerStats, capital: prev.playerStats.capital - pendingRemovalPrice },
+            deck: prev.deck.filter(c => c.id !== card.id),
+            message: `Removed ${card.name} from codebase.`
+        }));
+        setViewingPile(null);
+        setPendingRemovalPrice(0);
+    };
+
 
     // --- Event Actions ---
 
@@ -1088,6 +1121,14 @@ const App: React.FC = () => {
                         <span className="text-sm font-mono text-gray-400">Roadmap View</span>
                     </div>
                     <div className="flex items-center gap-4 text-sm font-mono">
+                        {/* Deck View Button */}
+                        <button
+                            onClick={() => setViewingPile('deck')}
+                            className="px-3 py-1.5 bg-surface border border-gray-700 rounded-lg hover:border-primary/50 hover:bg-primary/10 transition-all flex items-center gap-2 text-gray-300 hover:text-white"
+                        >
+                            <Layers size={14} />
+                            <span>Deck ({gameState.deck.length})</span>
+                        </button>
                         <span className="text-warning flex items-center gap-2">
                             <DollarSign size={16} /> ${gameState.playerStats.capital}k
                         </span>
@@ -1104,6 +1145,18 @@ const App: React.FC = () => {
                         onNodeSelect={handleNodeSelect}
                     />
                 </main>
+
+                {/* Deck Viewer Modal */}
+                {viewingPile === 'deck' && (
+                    <DeckViewer
+                        title="Your Deck"
+                        cards={gameState.deck}
+                        onClose={() => setViewingPile(null)}
+                        icon="deck"
+                        emptyMessage="No cards in deck"
+                    />
+                )}
+
                 <DevConsole />
             </div>
         );
@@ -1220,8 +1273,8 @@ const App: React.FC = () => {
                                             <Trash2 size={20} />
                                         </div>
                                         <div>
-                                            <div className="text-white font-bold">Fire Incompetent Dev</div>
-                                            <div className="text-xs text-gray-500">Remove a card from deck.</div>
+                                            <div className="text-white font-bold">Cut a Feature</div>
+                                            <div className="text-xs text-gray-500">Streamline your playbook. Remove one card.</div>
                                         </div>
                                     </div>
                                     <button
@@ -1242,6 +1295,20 @@ const App: React.FC = () => {
                         </button>
                     </div>
                 </div>
+
+                {/* Card Removal Modal */}
+                {viewingPile === 'remove' && (
+                    <DeckViewer
+                        title="Select Card to Remove"
+                        cards={gameState.deck}
+                        onClose={() => { setViewingPile(null); setPendingRemovalPrice(0); }}
+                        selectable={true}
+                        onSelect={handleConfirmCardRemoval}
+                        icon="remove"
+                        emptyMessage="No cards in deck"
+                    />
+                )}
+
                 <DevConsole />
             </div>
         );
@@ -1599,28 +1666,45 @@ const App: React.FC = () => {
                                         </div>
                                     )}
 
-                                    {/* Relic Reward - Full Display */}
+                                    {/* Relic Reward - StS Style: Click to take */}
                                     {gameState.lastVictoryReward.relic && (
-                                        <div className="bg-gradient-to-r from-purple-900/40 to-purple-800/20 border border-purple-500/50 p-5 rounded-lg">
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <Gem size={18} className="text-purple-400" />
-                                                <span className="text-purple-300 font-mono text-sm uppercase tracking-wider">New Relic Acquired!</span>
-                                            </div>
-                                            <div className="flex items-start gap-4">
-                                                <div className="text-4xl bg-purple-900/50 p-3 rounded-lg border border-purple-500/30">
-                                                    {gameState.lastVictoryReward.relic.icon}
+                                        <div
+                                            onClick={!gameState.lastVictoryReward.relicCollected ? handleTakeRelic : undefined}
+                                            className={`
+                                                bg-gradient-to-r from-purple-900/40 to-purple-800/20 border border-purple-500/50 p-4 rounded-lg 
+                                                ${gameState.lastVictoryReward.relicCollected ? 'opacity-50' : 'cursor-pointer hover:border-purple-400 hover:from-purple-900/60 hover:to-purple-800/40 transition-all'}
+                                            `}
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                {/* Relic Icon */}
+                                                <div className="relative group">
+                                                    <div className="text-3xl bg-purple-900/50 p-2.5 rounded-lg border border-purple-500/30">
+                                                        {gameState.lastVictoryReward.relic.icon}
+                                                    </div>
+                                                    {/* Tooltip on hover */}
+                                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-black/95 border border-purple-500/50 rounded-lg p-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
+                                                        <div className="text-purple-300 font-bold text-sm mb-1">{gameState.lastVictoryReward.relic.name}</div>
+                                                        <div className="text-[10px] text-purple-500 uppercase tracking-wider mb-2 font-mono">{gameState.lastVictoryReward.relic.rarity} Relic</div>
+                                                        <div className="text-xs text-gray-300 leading-relaxed">{gameState.lastVictoryReward.relic.description}</div>
+                                                    </div>
                                                 </div>
+
+                                                {/* Relic Info */}
                                                 <div className="flex-1 text-left">
-                                                    <div className="text-purple-300 font-bold text-lg mb-1">
+                                                    <div className="text-purple-200 font-bold">
                                                         {gameState.lastVictoryReward.relic.name}
                                                     </div>
-                                                    <div className="text-[10px] text-purple-500 uppercase tracking-wider mb-2 font-mono">
-                                                        {gameState.lastVictoryReward.relic.rarity} Relic
-                                                    </div>
-                                                    <div className="text-sm text-gray-300 leading-relaxed">
+                                                    <div className="text-sm text-gray-400">
                                                         {gameState.lastVictoryReward.relic.description}
                                                     </div>
                                                 </div>
+
+                                                {/* Status */}
+                                                {gameState.lastVictoryReward.relicCollected ? (
+                                                    <span className="text-primary font-mono text-sm">✓ Acquired</span>
+                                                ) : (
+                                                    <span className="text-purple-400 text-sm font-mono">Click to take</span>
+                                                )}
                                             </div>
                                         </div>
                                     )}
@@ -1784,31 +1868,91 @@ const App: React.FC = () => {
                 </div>
 
                 <div className="w-48 flex flex-col items-end gap-2 mb-4">
-                    <div className="flex items-center gap-3 text-xs font-mono text-gray-500 group relative">
+                    {/* Draw Pile - Clickable */}
+                    <button
+                        onClick={() => setViewingPile('draw')}
+                        className="flex items-center gap-3 text-xs font-mono text-gray-500 group relative hover:text-white transition-colors"
+                    >
                         <span className="opacity-0 group-hover:opacity-100 transition-opacity">Draw Pile</span>
-                        <div className="w-16 h-20 border border-gray-700 bg-gray-900 rounded flex flex-col items-center justify-center gap-1 shadow-lg group-hover:border-primary/50 transition-colors">
+                        <div className="w-16 h-20 border border-gray-700 bg-gray-900 rounded flex flex-col items-center justify-center gap-1 shadow-lg group-hover:border-primary/50 group-hover:bg-primary/5 transition-colors cursor-pointer">
                             <Layers size={20} />
                             <span className="font-bold text-white text-lg">{gameState.drawPile.length}</span>
                         </div>
-                    </div>
+                    </button>
 
-                    <div className="flex items-center gap-3 text-xs font-mono text-gray-500 group relative">
+                    {/* Discard Pile - Clickable */}
+                    <button
+                        onClick={() => setViewingPile('discard')}
+                        className="flex items-center gap-3 text-xs font-mono text-gray-500 group relative hover:text-white transition-colors"
+                    >
                         <span className="opacity-0 group-hover:opacity-100 transition-opacity">Discard</span>
-                        <div className="w-16 h-20 border border-gray-700 bg-gray-900 rounded flex flex-col items-center justify-center gap-1 shadow-lg group-hover:border-gray-500 transition-colors">
+                        <div className="w-16 h-20 border border-gray-700 bg-gray-900 rounded flex flex-col items-center justify-center gap-1 shadow-lg group-hover:border-gray-500 group-hover:bg-gray-800/50 transition-colors cursor-pointer">
                             <Archive size={20} />
                             <span className="font-bold text-white text-lg">{gameState.discardPile.length}</span>
                         </div>
-                    </div>
+                    </button>
 
-                    <div className="flex items-center gap-3 text-xs font-mono text-gray-500 group relative">
+                    {/* Exhaust Pile - Clickable */}
+                    <button
+                        onClick={() => setViewingPile('exhaust')}
+                        className="flex items-center gap-3 text-xs font-mono text-gray-500 group relative hover:text-white transition-colors"
+                    >
                         <span className="opacity-0 group-hover:opacity-100 transition-opacity">Archive</span>
-                        <div className="w-12 h-14 border border-gray-800 bg-black/60 rounded flex flex-col items-center justify-center gap-1 shadow-lg group-hover:border-gray-600 transition-colors">
+                        <div className="w-12 h-14 border border-gray-800 bg-black/60 rounded flex flex-col items-center justify-center gap-1 shadow-lg group-hover:border-purple-500/50 group-hover:bg-purple-900/20 transition-colors cursor-pointer">
                             <Ghost size={16} />
                             <span className="font-bold text-gray-400 text-sm">{gameState.exhaustPile.length}</span>
                         </div>
-                    </div>
+                    </button>
+
+                    {/* Deck View Button */}
+                    <button
+                        onClick={() => setViewingPile('deck')}
+                        className="mt-2 px-3 py-1.5 text-xs font-mono bg-surface border border-gray-700 rounded hover:border-primary/50 hover:bg-primary/10 transition-all flex items-center gap-2 text-gray-400 hover:text-white"
+                    >
+                        <Briefcase size={12} />
+                        Deck ({gameState.deck.length})
+                    </button>
                 </div>
             </footer>
+
+            {/* Pile Viewer Modals */}
+            {viewingPile === 'draw' && (
+                <DeckViewer
+                    title="Draw Pile"
+                    cards={gameState.drawPile}
+                    onClose={() => setViewingPile(null)}
+                    icon="draw"
+                    emptyMessage="Draw pile is empty"
+                />
+            )}
+            {viewingPile === 'discard' && (
+                <DeckViewer
+                    title="Discard Pile"
+                    cards={gameState.discardPile}
+                    onClose={() => setViewingPile(null)}
+                    icon="discard"
+                    emptyMessage="Discard pile is empty"
+                />
+            )}
+            {viewingPile === 'exhaust' && (
+                <DeckViewer
+                    title="Exhaust (Archive) Pile"
+                    cards={gameState.exhaustPile}
+                    onClose={() => setViewingPile(null)}
+                    icon="exhaust"
+                    emptyMessage="No exhausted cards"
+                />
+            )}
+            {viewingPile === 'deck' && (
+                <DeckViewer
+                    title="Your Deck"
+                    cards={gameState.deck}
+                    onClose={() => setViewingPile(null)}
+                    icon="deck"
+                    emptyMessage="No cards in deck"
+                />
+            )}
+
             <DevConsole />
         </div>
     );

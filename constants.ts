@@ -20,7 +20,7 @@ export const KEYWORD_GLOSSARY: Record<string, { icon: string; color: string; des
 
     // Card mechanics
     Archive: { icon: "📁", color: "text-gray-400", description: "Remove from deck for this combat only" },
-    Ethereal: { icon: "👻", color: "text-blue-300", description: "If not played, Archives at end of turn" },
+    Fleeting: { icon: "👻", color: "text-blue-300", description: "If not played, Archives at end of turn" },
     Retain: { icon: "📌", color: "text-yellow-200", description: "Keep in hand instead of discarding" },
     Unplayable: { icon: "🚫", color: "text-gray-500", description: "Cannot be played, clogs your hand" },
 
@@ -747,12 +747,12 @@ export const GAME_DATA = {
             rarity: "uncommon",
             cost: 2,
             ethereal: true,
-            description: "Ethereal. Execute 20.",
+            description: "Fleeting. Execute 20.",
             effects: [
                 { type: "damage", value: 20, target: "enemy" }
             ],
             icon: "⏱️",
-            keywords: ["ethereal"],
+            keywords: ["fleeting"],
             tooltip: { term: "Market Window", definition: "A limited time opportunity to launch a product." }
         } as CardData,
         cto_talent_poach: { // Disarm
@@ -941,10 +941,10 @@ export const GAME_DATA = {
             cost: -1,
             unplayable: true,
             ethereal: true,
-            description: "Unplayable. Ethereal.",
+            description: "Unplayable. Fleeting.",
             effects: [],
             icon: "🐛",
-            keywords: ["ethereal", "unplayable"],
+            keywords: ["fleeting", "unplayable"],
             tooltip: { term: "Software Bug", definition: "An error, flaw or fault in a computer program or system." }
         } as CardData,
         status_burnout: { // Burn
@@ -986,12 +986,12 @@ export const GAME_DATA = {
             cost: -1,
             unplayable: true,
             ethereal: true,
-            description: "Unplayable. Ethereal. When drawn, lose 1 Bandwidth.",
+            description: "Unplayable. Fleeting. When drawn, lose 1 Bandwidth.",
             effects: [
                 { type: "lose_bandwidth", value: 1, target: "self" }
             ],
             icon: "🔀",
-            keywords: ["ethereal", "unplayable", "exhaust"],
+            keywords: ["fleeting", "unplayable", "exhaust"],
             tooltip: { term: "Context Switching", definition: "Storing and restoring the state of a process so that execution can be resumed from the same point later." }
         } as CardData,
         card_bug: {
@@ -1001,12 +1001,12 @@ export const GAME_DATA = {
             type: "status",
             rarity: "common",
             cost: -2,
-            description: "Unplayable. Ethereal.",
+            description: "Unplayable. Fleeting.",
             unplayable: true,
             ethereal: true,
             effects: [],
             icon: "🐛",
-            keywords: ["ethereal"],
+            keywords: ["fleeting"],
             tooltip: { term: "Bug", definition: "A minor issue. Unplayable. Fades away at end of turn." }
         } as CardData
     },

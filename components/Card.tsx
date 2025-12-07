@@ -84,9 +84,9 @@ export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selecta
       }
     });
 
-    // Also check for Exhaust/Ethereal/Retain badges
+    // Also check for Exhaust/Fleeting/Retain badges
     if (card.exhaust && !found.includes('Archive')) found.push('Archive');
-    if (card.ethereal && !found.includes('Ethereal')) found.push('Ethereal');
+    if (card.ethereal && !found.includes('Fleeting')) found.push('Fleeting');
     if (card.retain && !found.includes('Retain')) found.push('Retain');
 
     return found;
@@ -157,7 +157,7 @@ export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selecta
         )}
         {card.ethereal && (
           <div className="absolute top-0 right-0 bg-blue-900/80 text-[8px] uppercase font-bold text-blue-200 px-1 py-0.5 rounded-bl border-b border-l border-white/10 flex items-center gap-0.5">
-            <Ghost size={8} /> Ethereal
+            <Ghost size={8} /> Fleeting
           </div>
         )}
         {card.retain && (

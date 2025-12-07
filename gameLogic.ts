@@ -917,28 +917,28 @@ const getNextIntent = (enemy: EnemyData, turn: number, playerHp: number): EnemyI
     if (enemy.id.startsWith('critical_bug')) {
         if (roll < 25) return { type: 'buff', value: 3, icon: 'buff', description: "Grow (Severity)" };
         const dmg = 6 + enemy.statuses.strength;
-        return { type: 'attack', value: dmg, icon: 'attack', description: "Bite" };
+        return { type: 'attack', value: dmg, icon: 'attack', description: "Critique" };
     }
 
     if (enemy.id.startsWith('minor_bug')) {
         if (roll < 25) return { type: 'debuff', value: 2, icon: 'debuff', description: "Spit Web (Weak)" };
         const dmg = 5 + enemy.statuses.strength;
-        return { type: 'attack', value: dmg, icon: 'attack', description: "Bite" };
+        return { type: 'attack', value: dmg, icon: 'attack', description: "Reject" };
     }
 
     if (enemy.id.startsWith('quick_hack') || enemy.id.startsWith('hotfix')) {
-        if (roll < 50) return { type: 'attack', value: 3, icon: 'attack', description: "Tackle" };
-        return { type: 'debuff', value: 1, icon: 'debuff', description: "Lick (Weak)" };
+        if (roll < 50) return { type: 'attack', value: 3, icon: 'attack', description: "Quick Commit" };
+        return { type: 'debuff', value: 1, icon: 'debuff', description: "Delay (Drained)" };
     }
 
     if (enemy.id.startsWith('tech_debt') || enemy.id.startsWith('bad_merge')) {
-        if (roll < 30) return { type: 'debuff', value: 1, icon: 'debuff', description: "Corrosive Spit (Slimed)" };
-        return { type: 'attack', value: 7, icon: 'attack', description: "Tackle" };
+        if (roll < 30) return { type: 'debuff', value: 1, icon: 'debuff', description: "Add Complexity" };
+        return { type: 'attack', value: 7, icon: 'attack', description: "Pile On" };
     }
 
     if (enemy.id.startsWith('legacy_module') || enemy.id.startsWith('merge_conflict')) {
-        if (roll < 30) return { type: 'debuff', value: 2, icon: 'debuff', description: "Corrosive Spit (Slimed)" };
-        return { type: 'attack', value: 16, icon: 'attack', description: "Tackle" };
+        if (roll < 30) return { type: 'debuff', value: 2, icon: 'debuff', description: "Add Complexity" };
+        return { type: 'attack', value: 16, icon: 'attack', description: "Crush" };
     }
 
     // Micromanager (Blue Slaver) - Stab 13, Rake (7 + Weak)
@@ -1104,7 +1104,7 @@ export const resolveEndTurn = (prev: GameState): GameState => {
 
         if (card.ethereal) {
             cardsToExhaust.push(card);
-            getGlobalLogger().log('CARD_EXHAUSTED', `${card.name} exhausted due to Ethereal.`);
+            getGlobalLogger().log('CARD_EXHAUSTED', `${card.name} archived due to Fleeting.`);
         }
         else if (card.retain) {
             cardsToRetain.push(card);
@@ -1328,6 +1328,12 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
                 // Over-Engineer Siphon: -1 Strength (can go negative)
                 newPlayerStatuses.strength -= 1;
                 getGlobalLogger().log('STATUS_APPLIED', `Enemy Siphoned 1 Execution Power.`);
+            } else {
+                // Default fallback: Apply Weak if no specific debuff keyword matched
+                // This handles intents like "Spread Rumors", "Add Complexity", "Delay", "Discourage", etc.
+                newPlayerStatuses.weak += intent.value;
+                newMessage += ` ${enemy.name} applied ${intent.value} Drained.`;
+                getGlobalLogger().log('STATUS_APPLIED', `Enemy applied ${intent.value} Drained (fallback).`);
             }
         }
 
@@ -1378,12 +1384,23 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
                 const capitalGained = Math.floor(Math.random() * (max - min + 1)) + min;
                 earnedCapital += capitalGained;
                 getGlobalLogger().log('REWARD_CAPITAL', `Gained ${capitalGained} capital from ${enemyData.name}.`);
-                if (enemyData.type === 'elite') {
-                    const hasCoffee = prev.relics.some(r => r.id === 'relic_coffee_drip');
-                    if (!hasCoffee && !earnedRelic) {
-                        earnedRelic = GAME_DATA.relics.coffee_drip;
-                        newRelics.push(earnedRelic);
-                        newMessage += ` Found Relic: ${earnedRelic.name}.`;
+
+                // Elite and Boss give relics
+                console.log('DEBUG RELIC: enemyData.type =', enemyData.type, 'earnedRelic =', earnedRelic);
+                if ((enemyData.type === 'elite' || enemyData.type === 'boss') && !earnedRelic) {
+                    // Get random relic from pool (not already owned)
+                    const ownedRelicIds = prev.relics.map(r => r.id);
+                    const availableRelics = Object.values(GAME_DATA.relics).filter(r =>
+                        !ownedRelicIds.includes(r.id) &&
+                        r.rarity !== 'starter' &&
+                        (enemyData.type === 'boss' ? true : r.rarity !== 'boss')
+                    );
+
+                    console.log('DEBUG RELIC: availableRelics.length =', availableRelics.length);
+
+                    if (availableRelics.length > 0) {
+                        earnedRelic = availableRelics[Math.floor(Math.random() * availableRelics.length)];
+                        newMessage += ` Found Relic: ${earnedRelic.name}!`;
                         getGlobalLogger().log('REWARD_RELIC', `Found relic: ${earnedRelic.name}.`);
                     }
                 }
@@ -1439,7 +1456,8 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
             cardRewards: shouldGetCardReward ? cardRewards : [],
             relic: earnedRelic,
             goldCollected: false,
-            cardCollected: false
+            cardCollected: false,
+            relicCollected: false
         } : undefined
     };
 
@@ -1790,11 +1808,17 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
 
         // Elite/Boss Relic Logic
         const isEliteOrBoss = prev.enemies.some(e => e.type === 'elite' || e.type === 'boss');
+        const isBoss = prev.enemies.some(e => e.type === 'boss');
         if (isEliteOrBoss) {
-            const hasCoffee = newRelics.some(r => r.id === 'relic_coffee_drip');
-            if (!hasCoffee) {
-                earnedRelic = GAME_DATA.relics.coffee_drip;
-                newRelics.push(earnedRelic);
+            const ownedRelicIds = newRelics.map(r => r.id);
+            const availableRelics = Object.values(GAME_DATA.relics).filter(r =>
+                !ownedRelicIds.includes(r.id) &&
+                r.rarity !== 'starter' &&
+                (isBoss ? true : r.rarity !== 'boss')
+            );
+
+            if (availableRelics.length > 0) {
+                earnedRelic = availableRelics[Math.floor(Math.random() * availableRelics.length)];
             }
         }
     }
@@ -1846,7 +1870,8 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
             cardRewards: shouldGetCardReward ? cardRewards : [],
             relic: earnedRelic,
             goldCollected: false,
-            cardCollected: false
+            cardCollected: false,
+            relicCollected: false
         } : undefined
     };
 };

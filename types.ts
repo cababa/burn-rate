@@ -292,6 +292,7 @@ export interface GameState {
     relic?: RelicData;
     goldCollected: boolean;    // Has player taken gold?
     cardCollected: boolean;    // Has player taken/skipped card?
+    relicCollected: boolean;   // Has player taken the relic?
   };
   pendingDiscard: number;
   deck: CardData[]; // Permanent deck
