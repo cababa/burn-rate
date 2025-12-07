@@ -233,11 +233,11 @@ export const Unit: React.FC<UnitProps> = ({
             {intent.type === 'attack' && (
               <div>
                 <p className="text-white mb-1">
-                  Intends to deal <b className="text-danger text-sm">{calculateIntentDamage()} Burn</b>.
+                  Intends to deal <b className="text-danger text-sm">⚔️ {calculateIntentDamage()} Runway damage</b>.
                 </p>
                 {statuses && statuses.strength !== 0 && (
                   <p className="text-gray-500 italic text-[10px] mt-1">
-                    (Base {intent.value} {statuses.strength > 0 ? '+' : ''}{statuses.strength} Complexity)
+                    (Base {intent.value} {statuses.strength > 0 ? '+' : ''}{statuses.strength} Velocity)
                   </p>
                 )}
                 {statuses && statuses.weak > 0 && (
@@ -250,24 +250,26 @@ export const Unit: React.FC<UnitProps> = ({
 
             {intent.type === 'buff' && (
               <div>
-                <p className="text-warning font-bold mb-1">{intent.description}</p>
+                <p className="text-warning font-bold mb-1">⬆️ {intent.description}</p>
                 <div className="text-gray-300">
-                  {intent.description.includes('Momentum') ? 'Gains Complexity per turn.' : 'Scales up.'}
+                  {intent.description.includes('Momentum') || intent.description.includes('Add Feature')
+                    ? 'Gains Velocity each turn. Kill fast!'
+                    : 'Enemy is powering up.'}
                 </div>
               </div>
             )}
 
             {intent.type === 'debuff' && (
               <div>
-                <p className="text-purple-400 font-bold mb-1">{intent.description}</p>
+                <p className="text-purple-400 font-bold mb-1">⬇️ {intent.description}</p>
                 <div className="text-gray-300">
-                  Applies negative status effects to you.
+                  Applies negative status effects to your Runway.
                 </div>
               </div>
             )}
 
             {intent.type !== 'attack' && intent.type !== 'buff' && intent.type !== 'debuff' && (
-              <p className="text-gray-300">{intent.description}</p>
+              <p className="text-gray-300">❓ {intent.description || 'Unknown intent'}</p>
             )}
           </div>
         </div>

@@ -228,7 +228,16 @@ const App: React.FC = () => {
         if (gameState.status !== 'PLAYING') return;
         const cardId = e.dataTransfer.getData('cardId');
         const card = gameState.hand.find(c => c.id === cardId);
-        if (card && card.type === 'attack') playCard(card, 'enemy', targetEnemyId);
+        if (!card) return;
+
+        // Attacks target specific enemy
+        if (card.type === 'attack') {
+            playCard(card, 'enemy', targetEnemyId);
+        }
+        // Skills can be played on enemies too - they apply to all enemies or self based on effect.target
+        else if (card.type === 'skill') {
+            playCard(card, 'self'); // Skills still resolve as 'self' but effects check their own target
+        }
     };
 
     const handlePlayerDrop = (e: React.DragEvent) => {
@@ -280,7 +289,7 @@ const App: React.FC = () => {
                     if (prev.playerStats.statuses.feelNoPain > 0) {
                         newMitigation += prev.playerStats.statuses.feelNoPain;
                     }
-                    newMessage = `Exhausted ${card.name}.`;
+                    newMessage = `Archived ${card.name}.`;
                 }
             }
 
@@ -797,9 +806,12 @@ const App: React.FC = () => {
                         break;
                     case 'random_chance':
                         const successRoll = Math.random() * 100;
-                        if (successRoll < (effect.chance || 50)) {
+                        const chancePercent = effect.chance || 50;
+                        if (successRoll < chancePercent) {
+                            message += ` 🎲 SUCCESS! (rolled ${Math.floor(successRoll)}/${chancePercent})`;
                             effect.successEffects?.forEach(e => processEffect(e));
                         } else {
+                            message += ` 🎲 FAILED! (rolled ${Math.floor(successRoll)}/${chancePercent})`;
                             effect.failureEffects?.forEach(e => processEffect(e));
                         }
                         break;
@@ -831,14 +843,21 @@ const App: React.FC = () => {
                 newMap[floor - 1] = newMap[floor - 1].map(n => n.id === nodeId ? { ...n, completed: true } : n);
             }
 
+            // Detect if this was a success or failure (for styling)
+            const wasSuccess = message.includes('SUCCESS') || message.includes('Gained') || message.includes('Upgraded');
+
             return {
                 ...prev,
                 playerStats: newStats,
                 deck: newDeck,
                 relics: newRelics,
                 map: newMap,
-                status: 'MAP',
-                currentEvent: undefined,
+                status: 'EVENT',
+                eventResult: {
+                    choiceLabel: choice.label,
+                    resultMessage: message.trim(),
+                    success: wasSuccess
+                },
                 message: `${choice.label}:${message}`
             };
         });
@@ -922,7 +941,7 @@ const App: React.FC = () => {
                     </button>
 
                     <div className="text-[10px] text-gray-600 font-mono mt-2 pt-2 border-t border-gray-800">
-                        Exhaust Pile: {gameState.exhaustPile.length}
+                        Archive Pile: {gameState.exhaustPile.length}
                     </div>
                 </div>
             )}
@@ -1154,9 +1173,9 @@ const App: React.FC = () => {
         const removePrice = 75;
 
         return (
-            <div className="min-h-screen bg-black/90 flex flex-col items-center justify-center p-8">
-                <div className="w-full max-w-4xl bg-surface border border-gray-800 rounded-2xl p-8 shadow-2xl relative">
-                    <div className="flex justify-between items-center mb-8 border-b border-gray-800 pb-4">
+            <div className="min-h-screen bg-black/90 flex flex-col items-center justify-center p-12">
+                <div className="w-full max-w-5xl bg-surface border border-gray-800 rounded-2xl p-10 shadow-2xl relative">
+                    <div className="flex justify-between items-center mb-10 border-b border-gray-800 pb-6">
                         <h2 className="text-3xl font-display font-bold text-white flex items-center gap-3">
                             <Store size={32} className="text-warning" /> Vendor
                         </h2>
@@ -1165,20 +1184,20 @@ const App: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-12">
+                    <div className="flex gap-16">
                         {/* Cards Section */}
-                        <div>
-                            <h3 className="text-gray-400 font-mono text-sm uppercase tracking-wider mb-4">Acquire Assets</h3>
-                            <div className="flex gap-4">
+                        <div className="flex-1">
+                            <h3 className="text-gray-400 font-mono text-sm uppercase tracking-wider mb-6">Acquire Assets</h3>
+                            <div className="flex flex-wrap gap-6">
                                 {gameState.vendorStock?.map(card => {
                                     const canAfford = gameState.playerStats.capital >= cardPrice;
                                     return (
-                                        <div key={card.id} className="flex flex-col items-center gap-2">
+                                        <div key={card.id} className="flex flex-col items-center gap-3">
                                             <Card card={card} onDragStart={() => { }} disabled={!canAfford} />
                                             <button
                                                 onClick={() => handleBuyCard(card, cardPrice)}
                                                 disabled={!canAfford}
-                                                className={`px-3 py-1 rounded text-sm font-mono flex items-center gap-1 ${canAfford ? 'bg-primary text-black hover:bg-white' : 'bg-gray-800 text-gray-500'}`}
+                                                className={`px-4 py-2 rounded text-sm font-mono flex items-center gap-1 ${canAfford ? 'bg-primary text-black hover:bg-white' : 'bg-gray-800 text-gray-500'}`}
                                             >
                                                 ${cardPrice}k
                                             </button>
@@ -1192,10 +1211,10 @@ const App: React.FC = () => {
                         </div>
 
                         {/* Services Section */}
-                        <div className="border-l border-gray-800 pl-8">
-                            <h3 className="text-gray-400 font-mono text-sm uppercase tracking-wider mb-4">Services</h3>
+                        <div className="w-72 border-l border-gray-800 pl-10">
+                            <h3 className="text-gray-400 font-mono text-sm uppercase tracking-wider mb-6">Services</h3>
                             <div className="flex flex-col gap-4">
-                                <div className="flex items-center justify-between bg-black/40 p-4 rounded border border-gray-800">
+                                <div className="flex flex-col gap-3 bg-black/40 p-5 rounded-lg border border-gray-800">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded bg-danger/20 flex items-center justify-center text-danger">
                                             <Trash2 size={20} />
@@ -1208,7 +1227,7 @@ const App: React.FC = () => {
                                     <button
                                         onClick={() => handleRemoveCardService(removePrice)}
                                         disabled={gameState.playerStats.capital < removePrice}
-                                        className={`px-3 py-1 rounded text-sm font-mono ${gameState.playerStats.capital >= removePrice ? 'bg-danger text-white hover:bg-red-500' : 'bg-gray-800 text-gray-500'}`}
+                                        className={`w-full px-4 py-2 rounded text-sm font-mono ${gameState.playerStats.capital >= removePrice ? 'bg-danger text-white hover:bg-red-500' : 'bg-gray-800 text-gray-500'}`}
                                     >
                                         ${removePrice}k
                                     </button>
@@ -1217,8 +1236,8 @@ const App: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="mt-8 flex justify-end">
-                        <button onClick={handleLeaveNode} className="text-gray-400 hover:text-white flex items-center gap-2">
+                    <div className="mt-10 flex justify-end">
+                        <button onClick={handleLeaveNode} className="text-gray-400 hover:text-white flex items-center gap-2 font-mono">
                             Leave Shop <ArrowRight size={16} />
                         </button>
                     </div>
@@ -1266,47 +1285,91 @@ const App: React.FC = () => {
                         <p className="text-gray-300 leading-relaxed italic">"{event.description}"</p>
                     </div>
 
-                    {/* Choices */}
-                    <div className="p-6 space-y-4">
-                        {event.choices.map((choice, index) => {
-                            const isAvailable = checkCondition(choice);
-                            return (
-                                <button
-                                    key={choice.id}
-                                    onClick={() => isAvailable && handleEventChoice(choice)}
-                                    disabled={!isAvailable}
-                                    className={`
-                                    w-full p-4 rounded-xl border text-left transition-all
-                                    ${isAvailable
-                                            ? 'border-gray-700 bg-black/40 hover:border-blue-500/50 hover:bg-blue-500/10 cursor-pointer'
-                                            : 'border-gray-800 bg-gray-900/30 opacity-50 cursor-not-allowed'}
-                                `}
-                                >
-                                    <div className="flex items-start gap-4">
-                                        <div className={`
-                                        w-8 h-8 rounded-full flex items-center justify-center font-bold font-mono text-sm
-                                        ${isAvailable ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-800 text-gray-600'}
-                                    `}>
-                                            {index + 1}
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className={`font-bold mb-1 ${isAvailable ? 'text-white' : 'text-gray-500'}`}>
-                                                {choice.label}
-                                            </div>
-                                            <div className={`text-sm ${isAvailable ? 'text-gray-400' : 'text-gray-600'}`}>
-                                                {choice.description}
-                                            </div>
-                                            {!isAvailable && choice.condition && (
-                                                <div className="text-xs text-red-400 mt-2 flex items-center gap-1">
-                                                    <X size={12} /> Requires: {choice.condition.type} {choice.condition.operator} {choice.condition.value}
-                                                </div>
-                                            )}
-                                        </div>
+                    {/* Choices OR Result */}
+                    {gameState.eventResult ? (
+                        // Result Screen
+                        <div className="p-6 space-y-4">
+                            <div className={`p-6 rounded-xl border ${gameState.eventResult.success ? 'bg-green-900/20 border-green-500/30' : 'bg-red-900/20 border-red-500/30'}`}>
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className={`p-2 rounded-full ${gameState.eventResult.success ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+                                        {gameState.eventResult.success ? (
+                                            <CheckCircle2 size={28} className="text-green-400" />
+                                        ) : (
+                                            <X size={28} className="text-red-400" />
+                                        )}
                                     </div>
-                                </button>
-                            );
-                        })}
-                    </div>
+                                    <div>
+                                        <div className="text-sm text-gray-400 uppercase tracking-wider">You chose</div>
+                                        <div className="text-xl font-bold text-white">{gameState.eventResult.choiceLabel}</div>
+                                    </div>
+                                </div>
+
+                                {/* Result details */}
+                                <div className="space-y-2">
+                                    {gameState.eventResult.resultMessage.split('.').filter(s => s.trim()).map((part, i) => (
+                                        <div key={i} className="flex items-center gap-2 text-sm">
+                                            <span className="text-gray-500">→</span>
+                                            <span className={gameState.eventResult?.success ? 'text-green-300' : 'text-gray-300'}>{part.trim()}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => setGameState(prev => ({
+                                    ...prev,
+                                    status: 'MAP',
+                                    currentEvent: undefined,
+                                    eventResult: undefined
+                                }))}
+                                className="w-full py-3 bg-primary text-black font-bold rounded-lg hover:bg-white transition flex items-center justify-center gap-2"
+                            >
+                                Continue <ArrowRight size={18} />
+                            </button>
+                        </div>
+                    ) : (
+                        // Choices
+                        <div className="p-6 space-y-4">
+                            {event.choices.map((choice, index) => {
+                                const isAvailable = checkCondition(choice);
+                                return (
+                                    <button
+                                        key={choice.id}
+                                        onClick={() => isAvailable && handleEventChoice(choice)}
+                                        disabled={!isAvailable}
+                                        className={`
+                                        w-full p-4 rounded-xl border text-left transition-all
+                                        ${isAvailable
+                                                ? 'border-gray-700 bg-black/40 hover:border-blue-500/50 hover:bg-blue-500/10 cursor-pointer'
+                                                : 'border-gray-800 bg-gray-900/30 opacity-50 cursor-not-allowed'}
+                                    `}
+                                    >
+                                        <div className="flex items-start gap-4">
+                                            <div className={`
+                                            w-8 h-8 rounded-full flex items-center justify-center font-bold font-mono text-sm
+                                            ${isAvailable ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-800 text-gray-600'}
+                                        `}>
+                                                {index + 1}
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className={`font-bold mb-1 ${isAvailable ? 'text-white' : 'text-gray-500'}`}>
+                                                    {choice.label}
+                                                </div>
+                                                <div className={`text-sm ${isAvailable ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                    {choice.description}
+                                                </div>
+                                                {!isAvailable && choice.condition && (
+                                                    <div className="text-xs text-red-400 mt-2 flex items-center gap-1">
+                                                        <X size={12} /> Requires: {choice.condition.type} {choice.condition.operator} {choice.condition.value}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
 
                     {/* Footer Stats */}
                     <div className="bg-black/40 border-t border-gray-800 px-6 py-4 flex justify-between items-center text-sm font-mono">
@@ -1620,7 +1683,7 @@ const App: React.FC = () => {
                                 className="bg-danger text-white font-bold py-3 px-8 rounded hover:bg-red-400 transition-colors font-mono text-sm uppercase tracking-wider flex items-center gap-2"
                             >
                                 <RefreshCw size={16} />
-                                Pivot & Retry
+                                Start New Run
                             </button>
                         </div>
                     </div>
@@ -1738,7 +1801,7 @@ const App: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-3 text-xs font-mono text-gray-500 group relative">
-                        <span className="opacity-0 group-hover:opacity-100 transition-opacity">Exhaust</span>
+                        <span className="opacity-0 group-hover:opacity-100 transition-opacity">Archive</span>
                         <div className="w-12 h-14 border border-gray-800 bg-black/60 rounded flex flex-col items-center justify-center gap-1 shadow-lg group-hover:border-gray-600 transition-colors">
                             <Ghost size={16} />
                             <span className="font-bold text-gray-400 text-sm">{gameState.exhaustPile.length}</span>

@@ -3,6 +3,34 @@ import { CardData, EnemyData, CharacterStats, RelicData, EncounterTemplate, Even
 
 export const MAX_HAND_SIZE = 10;
 
+// Keyword glossary for verbose tooltips - explains all gameplay terms
+export const KEYWORD_GLOSSARY: Record<string, { icon: string; color: string; description: string }> = {
+    // Core mechanics
+    Execute: { icon: "⚔️", color: "text-danger", description: "Deal damage to enemy Complexity" },
+    Buffer: { icon: "🛡️", color: "text-info", description: "Temporary protection that blocks incoming damage" },
+    Velocity: { icon: "💪", color: "text-warning", description: "Increases all Execute damage dealt" },
+    Bandwidth: { icon: "⚡", color: "text-primary", description: "Energy to play cards each turn" },
+    Runway: { icon: "💰", color: "text-primary", description: "Your health - reach $0 and you fail" },
+    Complexity: { icon: "🎯", color: "text-danger", description: "Enemy health - reduce to 0 to defeat" },
+
+    // Status effects (debuffs)
+    Exposed: { icon: "🎯", color: "text-danger", description: "Takes 50% more Execute damage" },
+    Drained: { icon: "😓", color: "text-purple-400", description: "Deals 25% less Execute damage" },
+    Fragile: { icon: "🩹", color: "text-orange-400", description: "Gains 25% less Buffer" },
+
+    // Card mechanics
+    Archive: { icon: "📁", color: "text-gray-400", description: "Remove from deck for this combat only" },
+    Ethereal: { icon: "👻", color: "text-blue-300", description: "If not played, Archives at end of turn" },
+    Retain: { icon: "📌", color: "text-yellow-200", description: "Keep in hand instead of discarding" },
+    Unplayable: { icon: "🚫", color: "text-gray-500", description: "Cannot be played, clogs your hand" },
+
+    // Deck zones
+    Backlog: { icon: "📚", color: "text-gray-300", description: "Your draw pile of undrawn cards" },
+
+    // Power effects
+    Momentum: { icon: "📊", color: "text-info", description: "Gain Velocity at the start of each turn" },
+};
+
 export const CARD_TYPE_CONFIG = {
     attack: {
         label: "Execution",
@@ -40,9 +68,9 @@ export const GAME_DATA = {
             hp: 75,
             maxHp: 75,
             bandwidth: 3,
-            capital: 0,
+            capital: 99,
             mitigation: 0,
-            statuses: { vulnerable: 0, weak: 0, strength: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0 }
+            statuses: { vulnerable: 0, weak: 0, strength: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, frail: 0, growth: 0, corruption: 0 }
         } as CharacterStats
     },
     relics: {
@@ -70,7 +98,7 @@ export const GAME_DATA = {
             rarity: "common",
             trigger: "combat_start",
             effect: { type: "apply_vulnerable_all", value: 1 },
-            description: "At the start of combat, apply 1 Vulnerable to ALL enemies.",
+            description: "At the start of combat, apply 1 Exposed to ALL enemies.",
             icon: "📝",
             tooltip: { term: "Focus", definition: "A simple tool for keeping priorities clear." }
         } as RelicData,
@@ -81,7 +109,7 @@ export const GAME_DATA = {
             rarity: "common",
             trigger: "first_attack",
             effect: { type: "bonus_damage", value: 8 },
-            description: "Your first attack each combat deals +8 damage.",
+            description: "Your first attack each combat deals +8 Execution.",
             icon: "🎯",
             tooltip: { term: "First Mover", definition: "The advantage of being first to act." }
         } as RelicData,
@@ -92,7 +120,7 @@ export const GAME_DATA = {
             rarity: "common",
             trigger: "combat_start",
             effect: { type: "block", value: 10 },
-            description: "Start each combat with 10 Mitigation.",
+            description: "Start each combat with 10 Buffer.",
             icon: "🛡️",
             tooltip: { term: "Preparation", definition: "Having backup plans ready." }
         } as RelicData,
@@ -103,7 +131,7 @@ export const GAME_DATA = {
             rarity: "common",
             trigger: "passive",
             effect: { type: "strength", value: 1 },
-            description: "Gain +1 Execution Power (Strength).",
+            description: "Gain +1 Velocity.",
             icon: "👀",
             tooltip: { term: "Perspective", definition: "New viewpoints reveal hidden solutions." }
         } as RelicData,
@@ -125,7 +153,7 @@ export const GAME_DATA = {
             rarity: "common",
             trigger: "turn_end_conditional",
             effect: { type: "block_if_zero", value: 6 },
-            description: "If you end your turn with 0 Mitigation, gain 6.",
+            description: "If you end your turn with 0 Buffer, gain 6.",
             icon: "🏠",
             tooltip: { term: "Safety", definition: "Automatic protection when exposed." }
         } as RelicData,
@@ -136,7 +164,7 @@ export const GAME_DATA = {
             rarity: "common",
             trigger: "on_damaged",
             effect: { type: "thorns", value: 3 },
-            description: "When you take damage, deal 3 damage back to the attacker.",
+            description: "When you take Runway damage, deal 3 back to the attacker.",
             icon: "🦔",
             tooltip: { term: "Resilience", definition: "Pushing back against setbacks." }
         } as RelicData,
@@ -160,7 +188,7 @@ export const GAME_DATA = {
             rarity: "uncommon",
             trigger: "on_attack_count",
             effect: { type: "strength_per_attacks", value: 1, threshold: 3 },
-            description: "Every 3 attacks you play, gain +1 Strength.",
+            description: "Every 3 attacks you play, gain +1 Velocity.",
             icon: "🚀",
             tooltip: { term: "Acceleration", definition: "Building speed compounds over time." }
         } as RelicData,
@@ -171,7 +199,7 @@ export const GAME_DATA = {
             rarity: "uncommon",
             trigger: "on_attack_count",
             effect: { type: "dexterity_per_attacks", value: 1, threshold: 3 },
-            description: "Every 3 attacks you play, gain +1 Dexterity (Block bonus).",
+            description: "Every 3 attacks you play, gain +1 Dexterity (Buffer bonus).",
             icon: "📚",
             tooltip: { term: "Adaptation", definition: "Learning fast improves your defenses." }
         } as RelicData,
@@ -182,7 +210,7 @@ export const GAME_DATA = {
             rarity: "uncommon",
             trigger: "combat_end_conditional",
             effect: { type: "heal_if_low", value: 12, threshold: 50 },
-            description: "If your HP is ≤50% after combat, heal 12 HP.",
+            description: "If your Runway is ≤50% after combat, heal 12.",
             icon: "💨",
             tooltip: { term: "Recovery", definition: "The ability to bounce back from near-failure." }
         } as RelicData,
@@ -204,7 +232,7 @@ export const GAME_DATA = {
             rarity: "uncommon",
             trigger: "on_attack_count",
             effect: { type: "block_per_attacks", value: 4, threshold: 3 },
-            description: "Every 3 attacks you play, gain 4 Mitigation.",
+            description: "Every 3 attacks you play, gain 4 Buffer.",
             icon: "🎯",
             tooltip: { term: "Concentration", definition: "Focus creates protection." }
         } as RelicData,
@@ -283,7 +311,7 @@ export const GAME_DATA = {
             rarity: "boss",
             trigger: "turn_start",
             effect: { type: "gain_bandwidth", value: 1, enemy_strength: 1 },
-            description: "+1 Bandwidth per turn. Enemies start combat with +1 Strength.",
+            description: "+1 Bandwidth per turn. Enemies start combat with +1 Velocity.",
             icon: "📈",
             tooltip: { term: "Risk", definition: "Moving fast, but facing tougher opposition." }
         } as RelicData,
@@ -313,11 +341,11 @@ export const GAME_DATA = {
             type: "attack",
             rarity: "starter",
             cost: 1,
-            description: "Deal 6 Execution damage.",
+            description: "Execute 6.",
             effects: [{ type: "damage", value: 6, target: "enemy" }],
             icon: "🚀",
             keywords: [],
-            tooltip: { term: "Git Commit", definition: "Snapshot of code changes. In startups: shipping small, testable increments." }
+            tooltip: { term: "Commit", definition: "Shipping small code chunks. Not pretty, but progress." }
         } as CardData,
         cto_rollback: {
             id: "cto_rollback",
@@ -326,11 +354,11 @@ export const GAME_DATA = {
             type: "skill",
             rarity: "starter",
             cost: 1,
-            description: "Gain 5 Mitigation.",
+            description: "Gain 5 Buffer.",
             effects: [{ type: "block", value: 5, target: "self" }],
             icon: "⏪",
             keywords: [],
-            tooltip: { term: "Rollback", definition: "Undo changes when something breaks. Essential for recovery." }
+            tooltip: { term: "Rollback", definition: "Reverting to a stable state. Prevents the crash." }
         } as CardData,
         cto_hotfix: {
             id: "cto_hotfix",
@@ -339,14 +367,14 @@ export const GAME_DATA = {
             type: "attack",
             rarity: "starter",
             cost: 2,
-            description: "Deal 8 Dmg. Apply 2 Vulnerable.",
+            description: "Execute 8. Apply 2 Exposed.",
             effects: [
                 { type: "damage", value: 8, target: "enemy" },
                 { type: "apply_status", value: 2, status: 'vulnerable', target: "enemy" }
             ],
             icon: "🔥",
             keywords: [],
-            tooltip: { term: "Hotfix", definition: "Emergency patch deployed directly to production. Risky but necessary." }
+            tooltip: { term: "Hotfix", definition: "A messy fix that works. Leaves the system exposed." }
         } as CardData,
 
         // --- COMMON ---
@@ -357,7 +385,7 @@ export const GAME_DATA = {
             type: "attack",
             rarity: "common",
             cost: 0,
-            description: "Deal 6 Dmg. Add a copy of this card to discard.",
+            description: "Execute 6. Add a copy of this card to discard.",
             effects: [
                 { type: "damage", value: 6, target: "enemy" },
                 { type: "add_copy", value: 1, target: "self" }
@@ -373,7 +401,7 @@ export const GAME_DATA = {
             type: "attack",
             rarity: "common",
             cost: 2,
-            description: "Deal 14 Dmg. Strength affects this card 3 times.",
+            description: "Execute 14. Velocity affects this card 3 times.",
             effects: [
                 { type: "damage", value: 14, target: "enemy", strengthMultiplier: 3 }
             ],
@@ -388,7 +416,7 @@ export const GAME_DATA = {
             type: "attack",
             rarity: "common",
             cost: 1,
-            description: "Deal 9 Dmg. Draw 1 card.",
+            description: "Execute 9. Draw 1 card.",
             effects: [
                 { type: "damage", value: 9, target: "enemy" },
                 { type: "draw", value: 1, target: "self" }
@@ -404,7 +432,7 @@ export const GAME_DATA = {
             type: "attack",
             rarity: "common",
             cost: 2,
-            description: "Deal 12 Dmg. Apply 2 Weak.",
+            description: "Execute 12. Apply 2 Drained.",
             effects: [
                 { type: "damage", value: 12, target: "enemy" },
                 { type: "apply_status", value: 2, status: 'weak', target: "enemy" }
@@ -420,7 +448,7 @@ export const GAME_DATA = {
             type: "skill",
             rarity: "common",
             cost: 1,
-            description: "Gain 7 Mitigation. Exhaust a random card.",
+            description: "Gain 7 Buffer. Archive a random card.",
             effects: [
                 { type: "block", value: 7, target: "self" },
                 { type: "exhaust_random", value: 1, target: "self" }
@@ -436,7 +464,7 @@ export const GAME_DATA = {
             type: "attack",
             rarity: "common",
             cost: 0,
-            description: "Can only be played if every card in your hand is an Attack. Deal 14 Dmg.",
+            description: "Can only be played if every card in your hand is an Attack. Execute 14.",
             playCondition: 'only_attacks_in_hand',
             effects: [
                 { type: "damage", value: 14, target: "enemy" }
@@ -452,7 +480,7 @@ export const GAME_DATA = {
             type: "skill",
             rarity: "common",
             cost: 1,
-            description: "Gain 5 Mitigation. Upgrade a card in your hand.",
+            description: "Gain 5 Buffer. Upgrade a card in your hand.",
             effects: [
                 { type: "block", value: 5, target: "self" },
                 { type: "upgrade_hand", value: 1, target: "self" }
@@ -468,7 +496,7 @@ export const GAME_DATA = {
             type: "attack",
             rarity: "common",
             cost: 1,
-            description: "Deal Dmg equal to your current Mitigation.",
+            description: "Execute equal to your current Buffer.",
             effects: [
                 { type: "damage_scale_mitigation", value: 1, target: "enemy" }
             ],
@@ -483,7 +511,7 @@ export const GAME_DATA = {
             type: "attack",
             rarity: "common",
             cost: 1,
-            description: "Deal 8 Dmg to ALL enemies.",
+            description: "Execute 8 to ALL enemies.",
             effects: [
                 { type: "damage", value: 8, target: "all_enemies" }
             ],
@@ -498,7 +526,7 @@ export const GAME_DATA = {
             type: "attack",
             rarity: "common",
             cost: 1,
-            description: "Deal 9 Dmg. Place a card from discard on top of draw pile.",
+            description: "Execute 9. Place a card from discard on top of Backlog.",
             effects: [
                 { type: "damage", value: 9, target: "enemy" },
                 { type: "retrieve_discard", value: 1, target: "self" }
@@ -514,7 +542,7 @@ export const GAME_DATA = {
             type: "attack",
             rarity: "common",
             cost: 1,
-            description: "Deal 5 Dmg. Gain 5 Mitigation.",
+            description: "Execute 5. Gain 5 Buffer.",
             effects: [
                 { type: "damage", value: 5, target: "enemy" },
                 { type: "block", value: 5, target: "self" }
@@ -530,7 +558,7 @@ export const GAME_DATA = {
             type: "attack",
             rarity: "common",
             cost: 2,
-            description: "Deal 6 Dmg. Deals +2 for every 'Commit' in your deck.",
+            description: "Execute 6. Deals +2 for every 'Commit' in your deck.",
             effects: [
                 { type: "damage_scale_matches", value: 6, matchString: 'Commit', target: "enemy" }
             ],
@@ -545,7 +573,7 @@ export const GAME_DATA = {
             type: "attack",
             rarity: "common",
             cost: 1,
-            description: "Deal 7 Dmg. Shuffle a 'Legacy Code' into your draw pile.",
+            description: "Execute 7. Shuffle a 'Legacy Code' into your Backlog.",
             effects: [
                 { type: "damage", value: 7, target: "enemy" },
                 { type: "add_card", value: 1, cardId: "status_legacy_code", target: "self" }
@@ -561,7 +589,7 @@ export const GAME_DATA = {
             type: "attack",
             rarity: "common",
             cost: 1,
-            description: "Deal 3 Dmg to a random enemy 3 times.",
+            description: "Execute 3 to a random enemy 3 times.",
             effects: [
                 { type: "damage", value: 3, target: "enemy" },
                 { type: "damage", value: 3, target: "enemy" },
@@ -578,7 +606,7 @@ export const GAME_DATA = {
             type: "attack",
             rarity: "common",
             cost: 1,
-            description: "Deal 5 Dmg twice.",
+            description: "Execute 5 twice.",
             effects: [
                 { type: "damage", value: 5, target: "enemy" },
                 { type: "damage", value: 5, target: "enemy" }
@@ -594,7 +622,7 @@ export const GAME_DATA = {
             type: "attack",
             rarity: "common",
             cost: 1,
-            description: "Deal 12 Dmg. Shuffle a 'Legacy Code' into your discard.",
+            description: "Execute 12. Shuffle a 'Legacy Code' into your discard.",
             effects: [
                 { type: "damage", value: 12, target: "enemy" },
                 { type: "add_card", value: 1, cardId: "status_legacy_code", target: "self" }
@@ -612,7 +640,7 @@ export const GAME_DATA = {
             type: "attack",
             rarity: "uncommon",
             cost: 2,
-            description: "Deal 13 Dmg. Apply 1 Weak and 1 Vulnerable.",
+            description: "Execute 13. Apply 1 Drained and 1 Exposed.",
             effects: [
                 { type: "damage", value: 13, target: "enemy" },
                 { type: "apply_status", value: 1, status: 'weak', target: "enemy" },
@@ -644,7 +672,7 @@ export const GAME_DATA = {
             type: "power",
             rarity: "uncommon",
             cost: 1,
-            description: "Whenever a card is Exhausted, gain 3 Mitigation.",
+            description: "Whenever a card is Archived, gain 3 Buffer.",
             effects: [
                 { type: "apply_status", value: 3, status: "feelNoPain", target: "self" }
             ],
@@ -659,7 +687,7 @@ export const GAME_DATA = {
             type: "power",
             rarity: "uncommon",
             cost: 1,
-            description: "At the end of your turn, gain 3 Mitigation.",
+            description: "At the end of your turn, gain 3 Buffer.",
             effects: [
                 { type: "apply_status", value: 3, status: "metallicize", target: "self" }
             ],
@@ -674,7 +702,7 @@ export const GAME_DATA = {
             type: "power",
             rarity: "uncommon",
             cost: 1,
-            description: "Gain 2 Execution Power (Strength).",
+            description: "Gain 2 Velocity.",
             effects: [{ type: "apply_status", value: 2, status: 'strength', target: "self" }],
             icon: "👓",
             keywords: [],
@@ -687,7 +715,7 @@ export const GAME_DATA = {
             type: "skill",
             rarity: "uncommon",
             cost: 1,
-            description: "If the enemy intends to attack, gain 3 Strength.",
+            description: "If an enemy intends to attack, gain 3 Velocity.",
             effects: [
                 { type: "conditional_strength", value: 3, target: "self" }
             ],
@@ -719,7 +747,7 @@ export const GAME_DATA = {
             rarity: "uncommon",
             cost: 2,
             ethereal: true,
-            description: "Ethereal. Deal 20 Dmg.",
+            description: "Ethereal. Execute 20.",
             effects: [
                 { type: "damage", value: 20, target: "enemy" }
             ],
@@ -735,7 +763,7 @@ export const GAME_DATA = {
             rarity: "uncommon",
             cost: 1,
             exhaust: true,
-            description: "Enemy loses 2 Strength. Exhaust.",
+            description: "Enemy loses 2 Velocity. Archive.",
             effects: [
                 { type: "apply_status", value: -2, status: 'strength', target: "enemy" }
             ],
@@ -750,7 +778,7 @@ export const GAME_DATA = {
             type: "attack",
             rarity: "uncommon",
             cost: 1,
-            description: "Deal 5 Dmg. If enemy is Vulnerable, gain 1 Bandwidth and Draw 1 card.",
+            description: "Execute 5. If enemy is Exposed, gain 1 Bandwidth and Draw 1 card.",
             effects: [
                 { type: "damage", value: 5, target: "enemy" },
                 { type: "conditional_refund", value: 1, target: "self" }
@@ -766,7 +794,7 @@ export const GAME_DATA = {
             type: "skill",
             rarity: "uncommon",
             cost: 2,
-            description: "Gain 12 Mitigation. Whenever you are attacked this turn, deal 4 Dmg to the attacker.",
+            description: "Gain 12 Buffer. Whenever you are attacked this turn, Execute 4 to the attacker.",
             effects: [
                 { type: "block", value: 12, target: "self" },
                 { type: "apply_status", value: 4, status: "thorns", target: "self" }
@@ -783,7 +811,7 @@ export const GAME_DATA = {
             rarity: "uncommon",
             cost: 1,
             exhaust: true,
-            description: "Deal 2 Dmg 4 times. Exhaust.",
+            description: "Execute 2, 4 times. Archive.",
             effects: [
                 { type: "damage", value: 2, target: "enemy" },
                 { type: "damage", value: 2, target: "enemy" },
@@ -801,13 +829,43 @@ export const GAME_DATA = {
             type: "power",
             rarity: "uncommon",
             cost: 1,
-            description: "Whenever you lose HP from a card, gain 1 Strength.",
+            description: "Whenever you lose Runway from a card, gain 1 Velocity.",
             effects: [
                 { type: "apply_status", value: 1, status: "antifragile", target: "self" }
             ],
             icon: "💪",
             keywords: [],
             tooltip: { term: "Antifragile", definition: "Systems that benefit from shocks, volatility, and stress." }
+        } as CardData,
+        cto_network_effects: { // Demon Form
+            id: "cto_network_effects",
+            character: "cto",
+            name: "Network Effects",
+            type: "power",
+            rarity: "rare",
+            cost: 3,
+            description: "At the start of each turn, gain 2 Velocity.",
+            effects: [
+                { type: "apply_status", value: 2, status: "growth", target: "self" }
+            ],
+            icon: "🕸️",
+            keywords: [],
+            tooltip: { term: "Network Effects", definition: "Expensive to build, but once running, your execution compounds infinitely." }
+        } as CardData,
+        cto_tech_debt: { // Corruption
+            id: "cto_tech_debt",
+            character: "cto",
+            name: "Tech Debt",
+            type: "power",
+            rarity: "rare",
+            cost: 3,
+            description: "Skills cost 0 Bandwidth. Whenever you play a Skill, Archive it.",
+            effects: [
+                { type: "apply_status", value: 1, status: "corruption", target: "self" }
+            ],
+            icon: "💳",
+            keywords: [],
+            tooltip: { term: "Tech Debt", definition: "Move incredibly fast now, but you're burning infrastructure. Win before you run out." }
         } as CardData,
         cto_bridge_round: { // Seeing Red
             id: "cto_bridge_round",
@@ -817,7 +875,7 @@ export const GAME_DATA = {
             rarity: "uncommon",
             cost: 1,
             exhaust: true,
-            description: "Gain 2 Bandwidth. Exhaust.",
+            description: "Gain 2 Bandwidth. Archive.",
             effects: [
                 { type: "gain_bandwidth", value: 2, target: "self" }
             ],
@@ -833,7 +891,7 @@ export const GAME_DATA = {
             rarity: "uncommon",
             cost: 2,
             exhaust: true,
-            description: "Apply 3 Weak and 3 Vulnerable to ALL enemies. Exhaust.",
+            description: "Apply 3 Drained and 3 Exposed to ALL enemies. Archive.",
             effects: [
                 { type: "apply_status", value: 3, status: "weak", target: "all_enemies" },
                 { type: "apply_status", value: 3, status: "vulnerable", target: "all_enemies" }
@@ -849,7 +907,7 @@ export const GAME_DATA = {
             type: "attack",
             rarity: "uncommon",
             cost: -1, // X Cost
-            description: "Deal 5 Dmg to ALL enemies X times.",
+            description: "Execute 5 to ALL enemies X times.",
             effects: [
                 { type: "damage", value: 5, target: "all_enemies" }
             ],
@@ -913,7 +971,7 @@ export const GAME_DATA = {
             rarity: "special",
             cost: 1,
             exhaust: true,
-            description: "Exhaust.",
+            description: "Archive.",
             effects: [],
             icon: "🐙",
             keywords: ["exhaust"],
@@ -956,20 +1014,20 @@ export const GAME_DATA = {
         // --- COMMON ---
         fanboy: { // Cultist
             id: "fanboy",
-            name: "The Hype Man",
+            name: "Feature Creep",
             act: 1,
             type: "normal",
             hp: 50, // 48-54
             maxHp: 50,
             mitigation: 0,
-            emoji: "📣",
-            description: "Promises the world. Gets louder every turn.",
+            emoji: "📦",
+            description: "Starts small. Grows uncontrollably if you don't execute fast.",
             statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 0, frail: 0 },
             currentIntent: {
                 type: 'buff',
                 value: 3,
                 icon: 'buff',
-                description: "Build Hype"
+                description: "Add Feature"
             },
             rewards: {
                 capital: { min: 10, max: 15 },
@@ -1288,20 +1346,20 @@ export const GAME_DATA = {
         } as EnemyData,
         over_engineer: { // Lagavulin
             id: "over_engineer",
-            name: "The Perfectionist",
+            name: "The Deadline",
             act: 1,
             type: "elite",
             hp: 110, // 109-111
             maxHp: 110,
             mitigation: 0,
-            emoji: "🎯",
-            description: "Sleeps on decisions. Wakes up demanding perfection.",
+            emoji: "⏰",
+            description: "Sits dormant. When it wakes, it hits your Runway hard.",
             statuses: { vulnerable: 0, strength: 0, growth: 0, weak: 0, metallicize: 8, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, curlUp: 0, malleable: 0, asleep: 1, frail: 0 },
             currentIntent: {
                 type: 'debuff',
                 value: 1,
                 icon: 'debuff',
-                description: "Overthink"
+                description: "Approach"
             },
             rewards: {
                 capital: { min: 25, max: 35 },
@@ -1447,20 +1505,20 @@ export const GAME_DATA = {
 
 // Status effect icons and labels for startup theme
 export const STATUS_CONFIG = {
-    vulnerable: { icon: "🎯", label: "Exposed", description: "Takes 50% more damage" },
-    weak: { icon: "😓", label: "Drained", description: "Deals 25% less damage" },
-    strength: { icon: "💪", label: "Execution Power", descPositive: "+{0} to all Execution", descNegative: "{0} to all Execution" },
-    frail: { icon: "🩹", label: "Fragile", description: "Mitigation reduced by 25%" },
-    metallicize: { icon: "🛡️", label: "Auto-Mitigation", description: "Gain {0} Mitigation at end of turn" },
-    thorns: { icon: "⚡", label: "Counterattack", description: "Deal {0} damage when hit" },
+    vulnerable: { icon: "🎯", label: "Exposed", description: "Takes 50% more Execution" },
+    weak: { icon: "😓", label: "Drained", description: "Deals 25% less Execution" },
+    strength: { icon: "💪", label: "Velocity", descPositive: "+{0} to all Execution", descNegative: "{0} to all Execution" },
+    frail: { icon: "🩹", label: "Fragile", description: "Buffer reduced by 25%" },
+    metallicize: { icon: "🛡️", label: "Auto-Buffer", description: "Gain {0} Buffer at end of turn" },
+    thorns: { icon: "⚡", label: "Counterattack", description: "Execute {0} when hit" },
     artifact: { icon: "💎", label: "Buffer", description: "Negates next {0} debuff(s)" },
     evolve: { icon: "📖", label: "Troubleshoot", description: "Draw {0} card(s) when drawing Status cards" },
-    feelNoPain: { icon: "🧘", label: "Lean Ops", description: "Gain {0} Mitigation when a card is Exhausted" },
+    feelNoPain: { icon: "🧘", label: "Lean Ops", description: "Gain {0} Buffer when a card is Archived" },
     noDraw: { icon: "🚫", label: "Flow State Lock", description: "Cannot draw cards this turn" },
-    antifragile: { icon: "📈", label: "Antifragile", description: "Gain +{0} Strength when losing HP from cards" },
-    growth: { icon: "📊", label: "Momentum", description: "Gains +{0} Strength each turn" },
-    curlUp: { icon: "🥚", label: "Defensive", description: "Gains {0} Mitigation when first attacked" },
-    malleable: { icon: "🍃", label: "Adaptive", description: "Gains {0}+ Mitigation when attacked" },
+    antifragile: { icon: "📈", label: "Antifragile", description: "Gain +{0} Velocity when losing Runway from cards" },
+    growth: { icon: "📊", label: "Momentum", description: "Gains +{0} Velocity each turn" },
+    curlUp: { icon: "🥚", label: "Defensive", description: "Gains {0} Buffer when first attacked" },
+    malleable: { icon: "🍃", label: "Adaptive", description: "Gains {0}+ Buffer when attacked" },
     asleep: { icon: "😴", label: "Dormant", description: "Inactive until damaged" },
 };
 
@@ -1559,7 +1617,7 @@ export const ACT1_EVENTS: EventData[] = [
             {
                 id: 'prepare',
                 label: 'Prepare',
-                description: 'Exhaust 1 card, gain 1 uncommon card',
+                description: 'Archive 1 card, gain 1 uncommon card',
                 effects: [
                     { type: 'exhaust_card', value: 1 },
                     { type: 'gain_card', cardRarity: 'uncommon' }
@@ -1641,7 +1699,7 @@ export const ACT1_EVENTS: EventData[] = [
             {
                 id: 'assert',
                 label: 'Assert Dominance',
-                description: 'Gain 2 Strength, lose $100',
+                description: 'Gain 2 Velocity, lose $100',
                 effects: [
                     { type: 'gain_strength', value: 2 },
                     { type: 'lose_gold', value: 100 }
@@ -1772,7 +1830,7 @@ export const ACT1_EVENTS: EventData[] = [
             {
                 id: 'all_hands',
                 label: 'All Hands On Deck',
-                description: 'Exhaust 2 cards, gain 2 rare cards',
+                description: 'Archive 2 cards, gain 2 rare cards',
                 effects: [
                     { type: 'exhaust_card', value: 2 },
                     { type: 'gain_card', cardRarity: 'rare' },

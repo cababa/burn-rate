@@ -3,6 +3,7 @@
 import React from 'react';
 import { CardData } from '../types';
 import { Zap, Ban, Ghost, Archive } from 'lucide-react';
+import { KEYWORD_GLOSSARY } from '../constants';
 
 interface CardProps {
   card: CardData;
@@ -59,18 +60,39 @@ export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selecta
 
   // Helper to colorize keywords in description
   const formatDescription = (text: string) => {
-    const parts = text.split(/(\bExecution\b|\bMitigation\b|\bVulnerable\b|\bBurn\b|\bExhaust\b|\bUnplayable\b|\bEthereal\b|\bRetain\b)/g);
+    const keywordPattern = Object.keys(KEYWORD_GLOSSARY).join('|');
+    const regex = new RegExp(`(\\b(?:${keywordPattern})\\b)`, 'g');
+    const parts = text.split(regex);
+
     return parts.map((part, i) => {
-      if (part === 'Execution' || part === 'Burn') return <span key={i} className="text-danger font-bold">{part}</span>;
-      if (part === 'Mitigation') return <span key={i} className="text-info font-bold">{part}</span>;
-      if (part === 'Vulnerable') return <span key={i} className="text-danger font-bold underline decoration-dashed underline-offset-2">{part}</span>;
-      if (part === 'Exhaust') return <span key={i} className="text-gray-400 font-bold border-b border-gray-500">{part}</span>;
-      if (part === 'Unplayable') return <span key={i} className="text-gray-500 font-bold italic">{part}</span>;
-      if (part === 'Ethereal') return <span key={i} className="text-blue-300 font-bold italic">{part}</span>;
-      if (part === 'Retain') return <span key={i} className="text-yellow-200 font-bold italic">{part}</span>;
+      const keyword = KEYWORD_GLOSSARY[part];
+      if (keyword) {
+        return <span key={i} className={`${keyword.color} font-bold`}>{part}</span>;
+      }
       return part;
     });
   };
+
+  // Extract keywords found in description for tooltip glossary
+  const getKeywordsInDescription = (): string[] => {
+    const found: string[] = [];
+    const text = card.description;
+
+    Object.keys(KEYWORD_GLOSSARY).forEach(keyword => {
+      if (text.includes(keyword)) {
+        found.push(keyword);
+      }
+    });
+
+    // Also check for Exhaust/Ethereal/Retain badges
+    if (card.exhaust && !found.includes('Archive')) found.push('Archive');
+    if (card.ethereal && !found.includes('Ethereal')) found.push('Ethereal');
+    if (card.retain && !found.includes('Retain')) found.push('Retain');
+
+    return found;
+  };
+
+  const keywordsInCard = getKeywordsInDescription();
 
   return (
     <div
@@ -130,7 +152,7 @@ export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selecta
         </div>
         {card.exhaust && (
           <div className="absolute bottom-0 right-0 bg-black/80 text-[8px] uppercase font-bold text-gray-400 px-1 py-0.5 rounded-tl border-t border-l border-white/10">
-            Exhaust
+            Archive
           </div>
         )}
         {card.ethereal && (
@@ -155,13 +177,39 @@ export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selecta
           {formatDescription(card.description)}
         </p>
       </div>
-      {/* Tooltip */}
-      {card.tooltip && (
-        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-48 bg-gray-900 border border-gray-700 p-3 rounded shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-          <div className="text-xs font-bold text-warning mb-1">{card.tooltip.term}</div>
-          <div className="text-[10px] text-gray-300 leading-tight">{card.tooltip.definition}</div>
-        </div>
-      )}
+
+      {/* Enhanced Tooltip with Keyword Glossary */}
+      <div className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full w-64 bg-gray-900 border border-gray-700 p-2.5 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+        {/* Card tooltip term if present */}
+        {card.tooltip && (
+          <div className={keywordsInCard.length > 0 ? "border-b border-gray-700 pb-2 mb-2" : ""}>
+            <div className="text-xs font-bold text-warning mb-0.5">{card.tooltip.term}</div>
+            <div className="text-[10px] text-gray-300 leading-tight">{card.tooltip.definition}</div>
+          </div>
+        )}
+
+        {/* Keyword glossary - compact inline format */}
+        {keywordsInCard.length > 0 && (
+          <div className="space-y-1">
+            {keywordsInCard.map(keyword => {
+              const def = KEYWORD_GLOSSARY[keyword];
+              return (
+                <div key={keyword} className="text-[10px] leading-tight">
+                  <span className="mr-1">{def.icon}</span>
+                  <span className={`font-bold ${def.color}`}>{keyword}</span>
+                  <span className="text-gray-500 mx-1">—</span>
+                  <span className="text-gray-400">{def.description}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Fallback if no tooltip content */}
+        {!card.tooltip && keywordsInCard.length === 0 && (
+          <div className="text-[10px] text-gray-500 italic">No additional info</div>
+        )}
+      </div>
     </div>
   );
 };

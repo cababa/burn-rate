@@ -902,47 +902,47 @@ const getNextIntent = (enemy: EnemyData, turn: number, playerHp: number): EnemyI
     const roll = Math.random() * 100;
 
     // --- COMMON ---
-    if (enemy.id === 'fanboy') {
+    if (enemy.id.startsWith('fanboy')) {
         if (turn === 1) return { type: 'buff', value: 3, icon: 'buff', description: "Ritual (Hype)" };
         const dmg = 6 + enemy.statuses.strength;
         return { type: 'attack', value: dmg, icon: 'attack', description: `${dmg} Dark Strike` };
     }
 
-    if (enemy.id === 'spaghetti_code') {
+    if (enemy.id.startsWith('spaghetti_code')) {
         if (roll < 25) return { type: 'buff', value: 3, icon: 'buff', description: "Bellow (Block+Str)" };
         if (roll < 55) return { type: 'attack', value: 7, icon: 'attack', description: "Thrash (7 Dmg + 5 Blk)" };
         return { type: 'attack', value: 11, icon: 'attack', description: "Chomp (11 Dmg)" };
     }
 
-    if (enemy.id === 'critical_bug') {
+    if (enemy.id.startsWith('critical_bug')) {
         if (roll < 25) return { type: 'buff', value: 3, icon: 'buff', description: "Grow (Severity)" };
         const dmg = 6 + enemy.statuses.strength;
         return { type: 'attack', value: dmg, icon: 'attack', description: "Bite" };
     }
 
-    if (enemy.id === 'minor_bug') {
+    if (enemy.id.startsWith('minor_bug')) {
         if (roll < 25) return { type: 'debuff', value: 2, icon: 'debuff', description: "Spit Web (Weak)" };
         const dmg = 5 + enemy.statuses.strength;
         return { type: 'attack', value: dmg, icon: 'attack', description: "Bite" };
     }
 
-    if (enemy.id === 'quick_hack' || enemy.id === 'hotfix') {
+    if (enemy.id.startsWith('quick_hack') || enemy.id.startsWith('hotfix')) {
         if (roll < 50) return { type: 'attack', value: 3, icon: 'attack', description: "Tackle" };
         return { type: 'debuff', value: 1, icon: 'debuff', description: "Lick (Weak)" };
     }
 
-    if (enemy.id === 'tech_debt' || enemy.id === 'bad_merge') {
+    if (enemy.id.startsWith('tech_debt') || enemy.id.startsWith('bad_merge')) {
         if (roll < 30) return { type: 'debuff', value: 1, icon: 'debuff', description: "Corrosive Spit (Slimed)" };
         return { type: 'attack', value: 7, icon: 'attack', description: "Tackle" };
     }
 
-    if (enemy.id === 'legacy_module' || enemy.id === 'merge_conflict') {
+    if (enemy.id.startsWith('legacy_module') || enemy.id.startsWith('merge_conflict')) {
         if (roll < 30) return { type: 'debuff', value: 2, icon: 'debuff', description: "Corrosive Spit (Slimed)" };
         return { type: 'attack', value: 16, icon: 'attack', description: "Tackle" };
     }
 
     // Micromanager (Blue Slaver) - Stab 13, Rake (7 + Weak)
-    if (enemy.id === 'micromanager') {
+    if (enemy.id.startsWith('micromanager')) {
         if (roll < 40) {
             const dmg = 7 + enemy.statuses.strength;
             return { type: 'attack', value: dmg, icon: 'attack', description: "Rake (Weak)" };
@@ -952,7 +952,7 @@ const getNextIntent = (enemy: EnemyData, turn: number, playerHp: number): EnemyI
     }
 
     // Feature Pusher (Red Slaver) - Stab 14, Scrape (9 + Vuln), Entangle
-    if (enemy.id === 'feature_pusher') {
+    if (enemy.id.startsWith('feature_pusher')) {
         if (turn === 1) return { type: 'debuff', value: 1, icon: 'debuff', description: "Entangle" };
         if (roll < 45) {
             const dmg = 9 + enemy.statuses.strength;
@@ -963,7 +963,7 @@ const getNextIntent = (enemy: EnemyData, turn: number, playerHp: number): EnemyI
     }
 
     // Headhunter (Looter) - Mug 10-12, Lunge 12, Escape
-    if (enemy.id === 'headhunter') {
+    if (enemy.id.startsWith('headhunter')) {
         if (turn >= 3 && roll < 15) return { type: 'buff', value: 0, icon: 'buff', description: "Escape (Flee)" };
         if (roll < 50) {
             const dmg = 10 + enemy.statuses.strength;
@@ -974,7 +974,7 @@ const getNextIntent = (enemy: EnemyData, turn: number, playerHp: number): EnemyI
     }
 
     // Memory Leak (Fungi Beast) - Bite 6, Grow (Strength)
-    if (enemy.id === 'memory_leak') {
+    if (enemy.id.startsWith('memory_leak')) {
         if (roll < 40) return { type: 'buff', value: 3, icon: 'buff', description: "Grow (Strength)" };
         const dmg = 6 + enemy.statuses.strength;
         return { type: 'attack', value: dmg, icon: 'attack', description: "Bite" };
@@ -982,7 +982,7 @@ const getNextIntent = (enemy: EnemyData, turn: number, playerHp: number): EnemyI
 
     // --- ELITES ---
     // Scope Creep (Gremlin Nob) - Enrage on skills, Skull Bash 6+Vuln, Rush 14
-    if (enemy.id === 'scope_creep') {
+    if (enemy.id.startsWith('scope_creep')) {
         if (turn === 1) return { type: 'buff', value: 2, icon: 'buff', description: "Bellow (Enrage)" };
         if (roll < 33) {
             const dmg = 6 + enemy.statuses.strength;
@@ -992,7 +992,7 @@ const getNextIntent = (enemy: EnemyData, turn: number, playerHp: number): EnemyI
         return { type: 'attack', value: dmg, icon: 'attack', description: "Rush" };
     }
 
-    if (enemy.id === 'the_over_engineer') {
+    if (enemy.id.startsWith('over_engineer')) {
         if (enemy.statuses.asleep > 0) {
             return { type: 'debuff', value: 1, icon: 'debuff', description: "Siphon (-1 Str/Dex)" };
         }
@@ -1000,14 +1000,14 @@ const getNextIntent = (enemy: EnemyData, turn: number, playerHp: number): EnemyI
         return { type: 'attack', value: 18, icon: 'attack', description: "Attack" };
     }
 
-    if (enemy.id.startsWith('legacy_system')) {
+    if (enemy.id.startsWith('legacy_monolith') || enemy.id.startsWith('legacy_hack') || enemy.id.startsWith('legacy_patch')) {
         if (turn % 2 === 0) return { type: 'attack', value: 9, icon: 'attack', description: "Beam" };
         return { type: 'debuff', value: 2, icon: 'debuff', description: "Shuffle Bugs" };
     }
 
     // --- BOSSES ---
     // The Pivot (Guardian) - Mode Shift between Offensive/Defensive
-    if (enemy.id === 'boss_the_pivot') {
+    if (enemy.id.startsWith('boss_the_pivot')) {
         // Track mode using asleep status as mode flag (0=offensive, 1+=defensive)
         const isDefensive = enemy.statuses.asleep > 0;
 
@@ -1028,7 +1028,7 @@ const getNextIntent = (enemy: EnemyData, turn: number, playerHp: number): EnemyI
         }
     }
 
-    if (enemy.id === 'boss_burn_rate') {
+    if (enemy.id.startsWith('boss_burn_rate')) {
         if (turn === 1) return { type: 'attack', value: 0, icon: 'attack', description: "Divider (x6)" };
         const cycle = (turn - 1) % 5;
         if (cycle === 0) return { type: 'attack', value: 6, icon: 'attack', description: "Sear" };
@@ -1038,7 +1038,7 @@ const getNextIntent = (enemy: EnemyData, turn: number, playerHp: number): EnemyI
         return { type: 'attack', value: 2, icon: 'attack', description: "Inferno (x6)" };
     }
 
-    if (enemy.id === 'boss_the_monolith') {
+    if (enemy.id.startsWith('boss_the_monolith')) {
         const cycle = turn % 3;
         if (cycle === 1) return { type: 'debuff', value: 3, icon: 'debuff', description: "Goop Spray (Slimed)" };
         if (cycle === 2) return { type: 'buff', value: 0, icon: 'buff', description: "Prepare" };
@@ -1154,7 +1154,7 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
         getGlobalLogger().log('ENEMY_ACTION', `${enemy.name} executing ${intent.type}`, { enemyName: enemy.name, intentType: intent.type, intentDescription: intent.description });
 
         // Handle Slime Boss Split regardless of intent type (can be set to 'unknown' when triggered by thorns)
-        if (intent.description === 'Splitting...' && enemy.id === 'boss_the_monolith') {
+        if (intent.description === 'Splitting...' && enemy.id.startsWith('boss_the_monolith')) {
             const currentBossHp = Math.max(1, enemy.hp);
 
             // Remove the main boss
@@ -1172,7 +1172,7 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
 
         if (intent.type === 'attack') {
             let attackValue = intent.value;
-            if (enemy.id === 'boss_burn_rate' && intent.description.includes('Divider')) {
+            if (enemy.id.startsWith('boss_burn_rate') && intent.description.includes('Divider')) {
                 const hits = 6;
                 const dmgPerHit = Math.floor(newPlayerHp / 12) + 1;
                 attackValue = dmgPerHit * hits;
@@ -1190,7 +1190,7 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
                 getGlobalLogger().log('DAMAGE_DEALT', `Thorns dealt ${thornsDamage} to ${enemy.name}.`);
 
                 // Check for Split Trigger (Thorns Damage)
-                if (enemy.id === 'boss_the_monolith' && enemy.hp <= enemy.maxHp / 2 && enemy.currentIntent.type !== 'unknown') {
+                if (enemy.id.startsWith('boss_the_monolith') && enemy.hp <= enemy.maxHp / 2 && enemy.currentIntent.type !== 'unknown') {
                     enemy.currentIntent = {
                         type: 'unknown',
                         value: 0,
@@ -1249,7 +1249,7 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
                 getGlobalLogger().log('ENEMY_ATTACK_SPECIAL', `Inferno: 6 hits.`);
             }
             // Twin Slam: Exit defensive mode for The Pivot
-            if (intent.description.includes('Twin Slam') && enemy.id === 'boss_the_pivot') {
+            if (intent.description.includes('Twin Slam') && enemy.id.startsWith('boss_the_pivot')) {
                 enemy.statuses.asleep = 0; // Exit defensive mode
                 enemy.statuses.thorns = 0; // Remove Sharp Hide
                 newMessage += ` Exited Defensive Mode!`;
@@ -1283,7 +1283,7 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
                 enemy.maxHp = 0;
                 newMessage += ` ${enemy.name} Escaped with your capital!`;
                 getGlobalLogger().log('ENEMY_ACTION_SPECIAL', `${enemy.name} escaped.`);
-            } else if (intent.description.includes('Split') && enemy.id === 'boss_the_monolith') {
+            } else if (intent.description.includes('Split') && enemy.id.startsWith('boss_the_monolith')) {
                 const acidL = { ...GAME_DATA.enemies.legacy_module, id: `legacy_module_split_${Date.now()}_acid`, hp: 70, maxHp: 70 };
                 const spikeL = { ...GAME_DATA.enemies.merge_conflict, id: `merge_conflict_split_${Date.now()}_spike`, hp: 70, maxHp: 70 };
                 enemiesToSpawn.push(acidL, spikeL);
@@ -1527,7 +1527,7 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                     getGlobalLogger().log('DAMAGE_DEALT', `Dealt ${finalDamage} Burn to ${t.name}. HP: ${hpBefore} -> ${t.hp}`);
 
                     // Check for Split Trigger (Direct Damage)
-                    if (t.id === 'boss_the_monolith' && t.hp <= t.maxHp / 2 && t.currentIntent.type !== 'unknown') {
+                    if (t.id.startsWith('boss_the_monolith') && t.hp <= t.maxHp / 2 && t.currentIntent.type !== 'unknown') {
                         t.currentIntent = {
                             type: 'unknown',
                             value: 0,
@@ -1643,15 +1643,18 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                     if (statusType === 'thorns') newPlayerStatuses.thorns += amount;
                     if (statusType === 'antifragile') newPlayerStatuses.antifragile += amount;
                     if (statusType === 'artifact') newPlayerStatuses.artifact += amount;
+                } else if (effect.target === 'all_enemies') {
+                    // Apply to ALL enemies - must check before targetEnemy to work correctly!
+                    newEnemies.forEach(e => {
+                        if (statusType === 'vulnerable') e.statuses.vulnerable += amount;
+                        if (statusType === 'weak') e.statuses.weak += amount;
+                        if (statusType === 'strength') e.statuses.strength += amount;
+                    });
+                    newMessage += ` Applied ${amount} ${statusType} to all enemies.`;
                 } else if (targetEnemy) {
                     if (statusType === 'vulnerable') targetEnemy.statuses.vulnerable += amount;
                     if (statusType === 'weak') targetEnemy.statuses.weak += amount;
                     if (statusType === 'strength') targetEnemy.statuses.strength += amount; // Disarm (negative strength)
-                } else if (effect.target === 'all_enemies') {
-                    newEnemies.forEach(e => {
-                        if (statusType === 'vulnerable') e.statuses.vulnerable += amount;
-                        if (statusType === 'weak') e.statuses.weak += amount;
-                    });
                 }
             } else if (effect.type === 'add_copy') {
                 const copy = { ...card, id: `${card.id}_copy_${Date.now()}` };
@@ -1701,10 +1704,11 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                     newMessage += ` Discard is empty.`;
                 }
             } else if (effect.type === 'conditional_strength') {
-                // Spot Weakness: If enemy intends to attack
-                if (targetEnemy && targetEnemy.currentIntent.type === 'attack') {
+                // Spot Weakness: If ANY enemy intends to attack
+                const anyEnemyAttacking = newEnemies.some(e => e.hp > 0 && e.currentIntent.type === 'attack');
+                if (anyEnemyAttacking) {
                     newPlayerStatuses.strength += effect.value;
-                    newMessage += ` Gained ${effect.value} Strength.`;
+                    newMessage += ` Gained ${effect.value} Velocity.`;
                 }
             } else if (effect.type === 'conditional_refund') {
                 // Dropkick: If enemy is Vulnerable
@@ -1762,14 +1766,7 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
         executeEffect(effect, loops);
     });
 
-    // Elite Mechanism: Scope Creep Passive
-    newEnemies.forEach(e => {
-        if (e.id === 'enemy_scope_creep' && card.type === 'skill' && e.hp > 0) {
-            e.statuses = { ...e.statuses };
-            e.statuses.strength += 2;
-            newMessage += " Scope Creep grows stronger! (+2 Complexity)";
-        }
-    });
+
 
     if (card.exhaust) {
         newExhaustPile.push(card);
@@ -1805,16 +1802,16 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
     // Scope Creep (Gremlin Nob) ENRAGE: Gains +2 Strength each time player plays a Skill
     if (card.type === 'skill') {
         newEnemies.forEach(e => {
-            if (e.id === 'scope_creep' && e.hp > 0) {
+            if (e.id.startsWith('scope_creep') && e.hp > 0) {
                 e.statuses.strength += 2;
-                newMessage += ` Scope Creep Enraged! (+2 Str)`;
+                newMessage += ` Scope Creep Enraged! (+2 Velocity)`;
             }
         });
     }
 
     // Over-Engineer (Lagavulin): Wake up if damaged
     newEnemies.forEach(e => {
-        if (e.id === 'over_engineer' && e.statuses.asleep > 0 && e.hp < e.maxHp) {
+        if (e.id.startsWith('over_engineer') && e.statuses.asleep > 0 && e.hp < e.maxHp) {
             e.statuses.asleep = 0;
             newMessage += ` ${e.name} woke up!`;
         }

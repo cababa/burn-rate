@@ -6,7 +6,7 @@ export interface CardEffect {
   type: 'damage' | 'block' | 'draw' | 'heal' | 'apply_status' | 'add_card' | 'discard' | 'lose_bandwidth' | 'add_copy' | 'exhaust_random' | 'exhaust_targeted' | 'conditional_strength' | 'upgrade_hand' | 'damage_scale_mitigation' | 'damage_scale_matches' | 'retrieve_discard' | 'gain_bandwidth' | 'conditional_refund' | 'lose_hp_turn_end' | 'steal_capital' | 'escape' | 'split' | 'siphon';
   value: number;
   target?: 'enemy' | 'self' | 'all_enemies';
-  status?: 'vulnerable' | 'weak' | 'strength' | 'metallicize' | 'evolve' | 'feelNoPain' | 'noDraw' | 'thorns' | 'antifragile' | 'artifact' | 'frail';
+  status?: 'vulnerable' | 'weak' | 'strength' | 'metallicize' | 'evolve' | 'feelNoPain' | 'noDraw' | 'thorns' | 'antifragile' | 'artifact' | 'frail' | 'growth' | 'corruption';
   cardId?: string;
   matchString?: string; // For scaling damage based on card names (e.g. Commit)
   strengthMultiplier?: number; // For Heavy Blade mechanics
@@ -56,6 +56,8 @@ export interface PlayerStatuses {
   antifragile: number; // Gain strength at start of turn
   artifact: number;    // Negate next debuff
   frail: number;       // Block is less effective
+  growth: number;      // Gain strength each turn (Network Effects)
+  corruption: number;  // Skills cost 0 but exhaust (Tech Debt)
 }
 
 export interface CharacterStats {
@@ -299,4 +301,9 @@ export interface GameState {
     count: number;
   };
   currentEvent?: EventData;
+  eventResult?: {
+    choiceLabel: string;
+    resultMessage: string;
+    success?: boolean;
+  };
 }
