@@ -98,7 +98,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({ map, currentFloor, current
 
   // Generate SVG path connections
   const renderConnections = () => {
-    const paths: JSX.Element[] = [];
+    const paths: React.ReactElement[] = [];
 
     map.forEach((layer) => {
       layer.forEach((node) => {

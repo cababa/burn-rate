@@ -1,5 +1,5 @@
 
-import { CardData, EnemyData, CharacterStats, RelicData, EncounterTemplate, EventData } from './types.ts';
+import { CardData, EnemyData, CharacterStats, RelicData, EncounterTemplate, EventData, PotionData } from './types.ts';
 
 export const MAX_HAND_SIZE = 10;
 
@@ -453,6 +453,450 @@ export const GAME_DATA = {
             tooltip: { term: "Dominance", definition: "Leading the market attracts stronger competition." }
         } as RelicData
     },
+
+    // ==============================================
+    // POTIONS - Quick Resources (1:1 STS mapping)
+    // ==============================================
+    potions: {
+        // === COMMON POTIONS (65% drop rate) ===
+
+        angel_check: {
+            id: 'potion_angel_check',
+            name: 'Angel Check',
+            character: 'shared',
+            rarity: 'common',
+            target: 'enemy',
+            description: 'Deal 20 damage.',
+            icon: '💸',
+            tooltip: { term: 'Angel Investment', definition: 'A quick capital injection to accelerate your attack.' },
+            effects: [{ type: 'damage', value: 20 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        emergency_fund: {
+            id: 'potion_emergency_fund',
+            name: 'Emergency Fund',
+            character: 'shared',
+            rarity: 'common',
+            target: 'none',
+            description: 'Gain 12 Buffer.',
+            icon: '🏦',
+            tooltip: { term: 'Reserve Capital', definition: 'Cash set aside for unexpected challenges.' },
+            effects: [{ type: 'block', value: 12 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        sprint_boost: {
+            id: 'potion_sprint_boost',
+            name: 'Sprint Boost',
+            character: 'shared',
+            rarity: 'common',
+            target: 'none',
+            description: 'Draw 3 cards.',
+            icon: '🏃',
+            tooltip: { term: 'Sprint', definition: 'A focused period of rapid execution.' },
+            effects: [{ type: 'draw', value: 3 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        talent_surge: {
+            id: 'potion_talent_surge',
+            name: 'Talent Surge',
+            character: 'shared',
+            rarity: 'common',
+            target: 'none',
+            description: 'Gain 2 Velocity.',
+            icon: '👨‍💻',
+            tooltip: { term: 'Talent', definition: 'Great people make great products.' },
+            effects: [{ type: 'gain_strength', value: 2 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        process_upgrade: {
+            id: 'potion_process_upgrade',
+            name: 'Process Upgrade',
+            character: 'shared',
+            rarity: 'common',
+            target: 'none',
+            description: 'Gain 2 Dexterity.',
+            icon: '⚙️',
+            tooltip: { term: 'Systems', definition: 'Better processes protect the team.' },
+            effects: [{ type: 'gain_dexterity', value: 2 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        espresso_shot: {
+            id: 'potion_espresso_shot',
+            name: 'Espresso Shot',
+            character: 'shared',
+            rarity: 'common',
+            target: 'none',
+            description: 'Gain 2 Bandwidth.',
+            icon: '☕',
+            tooltip: { term: 'Caffeine', definition: 'Fuel for the all-nighter.' },
+            effects: [{ type: 'gain_energy', value: 2 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        pr_blast: {
+            id: 'potion_pr_blast',
+            name: 'PR Blast',
+            character: 'shared',
+            rarity: 'common',
+            target: 'none',
+            description: 'Deal 10 damage to ALL enemies.',
+            icon: '📢',
+            tooltip: { term: 'Press Release', definition: 'Broadcast your message to everyone.' },
+            effects: [{ type: 'damage_all', value: 10 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        fud_campaign: {
+            id: 'potion_fud_campaign',
+            name: 'FUD Campaign',
+            character: 'shared',
+            rarity: 'common',
+            target: 'enemy',
+            description: 'Apply 3 Exposed.',
+            icon: '😨',
+            tooltip: { term: 'FUD', definition: 'Fear, Uncertainty, and Doubt — used against competitors.' },
+            effects: [{ type: 'apply_vulnerable', value: 3 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        bad_press: {
+            id: 'potion_bad_press',
+            name: 'Bad Press',
+            character: 'shared',
+            rarity: 'common',
+            target: 'enemy',
+            description: 'Apply 3 Drained.',
+            icon: '📰',
+            tooltip: { term: 'Negative Coverage', definition: 'Bad publicity weakens even strong rivals.' },
+            effects: [{ type: 'apply_weak', value: 3 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        adrenaline_rush: {
+            id: 'potion_adrenaline_rush',
+            name: 'Adrenaline Rush',
+            character: 'shared',
+            rarity: 'common',
+            target: 'none',
+            description: 'Gain 5 Velocity. At end of turn, lose 5 Velocity.',
+            icon: '💉',
+            tooltip: { term: 'Adrenaline', definition: 'Temporary burst of power under pressure.' },
+            effects: [{ type: 'temporary_strength', value: 5, duration: 1 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        agile_sprint: {
+            id: 'potion_agile_sprint',
+            name: 'Agile Sprint',
+            character: 'shared',
+            rarity: 'common',
+            target: 'none',
+            description: 'Gain 5 Dexterity. At end of turn, lose 5 Dexterity.',
+            icon: '🏃‍♂️',
+            tooltip: { term: 'Agile', definition: 'Rapid iteration with temporary focus.' },
+            effects: [{ type: 'temporary_dexterity', value: 5, duration: 1 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        pitch_deck: {
+            id: 'potion_pitch_deck',
+            name: 'Pitch Deck',
+            character: 'shared',
+            rarity: 'common',
+            target: 'none',
+            description: 'Add 1 of 3 random Attack cards to your hand. It costs 0 this turn.',
+            icon: '📊',
+            tooltip: { term: 'Pitch Deck', definition: 'Ready-made execution plans for investors.' },
+            effects: [{ type: 'add_random_attack', value: 1 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        playbook: {
+            id: 'potion_playbook',
+            name: 'Playbook',
+            character: 'shared',
+            rarity: 'common',
+            target: 'none',
+            description: 'Add 1 of 3 random Skill cards to your hand. It costs 0 this turn.',
+            icon: '📘',
+            tooltip: { term: 'Playbook', definition: 'Tactical options on demand.' },
+            effects: [{ type: 'add_random_skill', value: 1 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        strategy_brief: {
+            id: 'potion_strategy_brief',
+            name: 'Strategy Brief',
+            character: 'shared',
+            rarity: 'common',
+            target: 'none',
+            description: 'Add 1 of 3 random Power cards to your hand. It costs 0 this turn.',
+            icon: '📋',
+            tooltip: { term: 'Strategy', definition: 'Long-term advantages from well-planned moves.' },
+            effects: [{ type: 'add_random_power', value: 1 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        wild_card: {
+            id: 'potion_wild_card',
+            name: 'Wild Card',
+            character: 'shared',
+            rarity: 'common',
+            target: 'none',
+            description: 'Add 1 of 3 random Colorless cards to your hand. It costs 0 this turn.',
+            icon: '🃏',
+            tooltip: { term: 'Wild Card', definition: 'Unconventional tactics from outside the playbook.' },
+            effects: [{ type: 'add_random_colorless', value: 1 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        team_offsite: {
+            id: 'potion_team_offsite',
+            name: 'Team Offsite',
+            character: 'shared',
+            rarity: 'common',
+            target: 'none',
+            description: 'Upgrade all cards in your hand for the rest of combat.',
+            icon: '🏕️',
+            tooltip: { term: 'Offsite', definition: 'Team retreat that enhances capabilities.' },
+            effects: [{ type: 'upgrade_hand', value: 1 }],
+            sacredBarkAffected: false
+        } as PotionData,
+
+        // CTO-specific Common
+        founder_sacrifice: {
+            id: 'potion_founder_sacrifice',
+            name: 'Founder Sacrifice',
+            character: 'cto',
+            rarity: 'common',
+            target: 'none',
+            description: 'Heal 20% of your Max Runway.',
+            icon: '🩸',
+            tooltip: { term: 'Founder Sacrifice', definition: 'Putting personal resources back into the company.' },
+            effects: [{ type: 'heal_percent', value: 20 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        // === UNCOMMON POTIONS (25% drop rate) ===
+
+        term_sheet: {
+            id: 'potion_term_sheet',
+            name: 'Term Sheet',
+            character: 'shared',
+            rarity: 'uncommon',
+            target: 'none',
+            description: 'Gain 1 Artifact.',
+            icon: '📜',
+            tooltip: { term: 'Term Sheet', definition: 'Legal protection from unfavorable terms.' },
+            effects: [{ type: 'gain_artifact', value: 1 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        insurance_policy: {
+            id: 'potion_insurance_policy',
+            name: 'Insurance Policy',
+            character: 'shared',
+            rarity: 'uncommon',
+            target: 'none',
+            description: 'Gain 4 Plated Armor.',
+            icon: '🛡️',
+            tooltip: { term: 'Insurance', definition: 'Ongoing protection against future damage.' },
+            effects: [{ type: 'gain_plated_armor', value: 4 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        recurring_revenue: {
+            id: 'potion_recurring_revenue',
+            name: 'Recurring Revenue',
+            character: 'shared',
+            rarity: 'uncommon',
+            target: 'none',
+            description: 'Gain 5 Regeneration.',
+            icon: '💵',
+            tooltip: { term: 'MRR', definition: 'Monthly Recurring Revenue heals your runway over time.' },
+            effects: [{ type: 'gain_regen', value: 5 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        troll_toll: {
+            id: 'potion_troll_toll',
+            name: 'Troll Toll',
+            character: 'shared',
+            rarity: 'uncommon',
+            target: 'none',
+            description: 'Gain 3 Thorns.',
+            icon: '🌵',
+            tooltip: { term: 'Patent Troll', definition: 'Punish anyone who attacks.' },
+            effects: [{ type: 'gain_thorns', value: 3 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        version_restore: {
+            id: 'potion_version_restore',
+            name: 'Version Restore',
+            character: 'shared',
+            rarity: 'uncommon',
+            target: 'card_in_discard',
+            description: 'Choose a card in your discard pile and return it to your hand. It costs 0 this turn.',
+            icon: '⏮️',
+            tooltip: { term: 'Restore', definition: 'Retrieve past work from version history.' },
+            effects: [{ type: 'return_from_discard', value: 1 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        pivot_juice: {
+            id: 'potion_pivot_juice',
+            name: 'Pivot Juice',
+            character: 'shared',
+            rarity: 'uncommon',
+            target: 'cards_in_hand',
+            description: 'Discard any number of cards, then draw that many.',
+            icon: '🔄',
+            tooltip: { term: 'Pivot', definition: 'Swap your current strategy for something better.' },
+            effects: [{ type: 'gambler', value: 0 }],
+            sacredBarkAffected: false
+        } as PotionData,
+
+        rapid_prototype: {
+            id: 'potion_rapid_prototype',
+            name: 'Rapid Prototype',
+            character: 'shared',
+            rarity: 'uncommon',
+            target: 'none',
+            description: 'Play the top 3 cards of your draw pile.',
+            icon: '🚀',
+            tooltip: { term: 'MVP', definition: 'Minimum Viable Product — ship fast and iterate.' },
+            effects: [{ type: 'play_top_cards', value: 3 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        clone_script: {
+            id: 'potion_clone_script',
+            name: 'Clone Script',
+            character: 'shared',
+            rarity: 'uncommon',
+            target: 'none',
+            description: 'This turn, your next card is played twice.',
+            icon: '📋',
+            tooltip: { term: 'Clone', definition: 'Duplicate your best move for double impact.' },
+            effects: [{ type: 'duplicate_next', value: 1 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        // CTO-specific Uncommon
+        spring_cleaning: {
+            id: 'potion_spring_cleaning',
+            name: 'Spring Cleaning',
+            character: 'cto',
+            rarity: 'uncommon',
+            target: 'cards_in_hand',
+            description: 'Exhaust any number of cards in your hand.',
+            icon: '🧹',
+            tooltip: { term: 'Refactor', definition: 'Clear out the cruft and technical debt.' },
+            effects: [{ type: 'exhaust_choice', value: 0 }],
+            sacredBarkAffected: false
+        } as PotionData,
+
+        // === RARE POTIONS (10% drop rate) ===
+
+        viral_coefficient: {
+            id: 'potion_viral_coefficient',
+            name: 'Viral Coefficient',
+            character: 'shared',
+            rarity: 'rare',
+            target: 'none',
+            description: 'Gain 1 Ritual.',
+            icon: '📈',
+            tooltip: { term: 'K-Factor', definition: 'Compounding growth that builds on itself each turn.' },
+            effects: [{ type: 'gain_ritual', value: 1 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        equity_grant: {
+            id: 'potion_equity_grant',
+            name: 'Equity Grant',
+            character: 'shared',
+            rarity: 'rare',
+            target: 'none',
+            description: 'Gain 5 Max Runway.',
+            icon: '📈',
+            tooltip: { term: 'Equity', definition: 'Permanent value increase in the company.' },
+            effects: [{ type: 'gain_max_hp', value: 5 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        backup_plan: {
+            id: 'potion_backup_plan',
+            name: 'Backup Plan',
+            character: 'shared',
+            rarity: 'rare',
+            target: 'none',
+            description: 'When you would die, heal to 30% of your Max Runway instead and discard this potion.',
+            icon: '🧚',
+            tooltip: { term: 'Contingency', definition: 'Emergency failsafe when everything goes wrong.' },
+            effects: [{ type: 'fairy', value: 30 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        exit_strategy: {
+            id: 'potion_exit_strategy',
+            name: 'Exit Strategy',
+            character: 'shared',
+            rarity: 'rare',
+            target: 'none',
+            description: 'Escape from a non-boss combat. Receive no rewards.',
+            icon: '🚪',
+            tooltip: { term: 'Exit', definition: 'Strategic retreat to fight another day.' },
+            effects: [{ type: 'escape', value: 1 }],
+            sacredBarkAffected: false
+        } as PotionData,
+
+        market_chaos: {
+            id: 'potion_market_chaos',
+            name: 'Market Chaos',
+            character: 'shared',
+            rarity: 'rare',
+            target: 'none',
+            description: 'Draw 5 cards. Randomize the costs of all cards in your hand for the rest of combat.',
+            icon: '🎲',
+            tooltip: { term: 'Volatility', definition: 'Embrace chaos for potential gains.' },
+            effects: [{ type: 'snecko', value: 5 }],
+            sacredBarkAffected: true
+        } as PotionData,
+
+        venture_round: {
+            id: 'potion_venture_round',
+            name: 'Venture Round',
+            character: 'shared',
+            rarity: 'rare',
+            target: 'none',
+            description: 'Fill all your empty potion slots with random potions.',
+            icon: '💰',
+            tooltip: { term: 'Series Funding', definition: 'Massive funding haul fills your reserves.' },
+            effects: [{ type: 'fill_potions', value: 1 }],
+            sacredBarkAffected: false
+        } as PotionData,
+
+        // CTO-specific Rare
+        devops_pipeline: {
+            id: 'potion_devops_pipeline',
+            name: 'DevOps Pipeline',
+            character: 'cto',
+            rarity: 'rare',
+            target: 'none',
+            description: 'Gain 6 Metallicize.',
+            icon: '🔧',
+            tooltip: { term: 'CI/CD', definition: 'Automated deployment provides ongoing protection.' },
+            effects: [{ type: 'gain_metallicize', value: 6 }],
+            sacredBarkAffected: true
+        } as PotionData
+    },
+
     cards: {
         // --- BASIC ---
         cto_commit: {

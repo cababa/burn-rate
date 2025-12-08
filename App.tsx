@@ -4,13 +4,15 @@ import { Card } from './components/Card';
 import { MapScreen } from './components/MapScreen';
 import { DeckViewer } from './components/DeckViewer';
 import { GAME_DATA, MAX_HAND_SIZE, ACT1_EVENTS } from './constants';
-import { CardData, GameState, EnemyIntent, MapLayer, MapNode, CharacterStats, RelicData, EntityStatus, EnemyData, CardEffect, EventData, EventChoice, EventEffect } from './types';
+import { CardData, GameState, EnemyIntent, MapLayer, MapNode, CharacterStats, RelicData, EntityStatus, EnemyData, CardEffect, EventData, EventChoice, EventEffect, PotionData } from './types';
 import { Battery, DollarSign, CheckCircle2, AlertOctagon, RefreshCw, Play, Layers, Archive, Gift, ArrowRight, Coffee, Hammer, Store, Trash2, Gem, Wrench, FastForward, Heart, Plus, Bug, Ghost, Rocket, Lock, User, Briefcase, ChevronRight, Zap, X, HelpCircle } from 'lucide-react';
 import {
     calculateDamage, countCardsMatches, generateStarterDeck, getRandomRewardCards, shuffle, drawCards, upgradeCard,
     applyCombatStartRelics, applyCombatEndRelics, getTurnStartBandwidth, generateMap, resolveCardEffect, resolveEnemyTurn, resolveEndTurn, processDrawnCards,
     applyOnAttackRelics, applyOnEnemyDeathRelics, applyTurnEndRelics, hasRetainHand, getCardLimit, canRestAtSite,
-    getRelicWoundsToAdd, applyOnCardReward, getSecretWeaponCard, getEncounterForFloor, getEliteEncounter, getBossEncounter
+    getRelicWoundsToAdd, applyOnCardReward, getSecretWeaponCard, getEncounterForFloor, getEliteEncounter, getBossEncounter,
+    // Potion functions
+    resolvePotionEffect, checkPotionDrop, generateRandomPotion, addPotionToSlot, removePotionFromSlot, canAcquirePotion, canUseExitStrategy
 } from './gameLogic';
 
 const App: React.FC = () => {
@@ -32,7 +34,12 @@ const App: React.FC = () => {
         map: [],
         currentMapPosition: null,
         vendorStock: [],
-        pendingDiscard: 0
+        pendingDiscard: 0,
+        // Potion system
+        potions: [null, null, null],
+        potionSlotCount: 3,
+        potionDropChance: 40,
+        duplicateNextCard: false
     });
 
     const [viewingDeckForUpgrade, setViewingDeckForUpgrade] = useState(false);
@@ -44,6 +51,9 @@ const App: React.FC = () => {
 
     // Secret Weapon relic: pending relic that needs skill card selection before being added
     const [pendingSecretWeaponRelic, setPendingSecretWeaponRelic] = useState<RelicData | null>(null);
+
+    // Potion targeting state: which potion is being targeted
+    const [pendingPotionUse, setPendingPotionUse] = useState<{ potion: PotionData; slotIndex: number } | null>(null);
 
 
     // --- START GAME LOGIC ---
@@ -58,7 +68,7 @@ const App: React.FC = () => {
 
         setGameState({
             playerStats: initialStats,
-            enemy: null,
+            enemies: [],
             hand: [],
             drawPile: initialDeck,
             deck: initialDeck, // Initialize Master Deck
@@ -73,7 +83,12 @@ const App: React.FC = () => {
             map: generateMap(),
             currentMapPosition: null,
             lastVictoryReward: undefined,
-            pendingDiscard: 0
+            pendingDiscard: 0,
+            // Potion system
+            potions: [null, null, null],
+            potionSlotCount: 3,
+            potionDropChance: 40,
+            duplicateNextCard: false
         });
     };
 
@@ -529,6 +544,98 @@ const App: React.FC = () => {
         setPendingSecretWeaponRelic(null);
     };
 
+    // --- POTION HANDLERS ---
+
+    // Click on potion slot to initiate use
+    const handlePotionClick = (potion: PotionData, slotIndex: number) => {
+        if (gameState.status !== 'PLAYING') return;
+
+        // Check if this potion requires a target
+        const needsTarget = potion.target === 'enemy';
+
+        // Exit Strategy cannot be used on boss fights
+        if (potion.effects.some(e => e.type === 'escape')) {
+            if (!canUseExitStrategy(gameState.enemies)) {
+                setGameState(prev => ({ ...prev, message: 'Cannot use Exit Strategy in boss fights!' }));
+                return;
+            }
+        }
+
+        if (needsTarget) {
+            // If only one enemy, use directly
+            const aliveEnemies = gameState.enemies.filter(e => e.hp > 0);
+            if (aliveEnemies.length === 1) {
+                handleUsePotion(potion, slotIndex, aliveEnemies[0].id);
+            } else {
+                // Multiple enemies - enter targeting mode
+                setPendingPotionUse({ potion, slotIndex });
+                setGameState(prev => ({ ...prev, message: `Select target for ${potion.name}...` }));
+            }
+        } else {
+            // No target needed, use immediately
+            handleUsePotion(potion, slotIndex);
+        }
+    };
+
+    // Actually use the potion
+    const handleUsePotion = (potion: PotionData, slotIndex: number, targetEnemyId?: string) => {
+        setPendingPotionUse(null);
+        setGameState(prev => {
+            const newState = resolvePotionEffect(prev, potion, slotIndex, targetEnemyId);
+            return {
+                ...newState,
+                message: `Used ${potion.name}!`
+            };
+        });
+    };
+
+    // Handle enemy click for potion targeting
+    const handlePotionTargetEnemy = (enemyId: string) => {
+        if (!pendingPotionUse) return;
+        handleUsePotion(pendingPotionUse.potion, pendingPotionUse.slotIndex, enemyId);
+    };
+
+    // Cancel potion targeting
+    const cancelPotionTargeting = () => {
+        setPendingPotionUse(null);
+        setGameState(prev => ({ ...prev, message: 'Potion use cancelled.' }));
+    };
+
+    // Discard a potion (right-click or shift-click)
+    const handleDiscardPotion = (slotIndex: number, e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setGameState(prev => ({
+            ...prev,
+            potions: removePotionFromSlot(prev.potions, slotIndex),
+            message: 'Potion discarded.'
+        }));
+    };
+
+    // Handle taking a potion reward
+    const handleTakePotion = () => {
+        setGameState(prev => {
+            if (!prev.pendingPotionReward) return prev;
+            if (!canAcquirePotion(prev.potions)) {
+                return { ...prev, message: 'Potion slots full! Discard one first.' };
+            }
+            return {
+                ...prev,
+                potions: addPotionToSlot(prev.potions, prev.pendingPotionReward),
+                pendingPotionReward: undefined,
+                message: `Acquired ${prev.pendingPotionReward.name}!`
+            };
+        });
+    };
+
+    // Skip potion reward
+    const handleSkipPotion = () => {
+        setGameState(prev => ({
+            ...prev,
+            pendingPotionReward: undefined,
+            message: 'Skipped potion reward.'
+        }));
+    };
 
     const handleVictoryProceed = () => {
         setGameState(prev => {
@@ -1555,6 +1662,56 @@ const App: React.FC = () => {
                             </div>
                         ))}
                     </div>
+
+                    {/* Potion Bar */}
+                    <div className="h-6 w-px bg-white/10 mx-2" />
+                    <div className="flex items-center gap-2">
+                        {gameState.potions.map((potion, index) => (
+                            <div
+                                key={`potion-slot-${index}`}
+                                className={`group relative w-8 h-8 rounded border flex items-center justify-center transition-all cursor-pointer
+                                    ${potion
+                                        ? pendingPotionUse?.slotIndex === index
+                                            ? 'border-primary bg-primary/30 ring-2 ring-primary animate-pulse'
+                                            : 'border-info/50 bg-info/10 hover:border-info hover:bg-info/20'
+                                        : 'border-white/10 bg-black/20'
+                                    }
+                                    ${gameState.status === 'PLAYING' && potion ? 'cursor-pointer' : 'cursor-default'}
+                                `}
+                                onClick={() => potion && handlePotionClick(potion, index)}
+                                onContextMenu={(e) => potion && handleDiscardPotion(index, e)}
+                                title={potion ? `Click to use, Right-click to discard` : 'Empty potion slot'}
+                            >
+                                {potion ? (
+                                    <>
+                                        <span className="text-lg">{potion.icon}</span>
+                                        {/* Tooltip */}
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 p-3 bg-gray-900 border border-info rounded shadow-xl hidden group-hover:block z-50 pointer-events-none">
+                                            <div className="font-bold text-info mb-1 flex items-center gap-2">
+                                                <span>{potion.name}</span>
+                                                <span className={`text-[10px] uppercase px-1 rounded ${potion.rarity === 'rare' ? 'bg-warning/20 text-warning' :
+                                                    potion.rarity === 'uncommon' ? 'bg-info/20 text-info' :
+                                                        'bg-white/10 text-gray-400'
+                                                    }`}>{potion.rarity}</span>
+                                            </div>
+                                            <div className="text-xs text-white mb-2">{potion.description}</div>
+                                            {potion.tooltip && (
+                                                <div className="border-t border-gray-700 pt-2 mt-2">
+                                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">{potion.tooltip.term}</div>
+                                                    <div className="text-[10px] text-gray-500 italic">{potion.tooltip.definition}</div>
+                                                </div>
+                                            )}
+                                            <div className="text-[10px] text-gray-500 mt-2 border-t border-gray-700 pt-2">
+                                                <span className="text-info">Click</span> to use • <span className="text-danger">Right-click</span> to discard
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <span className="text-gray-600 text-xs">○</span>
+                                )}
+                            </div>
+                        ))}
+                    </div>
                 </div>
                 <div className="flex items-center gap-4 text-sm font-mono">
                     <span className="text-warning flex items-center gap-2">
@@ -1617,13 +1774,39 @@ const App: React.FC = () => {
                                 statuses={enemy.statuses}
                                 description={enemy.description}
                                 onDrop={(card) => handleEnemyDrop(card, enemy.id)}
-                                isTargetable={gameState.status === 'PLAYING'}
-                                isSelected={gameState.selectedEnemyId === enemy.id}
-                                onClick={() => setGameState(prev => ({ ...prev, selectedEnemyId: enemy.id }))}
+                                isTargetable={gameState.status === 'PLAYING' || !!pendingPotionUse}
+                                isSelected={gameState.selectedEnemyId === enemy.id || (pendingPotionUse !== null)}
+                                onClick={() => {
+                                    if (pendingPotionUse) {
+                                        // Using potion targeting mode
+                                        handlePotionTargetEnemy(enemy.id);
+                                    } else {
+                                        setGameState(prev => ({ ...prev, selectedEnemyId: enemy.id }));
+                                    }
+                                }}
                             />
                         ))}
                     </div>
                 </div>
+
+                {/* Potion Targeting Overlay */}
+                {pendingPotionUse && (
+                    <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 bg-info/20 border border-info px-6 py-3 rounded-lg backdrop-blur-sm animate-pulse">
+                        <div className="flex items-center gap-4">
+                            <span className="text-2xl">{pendingPotionUse.potion.icon}</span>
+                            <div>
+                                <div className="font-bold text-info">{pendingPotionUse.potion.name}</div>
+                                <div className="text-sm text-gray-300">Select a target enemy</div>
+                            </div>
+                            <button
+                                onClick={cancelPotionTargeting}
+                                className="ml-4 text-gray-400 hover:text-white p-1 rounded hover:bg-white/10"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Modal Overlays */}
 
@@ -1764,6 +1947,47 @@ const App: React.FC = () => {
                                                 ) : (
                                                     <span className="text-purple-400 text-sm font-mono">Click to take</span>
                                                 )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Potion Reward */}
+                                    {gameState.pendingPotionReward && (
+                                        <div className="bg-gradient-to-r from-info/20 to-info/5 border border-info/50 p-4 rounded-lg">
+                                            <div className="flex items-center gap-4">
+                                                <div className="text-3xl bg-info/20 p-2.5 rounded-lg border border-info/30">
+                                                    {gameState.pendingPotionReward.icon}
+                                                </div>
+                                                <div className="flex-1 text-left">
+                                                    <div className="text-info font-bold flex items-center gap-2">
+                                                        {gameState.pendingPotionReward.name}
+                                                        <span className={`text-[10px] uppercase px-1.5 py-0.5 rounded ${gameState.pendingPotionReward.rarity === 'rare' ? 'bg-warning/20 text-warning' :
+                                                                gameState.pendingPotionReward.rarity === 'uncommon' ? 'bg-info/20 text-info' :
+                                                                    'bg-white/10 text-gray-400'
+                                                            }`}>{gameState.pendingPotionReward.rarity}</span>
+                                                    </div>
+                                                    <div className="text-sm text-gray-400">
+                                                        {gameState.pendingPotionReward.description}
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col gap-2">
+                                                    <button
+                                                        onClick={handleTakePotion}
+                                                        disabled={!canAcquirePotion(gameState.potions)}
+                                                        className={`px-4 py-2 rounded font-mono text-sm transition-colors ${canAcquirePotion(gameState.potions)
+                                                                ? 'bg-info/20 border border-info text-info hover:bg-info hover:text-black'
+                                                                : 'bg-gray-800 border border-gray-600 text-gray-500 cursor-not-allowed'
+                                                            }`}
+                                                    >
+                                                        {canAcquirePotion(gameState.potions) ? 'Take Potion' : 'Slots Full'}
+                                                    </button>
+                                                    <button
+                                                        onClick={handleSkipPotion}
+                                                        className="text-gray-500 hover:text-white font-mono text-xs"
+                                                    >
+                                                        Skip
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     )}

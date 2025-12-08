@@ -175,7 +175,12 @@ export class BalanceAnalyzer {
             map: generateMap(),
             currentMapPosition: null,
             vendorStock: [],
-            pendingDiscard: 0
+            pendingDiscard: 0,
+            // Potion system
+            potions: [null, null, null],
+            potionSlotCount: 3,
+            potionDropChance: 40,
+            duplicateNextCard: false
         };
 
         const runStats: RunStats = {

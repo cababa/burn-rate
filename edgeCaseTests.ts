@@ -9,7 +9,7 @@ import {
 } from './gameLogic.ts';
 
 const createMockState = (): GameState => ({
-    playerStats: { ...GAME_DATA.character.stats, hp: 50, maxHp: 50, bandwidth: 3, mitigation: 0, statuses: { vulnerable: 0, weak: 0, strength: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, frail: 0 } },
+    playerStats: { ...GAME_DATA.character.stats, hp: 50, maxHp: 50, bandwidth: 3, mitigation: 0, statuses: { ...GAME_DATA.character.stats.statuses } },
     enemies: [],
     hand: [],
     drawPile: [],
@@ -25,7 +25,12 @@ const createMockState = (): GameState => ({
     map: [],
     currentMapPosition: null,
     vendorStock: [],
-    pendingDiscard: 0
+    pendingDiscard: 0,
+    // Potion system
+    potions: [null, null, null],
+    potionSlotCount: 3,
+    potionDropChance: 40,
+    duplicateNextCard: false
 });
 
 const runTests = () => {
@@ -91,16 +96,16 @@ const runTests = () => {
         state.hand = Array(MAX_HAND_SIZE).fill(GAME_DATA.cards.cto_commit);
         state.drawPile = Array(5).fill(GAME_DATA.cards.cto_commit); // 5 cards to draw
         state.enemies = [{ ...GAME_DATA.enemies.fanboy, id: 'e1', hp: 50, maxHp: 50, statuses: { ...GAME_DATA.enemies.fanboy.statuses }, currentIntent: { type: 'buff', value: 0, icon: '', description: '' } }];
-        
+
         // Simulate Start of Turn Draw (via resolveEnemyTurn)
         state.status = 'ENEMY_TURN'; // Will transition to PLAYING and draw
         // Hand is full (10).
         // Should draw 5, burn all 5.
         // Hand should remain 10.
         // Discard should increase by 5.
-        
+
         state = resolveEnemyTurn(state);
-        
+
         assert(state.hand.length === MAX_HAND_SIZE, "Hand Limit Respected (Start Turn)");
         assert(state.discardPile.length === 5, "Burned Cards went to Discard");
         assert(state.message.includes("Hand full! Burned"), "Burn Message Shown");

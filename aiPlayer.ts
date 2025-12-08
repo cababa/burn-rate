@@ -2,7 +2,7 @@
  * AI Player System - Multiple strategies for automated game testing
  */
 
-import { GameState, CardData, MapNode, RelicData } from './types.ts';
+import { GameState, CardData, MapNode, RelicData, PotionData } from './types.ts';
 
 /**
  * Interface for AI players that can make game decisions
@@ -35,6 +35,17 @@ export interface AIPlayer {
      * Select card(s) for discard/exhaust selection screens
      */
     selectCards(state: GameState, cards: CardData[], count: number, action: string): CardData[];
+
+    /**
+     * Select a potion to use, or null to not use any
+     * Returns the potion to use and the slot index, plus optional target
+     */
+    selectPotion?(state: GameState): { potion: PotionData; slotIndex: number; targetEnemyId?: string } | null;
+
+    /**
+     * Decide whether to keep a potion drop or discard it when slots are full
+     */
+    selectPotionDrop?(state: GameState, potion: PotionData): boolean;
 }
 
 /**
@@ -198,6 +209,87 @@ abstract class BaseAI implements AIPlayer {
         }
 
         return totalBlock;
+    }
+
+    /**
+     * Select a potion to use based on current game state
+     * Default strategy: use potions opportunistically when beneficial
+     */
+    selectPotion(state: GameState): { potion: PotionData; slotIndex: number; targetEnemyId?: string } | null {
+        const potions = state.potions.filter((p): p is PotionData => p !== null);
+        if (potions.length === 0) return null;
+
+        const incomingDamage = this.getIncomingDamage(state);
+        const currentBlock = state.playerStats.mitigation;
+        const unblockedDamage = Math.max(0, incomingDamage - currentBlock);
+        const hpPercent = state.playerStats.hp / state.playerStats.maxHp;
+
+        // Check each potion for usefulness
+        for (let i = 0; i < state.potions.length; i++) {
+            const potion = state.potions[i];
+            if (!potion) continue;
+
+            for (const effect of potion.effects) {
+                // Block potions: use when taking significant damage
+                if (effect.type === 'block' && unblockedDamage > 10) {
+                    return { potion, slotIndex: i, targetEnemyId: this.getTargetEnemy(state) };
+                }
+
+                // Healing potions: use when HP is low
+                if ((effect.type === 'heal' || effect.type === 'heal_percent') && hpPercent < 0.4) {
+                    return { potion, slotIndex: i };
+                }
+
+                // Energy potions: use when we have good cards but no energy
+                if (effect.type === 'gain_energy' && state.playerStats.bandwidth === 0 && state.hand.length > 3) {
+                    return { potion, slotIndex: i };
+                }
+
+                // Damage potions: use when enemy is low and we can secure a kill
+                if (effect.type === 'damage' || effect.type === 'damage_all') {
+                    const canKill = state.enemies.some(e => e.hp > 0 && e.hp <= effect.value);
+                    if (canKill) {
+                        const target = state.enemies.find(e => e.hp > 0 && e.hp <= effect.value);
+                        return { potion, slotIndex: i, targetEnemyId: target?.id };
+                    }
+                }
+
+                // Debuff potions: use on high-threat enemies
+                if (effect.type === 'apply_vulnerable' || effect.type === 'apply_weak') {
+                    const highThreat = state.enemies.find(e =>
+                        e.hp > 0 &&
+                        e.currentIntent.type === 'attack' &&
+                        e.currentIntent.value >= 15
+                    );
+                    if (highThreat && highThreat.statuses.vulnerable === 0 && highThreat.statuses.weak === 0) {
+                        return { potion, slotIndex: i, targetEnemyId: highThreat.id };
+                    }
+                }
+
+                // Draw potions: use when hand is empty
+                if (effect.type === 'draw' && state.hand.length <= 2) {
+                    return { potion, slotIndex: i };
+                }
+
+                // Strength/stat potions: use against bosses/elites early
+                if ((effect.type === 'gain_strength' || effect.type === 'gain_dexterity') && state.turn === 1) {
+                    const isBossOrElite = state.enemies.some(e => e.type === 'boss' || e.type === 'elite');
+                    if (isBossOrElite) {
+                        return { potion, slotIndex: i };
+                    }
+                }
+            }
+        }
+
+        return null; // Don't use any potion
+    }
+
+    /**
+     * Decide whether to keep a potion when slots are full
+     * Default: always try to pick up new potions
+     */
+    selectPotionDrop(state: GameState, potion: PotionData): boolean {
+        return true; // By default, take the potion
     }
 }
 

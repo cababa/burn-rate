@@ -1,4 +1,4 @@
-import { CardData, GameState, EnemyIntent, MapLayer, MapNode, MapNodeType, CharacterStats, RelicData, EntityStatus, EnemyData, CardEffect, PlayerStatuses, EnemyStatuses, EncounterTemplate } from './types.ts';
+import { CardData, GameState, EnemyIntent, MapLayer, MapNode, MapNodeType, CharacterStats, RelicData, EntityStatus, EnemyData, CardEffect, PlayerStatuses, EnemyStatuses, EncounterTemplate, PotionData, PotionRarity } from './types.ts';
 import { GAME_DATA, MAX_HAND_SIZE, MAP_CONFIG, ENCOUNTER_TEMPLATES } from './constants.ts';
 import { getGlobalLogger } from './logger.ts';
 
@@ -660,6 +660,533 @@ export const getBossRelicChoices = (excludeIds: string[] = []): RelicData[] => {
 export const getBossRelicSkipGold = (): number => {
     // StS gives ~250 gold for skipping boss relic
     return 150 + Math.floor(Math.random() * 100); // 150-250 gold
+};
+
+// ==============================================
+// POTION SYSTEM - StS-Accurate Implementation
+// ==============================================
+
+/**
+ * Get all available potions for a character (shared + character-specific)
+ */
+export const getAvailablePotions = (character: string = 'cto'): PotionData[] => {
+    return Object.values(GAME_DATA.potions).filter(p =>
+        p.character === 'shared' || p.character === character
+    );
+};
+
+/**
+ * Get potions by rarity
+ */
+export const getPotionsByRarity = (rarity: PotionRarity, character: string = 'cto'): PotionData[] => {
+    return getAvailablePotions(character).filter(p => p.rarity === rarity);
+};
+
+/**
+ * Generate a random potion based on STS rarity weights
+ * Common: 65%, Uncommon: 25%, Rare: 10%
+ */
+export const generateRandomPotion = (character: string = 'cto', excludeFruitJuice: boolean = false): PotionData => {
+    const roll = Math.random() * 100;
+    let rarity: PotionRarity;
+
+    if (roll < 65) rarity = 'common';
+    else if (roll < 90) rarity = 'uncommon';
+    else rarity = 'rare';
+
+    let availablePotions = getPotionsByRarity(rarity, character);
+
+    // Exclude Fruit Juice (Equity Grant) from Entropic Brew
+    if (excludeFruitJuice) {
+        availablePotions = availablePotions.filter(p => p.id !== 'potion_equity_grant');
+    }
+
+    // Fallback to any rarity if none available
+    if (availablePotions.length === 0) {
+        availablePotions = getAvailablePotions(character);
+        if (excludeFruitJuice) {
+            availablePotions = availablePotions.filter(p => p.id !== 'potion_equity_grant');
+        }
+    }
+
+    const selected = availablePotions[Math.floor(Math.random() * availablePotions.length)];
+    return { ...selected };
+};
+
+/**
+ * Check if a potion should drop after combat (StS mechanics)
+ * Base chance: 40%, adjusts by ±10 per drop/miss
+ */
+export const checkPotionDrop = (currentChance: number): { dropped: boolean; newChance: number; potion?: PotionData } => {
+    const roll = Math.random() * 100;
+
+    if (roll < currentChance) {
+        // Potion drops! Decrease chance by 10 (min 0)
+        const potion = generateRandomPotion();
+        getGlobalLogger().log('POTION_DROP', `Potion dropped! ${potion.name} (chance was ${currentChance}%)`);
+        return {
+            dropped: true,
+            newChance: Math.max(0, currentChance - 10),
+            potion
+        };
+    }
+
+    // No drop, increase chance by 10 (max 100)
+    getGlobalLogger().log('POTION_DROP', `No potion drop (chance was ${currentChance}%)`);
+    return {
+        dropped: false,
+        newChance: Math.min(100, currentChance + 10)
+    };
+};
+
+/**
+ * Check if player can acquire a potion (has empty slot)
+ */
+export const canAcquirePotion = (potions: (PotionData | null)[]): boolean => {
+    return potions.some(p => p === null);
+};
+
+/**
+ * Add potion to first empty slot
+ */
+export const addPotionToSlot = (potions: (PotionData | null)[], potion: PotionData): (PotionData | null)[] => {
+    const newPotions = [...potions];
+    const emptySlotIndex = newPotions.findIndex(p => p === null);
+
+    if (emptySlotIndex !== -1) {
+        newPotions[emptySlotIndex] = potion;
+        getGlobalLogger().log('POTION_ACQUIRE', `Added ${potion.name} to slot ${emptySlotIndex}`);
+    } else {
+        getGlobalLogger().log('POTION_ACQUIRE', `Cannot add ${potion.name} - no empty slots!`);
+    }
+
+    return newPotions;
+};
+
+/**
+ * Remove potion from slot (after use or discard)
+ */
+export const removePotionFromSlot = (potions: (PotionData | null)[], slotIndex: number): (PotionData | null)[] => {
+    const newPotions = [...potions];
+    if (slotIndex >= 0 && slotIndex < newPotions.length) {
+        const removed = newPotions[slotIndex];
+        newPotions[slotIndex] = null;
+        if (removed) {
+            getGlobalLogger().log('POTION_REMOVE', `Removed ${removed.name} from slot ${slotIndex}`);
+        }
+    }
+    return newPotions;
+};
+
+/**
+ * Get the effect multiplier if Sacred Bark equivalent is present
+ * (Doubles potion effects when sacredBarkAffected is true)
+ */
+export const getSacredBarkMultiplier = (relics: RelicData[]): number => {
+    // TODO: Add Sacred Bark equivalent relic (e.g., "Investor's Choice")
+    // For now, check if a relic with 'potion_double' effect exists
+    const hasSacredBark = relics.some(r => r.effect?.type === 'potion_double');
+    return hasSacredBark ? 2 : 1;
+};
+
+/**
+ * Initialize default potion slots for game start
+ */
+export const initializePotionSlots = (slotCount: number = 3): (PotionData | null)[] => {
+    return Array(slotCount).fill(null);
+};
+
+/**
+ * Check for Fairy potion (Backup Plan) on death
+ * Returns the heal amount or null if no fairy potion
+ */
+export const checkFairyPotion = (potions: (PotionData | null)[], maxHp: number, relics: RelicData[]): { healAmount: number; slotIndex: number } | null => {
+    const fairyIndex = potions.findIndex(p => p?.id === 'potion_backup_plan');
+    if (fairyIndex === -1) return null;
+
+    const potion = potions[fairyIndex]!;
+    const multiplier = potion.sacredBarkAffected ? getSacredBarkMultiplier(relics) : 1;
+    const healPercent = (potion.effects[0]?.value || 30) * multiplier;
+    const healAmount = Math.floor(maxHp * healPercent / 100);
+
+    getGlobalLogger().log('POTION_FAIRY', `Backup Plan activated! Healing to ${healPercent}% (${healAmount} HP)`);
+
+    return { healAmount, slotIndex: fairyIndex };
+};
+
+/**
+ * Check if Smoke Bomb (Exit Strategy) can be used
+ * Cannot be used against bosses
+ */
+export const canUseExitStrategy = (enemies: EnemyData[]): boolean => {
+    return !enemies.some(e => e.type === 'boss');
+};
+
+/**
+ * Resolve a potion's effects when used
+ * Handles all potion effect types with Sacred Bark multiplier support
+ */
+export const resolvePotionEffect = (
+    state: GameState,
+    potion: PotionData,
+    slotIndex: number,
+    targetEnemyId?: string
+): GameState => {
+    let newState = { ...state };
+    const multiplier = potion.sacredBarkAffected ? getSacredBarkMultiplier(state.relics) : 1;
+
+    getGlobalLogger().log('POTION_USE', `Used ${potion.name}`, {
+        potionName: potion.name,
+        slotIndex,
+        targetEnemyId,
+        multiplier: potion.sacredBarkAffected ? multiplier : 1
+    });
+
+    // Remove potion from slot
+    newState.potions = removePotionFromSlot(state.potions, slotIndex);
+
+    // Get target enemy if applicable
+    const targetEnemy = targetEnemyId
+        ? newState.enemies.find(e => e.id === targetEnemyId)
+        : newState.enemies[0];
+
+    // Process each effect
+    for (const effect of potion.effects) {
+        const value = effect.value * multiplier;
+
+        switch (effect.type) {
+            case 'damage':
+                if (targetEnemy) {
+                    const damage = calculateDamage(value, newState.playerStats.statuses, targetEnemy.statuses, 1, newState.relics);
+                    targetEnemy.hp = Math.max(0, targetEnemy.hp - damage);
+                    getGlobalLogger().log('POTION_EFFECT', `Dealt ${damage} damage to ${targetEnemy.name}`, { amount: damage });
+                }
+                break;
+
+            case 'damage_all':
+                for (const enemy of newState.enemies) {
+                    const damage = calculateDamage(value, newState.playerStats.statuses, enemy.statuses, 1, newState.relics);
+                    enemy.hp = Math.max(0, enemy.hp - damage);
+                    getGlobalLogger().log('POTION_EFFECT', `Dealt ${damage} damage to ${enemy.name}`, { amount: damage });
+                }
+                break;
+
+            case 'block':
+                newState.playerStats = {
+                    ...newState.playerStats,
+                    mitigation: newState.playerStats.mitigation + value
+                };
+                getGlobalLogger().log('POTION_EFFECT', `Gained ${value} block`, { amount: value });
+                break;
+
+            case 'heal':
+                const healAmount = Math.min(value, newState.playerStats.maxHp - newState.playerStats.hp);
+                newState.playerStats = {
+                    ...newState.playerStats,
+                    hp: newState.playerStats.hp + healAmount
+                };
+                getGlobalLogger().log('POTION_EFFECT', `Healed ${healAmount} HP`, { amount: healAmount });
+                break;
+
+            case 'heal_percent':
+                const percentHeal = Math.floor(newState.playerStats.maxHp * value / 100);
+                const actualHeal = Math.min(percentHeal, newState.playerStats.maxHp - newState.playerStats.hp);
+                newState.playerStats = {
+                    ...newState.playerStats,
+                    hp: newState.playerStats.hp + actualHeal
+                };
+                getGlobalLogger().log('POTION_EFFECT', `Healed ${actualHeal} HP (${value}% of max)`, { amount: actualHeal });
+                break;
+
+            case 'draw':
+                const { drawn, newDraw, newDiscard } = drawCards(newState.drawPile, newState.discardPile, value);
+                const processedDraw = processDrawnCards(drawn, newState.hand, newDiscard, newDraw, newState.playerStats, '');
+                newState = {
+                    ...newState,
+                    hand: processedDraw.hand,
+                    drawPile: processedDraw.drawPile,
+                    discardPile: processedDraw.discard,
+                    playerStats: processedDraw.stats
+                };
+                getGlobalLogger().log('POTION_EFFECT', `Drew ${drawn.length} cards`, { amount: drawn.length });
+                break;
+
+            case 'gain_energy':
+                newState.playerStats = {
+                    ...newState.playerStats,
+                    bandwidth: newState.playerStats.bandwidth + value
+                };
+                getGlobalLogger().log('POTION_EFFECT', `Gained ${value} energy`, { amount: value });
+                break;
+
+            case 'gain_strength':
+                newState.playerStats = {
+                    ...newState.playerStats,
+                    statuses: {
+                        ...newState.playerStats.statuses,
+                        strength: newState.playerStats.statuses.strength + value
+                    }
+                };
+                getGlobalLogger().log('POTION_EFFECT', `Gained ${value} Strength`, { amount: value });
+                break;
+
+            case 'gain_dexterity':
+                newState.playerStats = {
+                    ...newState.playerStats,
+                    statuses: {
+                        ...newState.playerStats.statuses,
+                        dexterity: newState.playerStats.statuses.dexterity + value
+                    }
+                };
+                getGlobalLogger().log('POTION_EFFECT', `Gained ${value} Dexterity`, { amount: value });
+                break;
+
+            case 'temporary_strength':
+                // Temporary strength that wears off at end of turn
+                // Mark this in a way that resolveEndTurn can handle
+                newState.playerStats = {
+                    ...newState.playerStats,
+                    statuses: {
+                        ...newState.playerStats.statuses,
+                        strength: newState.playerStats.statuses.strength + value
+                    }
+                };
+                // TODO: Track temporary strength to remove at end of turn
+                getGlobalLogger().log('POTION_EFFECT', `Gained ${value} temporary Strength`, { amount: value });
+                break;
+
+            case 'temporary_dexterity':
+                newState.playerStats = {
+                    ...newState.playerStats,
+                    statuses: {
+                        ...newState.playerStats.statuses,
+                        dexterity: newState.playerStats.statuses.dexterity + value
+                    }
+                };
+                // TODO: Track temporary dexterity to remove at end of turn
+                getGlobalLogger().log('POTION_EFFECT', `Gained ${value} temporary Dexterity`, { amount: value });
+                break;
+
+            case 'apply_vulnerable':
+                if (targetEnemy && targetEnemy.statuses.artifact > 0) {
+                    targetEnemy.statuses.artifact--;
+                    getGlobalLogger().log('POTION_EFFECT', `${targetEnemy.name}'s Artifact blocked Vulnerable`);
+                } else if (targetEnemy) {
+                    targetEnemy.statuses.vulnerable += value;
+                    getGlobalLogger().log('POTION_EFFECT', `Applied ${value} Vulnerable to ${targetEnemy.name}`, { amount: value });
+                }
+                break;
+
+            case 'apply_weak':
+                if (targetEnemy && targetEnemy.statuses.artifact > 0) {
+                    targetEnemy.statuses.artifact--;
+                    getGlobalLogger().log('POTION_EFFECT', `${targetEnemy.name}'s Artifact blocked Weak`);
+                } else if (targetEnemy) {
+                    targetEnemy.statuses.weak += value;
+                    getGlobalLogger().log('POTION_EFFECT', `Applied ${value} Weak to ${targetEnemy.name}`, { amount: value });
+                }
+                break;
+
+            case 'gain_artifact':
+                newState.playerStats = {
+                    ...newState.playerStats,
+                    statuses: {
+                        ...newState.playerStats.statuses,
+                        artifact: newState.playerStats.statuses.artifact + value
+                    }
+                };
+                getGlobalLogger().log('POTION_EFFECT', `Gained ${value} Artifact`, { amount: value });
+                break;
+
+            case 'gain_thorns':
+                newState.playerStats = {
+                    ...newState.playerStats,
+                    statuses: {
+                        ...newState.playerStats.statuses,
+                        thorns: newState.playerStats.statuses.thorns + value
+                    }
+                };
+                getGlobalLogger().log('POTION_EFFECT', `Gained ${value} Thorns`, { amount: value });
+                break;
+
+            case 'gain_metallicize':
+                newState.playerStats = {
+                    ...newState.playerStats,
+                    statuses: {
+                        ...newState.playerStats.statuses,
+                        metallicize: newState.playerStats.statuses.metallicize + value
+                    }
+                };
+                getGlobalLogger().log('POTION_EFFECT', `Gained ${value} Metallicize`, { amount: value });
+                break;
+
+            case 'gain_max_hp':
+                newState.playerStats = {
+                    ...newState.playerStats,
+                    maxHp: newState.playerStats.maxHp + value,
+                    hp: newState.playerStats.hp + value
+                };
+                getGlobalLogger().log('POTION_EFFECT', `Gained ${value} Max HP`, { amount: value });
+                break;
+
+            case 'duplicate_next':
+                newState.duplicateNextCard = true;
+                getGlobalLogger().log('POTION_EFFECT', 'Next card played will be played twice');
+                break;
+
+            case 'upgrade_hand':
+                // Upgrade all cards in hand
+                for (const card of newState.hand) {
+                    if (!card.name.endsWith('+')) {
+                        card.name = card.name + '+';
+                        // Upgrade effects (simplified - proper upgrade logic in separate function)
+                        for (const cardEffect of card.effects) {
+                            if (cardEffect.type === 'damage') cardEffect.value += 3;
+                            if (cardEffect.type === 'block') cardEffect.value += 3;
+                        }
+                    }
+                }
+                getGlobalLogger().log('POTION_EFFECT', `Upgraded ${newState.hand.length} cards in hand`);
+                break;
+
+            case 'gambler':
+                // Discard hand and draw same number
+                const handSize = newState.hand.length;
+                newState.discardPile = [...newState.discardPile, ...newState.hand];
+                newState.hand = [];
+                const gamblerDraw = drawCards(newState.drawPile, newState.discardPile, handSize);
+                const processedGambler = processDrawnCards(gamblerDraw.drawn, [], gamblerDraw.newDiscard, gamblerDraw.newDraw, newState.playerStats, '');
+                newState = {
+                    ...newState,
+                    hand: processedGambler.hand,
+                    drawPile: processedGambler.drawPile,
+                    discardPile: processedGambler.discard,
+                    playerStats: processedGambler.stats
+                };
+                getGlobalLogger().log('POTION_EFFECT', `Discarded hand and drew ${processedGambler.hand.length} cards`);
+                break;
+
+            case 'return_from_discard':
+                // Set pending selection for player to choose a card from discard
+                if (newState.discardPile.length > 0) {
+                    newState.pendingSelection = {
+                        type: 'retrieve',
+                        count: value,
+                        action: 'add_to_hand',
+                        context: 'discard',
+                        message: `Choose ${value} card(s) to return to hand`
+                    };
+                    newState.status = 'CARD_SELECTION';
+                    getGlobalLogger().log('POTION_EFFECT', `Selecting ${value} cards from discard pile`);
+                }
+                break;
+
+            case 'add_random_attack':
+                // Add random attack card to hand (0 cost this combat)
+                const attacks = Object.values(GAME_DATA.cards).filter(c => c.type === 'attack' && c.rarity !== 'special' && c.rarity !== 'starter');
+                if (attacks.length > 0) {
+                    for (let i = 0; i < value; i++) {
+                        const randomAttack = { ...attacks[Math.floor(Math.random() * attacks.length)], id: `random_attack_${Date.now()}_${i}`, cost: 0 };
+                        newState.hand.push(randomAttack);
+                    }
+                    getGlobalLogger().log('POTION_EFFECT', `Added ${value} random attack(s) to hand`);
+                }
+                break;
+
+            case 'add_random_skill':
+                const skills = Object.values(GAME_DATA.cards).filter(c => c.type === 'skill' && c.rarity !== 'special' && c.rarity !== 'starter');
+                if (skills.length > 0) {
+                    for (let i = 0; i < value; i++) {
+                        const randomSkill = { ...skills[Math.floor(Math.random() * skills.length)], id: `random_skill_${Date.now()}_${i}`, cost: 0 };
+                        newState.hand.push(randomSkill);
+                    }
+                    getGlobalLogger().log('POTION_EFFECT', `Added ${value} random skill(s) to hand`);
+                }
+                break;
+
+            case 'add_random_power':
+                const powers = Object.values(GAME_DATA.cards).filter(c => c.type === 'power' && c.rarity !== 'special' && c.rarity !== 'starter');
+                if (powers.length > 0) {
+                    const randomPower = { ...powers[Math.floor(Math.random() * powers.length)], id: `random_power_${Date.now()}`, cost: 0 };
+                    newState.hand.push(randomPower);
+                    getGlobalLogger().log('POTION_EFFECT', `Added random power to hand: ${randomPower.name}`);
+                }
+                break;
+
+            case 'add_random_colorless':
+                // Add colorless card to hand - for now use any random non-starter card
+                const colorless = Object.values(GAME_DATA.cards).filter(c => c.rarity !== 'special' && c.rarity !== 'starter');
+                if (colorless.length > 0) {
+                    const randomCard = { ...colorless[Math.floor(Math.random() * colorless.length)], id: `random_colorless_${Date.now()}`, cost: 0 };
+                    newState.hand.push(randomCard);
+                    getGlobalLogger().log('POTION_EFFECT', `Added random colorless card to hand: ${randomCard.name}`);
+                }
+                break;
+
+            case 'escape':
+                // Escape from combat (not for bosses, checked elsewhere)
+                if (canUseExitStrategy(newState.enemies)) {
+                    newState.status = 'MAP';
+                    newState.enemies = [];
+                    newState.message = 'Escaped from combat!';
+                    getGlobalLogger().log('POTION_EFFECT', 'Escaped from combat');
+                }
+                break;
+
+            case 'snecko':
+                // Confusion effect - randomize costs of all cards in hand
+                for (const card of newState.hand) {
+                    card.cost = Math.floor(Math.random() * 4); // 0-3 cost
+                }
+                getGlobalLogger().log('POTION_EFFECT', 'Snecko confusion applied - randomized hand costs');
+                break;
+
+            case 'fill_potions':
+                // Fill all empty slots with random potions
+                const character = 'cto'; // TODO: Get from game state
+                const newPotions = [...newState.potions];
+                for (let i = 0; i < newPotions.length; i++) {
+                    if (newPotions[i] === null) {
+                        const randomPotion = generateRandomPotion(character, potion.id === 'potion_funding_surge');
+                        if (randomPotion) {
+                            newPotions[i] = randomPotion;
+                            getGlobalLogger().log('POTION_EFFECT', `Generated ${randomPotion.name} in slot ${i}`);
+                        }
+                    }
+                }
+                newState.potions = newPotions;
+                break;
+
+            // Fairy potion is handled separately in checkFairyPotion
+            case 'fairy':
+                // This is a passive effect, handled by checkFairyPotion when player dies
+                break;
+
+            // Potions that need additional UI handling or are edge cases
+            case 'exhaust_choice':
+            case 'play_top_cards':
+            case 'gain_ritual':
+            case 'gain_plated_armor':
+            case 'gain_regen':
+            case 'gain_intangible':
+                getGlobalLogger().log('POTION_EFFECT', `${effect.type} effect not yet fully implemented`);
+                break;
+
+            default:
+                getGlobalLogger().log('WARNING', `Unknown potion effect type: ${effect.type}`);
+        }
+    }
+
+    // Clean up dead enemies
+    newState.enemies = newState.enemies.filter(e => e.hp > 0);
+
+    // Check for victory
+    if (newState.enemies.length === 0 && newState.status === 'PLAYING') {
+        newState.status = 'VICTORY';
+        newState.message = 'Victory!';
+    }
+
+    return newState;
 };
 
 // --- Map Generation (Exact Slay the Spire Algorithm) ---
@@ -1692,6 +2219,24 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
     // Check if any enemy gives card rewards
     const shouldGetCardReward = newStatus === 'VICTORY' && newEnemies.some(e => e.rewards?.card_reward !== false);
 
+    // Check for potion drop on victory
+    let pendingPotionReward: typeof prev.pendingPotionReward = undefined;
+    let newPotionDropChance = prev.potionDropChance;
+
+    if (newStatus === 'VICTORY') {
+        const potionDropResult = checkPotionDrop(newPotionDropChance);
+        newPotionDropChance = potionDropResult.newChance;
+
+        if (potionDropResult.dropped && canAcquirePotion(prev.potions)) {
+            pendingPotionReward = generateRandomPotion('cto');
+            getGlobalLogger().log('POTION_DROP', `Combat dropped "${pendingPotionReward.name}"!`);
+        } else if (potionDropResult.dropped) {
+            getGlobalLogger().log('POTION_DROP', 'Potion dropped but slots full - skipped.');
+        } else {
+            getGlobalLogger().log('POTION_DROP', `No potion drop (chance now ${newPotionDropChance}%)`);
+        }
+    }
+
     let nextState = {
         ...prev,
         playerStats: nextPlayerStats,
@@ -1700,6 +2245,8 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
         turn: nextTurn,
         status: newStatus,
         message: newMessage,
+        potionDropChance: newPotionDropChance,
+        pendingPotionReward: pendingPotionReward,
         lastVictoryReward: newStatus === 'VICTORY' ? {
             capital: earnedCapital,
             cardRewards: shouldGetCardReward ? cardRewards : [],
@@ -1778,13 +2325,14 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                 targets.forEach(t => {
                     // Apply Crunch Mode (Red Skull) bonus strength when HP ≤50%
                     const crunchBonus = getCrunchModeStrength(newRelics, prev.playerStats.hp, prev.playerStats.maxHp);
+                    // Use newPlayerStatuses to reflect buffs/debuffs gained during this turn
                     const effectiveStatuses = crunchBonus > 0
-                        ? { ...prev.playerStats.statuses, strength: prev.playerStats.statuses.strength + crunchBonus }
-                        : prev.playerStats.statuses;
+                        ? { ...newPlayerStatuses, strength: newPlayerStatuses.strength + crunchBonus }
+                        : newPlayerStatuses;
 
                     let finalDamage = calculateDamage(effect.value, effectiveStatuses, t.statuses, effect.strengthMultiplier || 1, newRelics);
                     if (t.statuses.vulnerable > 0) newMessage += " (Exposed!)";
-                    if (prev.playerStats.statuses.weak > 0) newMessage += " (Drained...)";
+                    if (newPlayerStatuses.weak > 0) newMessage += " (Drained...)";
 
                     if (t.mitigation > 0) {
                         const blocked = Math.min(t.mitigation, finalDamage);
@@ -1843,9 +2391,10 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                 targets.forEach(t => {
                     // Apply Crunch Mode (Red Skull) bonus strength when HP ≤50%
                     const crunchBonus = getCrunchModeStrength(newRelics, prev.playerStats.hp, prev.playerStats.maxHp);
+                    // Use newPlayerStatuses to reflect buffs/debuffs gained during this turn
                     const effectiveStatuses = crunchBonus > 0
-                        ? { ...prev.playerStats.statuses, strength: prev.playerStats.statuses.strength + crunchBonus }
-                        : prev.playerStats.statuses;
+                        ? { ...newPlayerStatuses, strength: newPlayerStatuses.strength + crunchBonus }
+                        : newPlayerStatuses;
                     let finalDamage = calculateDamage(dmg, effectiveStatuses, t.statuses, 1, newRelics);
                     if (t.mitigation > 0) {
                         const blocked = Math.min(t.mitigation, finalDamage);
@@ -1874,9 +2423,10 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                 targets.forEach(t => {
                     // Apply Crunch Mode (Red Skull) bonus strength when HP ≤50%
                     const crunchBonus = getCrunchModeStrength(newRelics, prev.playerStats.hp, prev.playerStats.maxHp);
+                    // Use newPlayerStatuses to reflect buffs/debuffs gained during this turn
                     const effectiveStatuses = crunchBonus > 0
-                        ? { ...prev.playerStats.statuses, strength: prev.playerStats.statuses.strength + crunchBonus }
-                        : prev.playerStats.statuses;
+                        ? { ...newPlayerStatuses, strength: newPlayerStatuses.strength + crunchBonus }
+                        : newPlayerStatuses;
                     let finalDamage = calculateDamage(totalDmg, effectiveStatuses, t.statuses, 1, newRelics);
                     if (t.mitigation > 0) {
                         const blocked = Math.min(t.mitigation, finalDamage);
@@ -2156,6 +2706,24 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
     const cardRewards = newStatus === 'VICTORY' ? getRandomRewardCards(3) : [];
     const shouldGetCardReward = newStatus === 'VICTORY' && prev.enemies.some(e => e.rewards?.card_reward !== false);
 
+    // Check for potion drop on victory
+    let pendingPotionReward: typeof prev.pendingPotionReward = undefined;
+    let newPotionDropChance = prev.potionDropChance;
+
+    if (newStatus === 'VICTORY') {
+        const potionDropResult = checkPotionDrop(newPotionDropChance);
+        newPotionDropChance = potionDropResult.newChance;
+
+        if (potionDropResult.dropped && canAcquirePotion(prev.potions)) {
+            pendingPotionReward = generateRandomPotion('cto');
+            getGlobalLogger().log('POTION_DROP', `Combat dropped "${pendingPotionReward.name}"!`);
+        } else if (potionDropResult.dropped) {
+            getGlobalLogger().log('POTION_DROP', 'Potion dropped but slots full - skipped.');
+        } else {
+            getGlobalLogger().log('POTION_DROP', `No potion drop (chance now ${newPotionDropChance}%)`);
+        }
+    }
+
     return {
         ...prev,
         playerStats: {
@@ -2176,6 +2744,8 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
         pendingDiscard: newPendingDiscard,
         pendingSelection: newPendingSelection,
         relics: newRelics,
+        potionDropChance: newPotionDropChance,
+        pendingPotionReward: pendingPotionReward,
         lastVictoryReward: newStatus === 'VICTORY' ? {
             capital: earnedCapital,
             cardRewards: shouldGetCardReward ? cardRewards : [],

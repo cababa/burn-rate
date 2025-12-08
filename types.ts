@@ -210,6 +210,42 @@ export interface RelicData {
   chosenCardId?: string;
 }
 
+// === POTION SYSTEM ===
+
+export type PotionRarity = 'common' | 'uncommon' | 'rare';
+
+export type PotionTarget = 'none' | 'enemy' | 'self' | 'card_in_discard' | 'cards_in_hand';
+
+export type PotionEffectType =
+  | 'damage' | 'damage_all' | 'block' | 'draw' | 'heal' | 'heal_percent'
+  | 'gain_strength' | 'gain_dexterity' | 'gain_energy'
+  | 'apply_vulnerable' | 'apply_weak'
+  | 'temporary_strength' | 'temporary_dexterity'
+  | 'add_random_attack' | 'add_random_skill' | 'add_random_power' | 'add_random_colorless'
+  | 'upgrade_hand' | 'gain_artifact' | 'gain_plated_armor' | 'gain_regen' | 'gain_thorns'
+  | 'return_from_discard' | 'gambler' | 'play_top_cards' | 'duplicate_next'
+  | 'exhaust_choice' | 'gain_ritual' | 'gain_max_hp' | 'fairy' | 'escape'
+  | 'snecko' | 'fill_potions' | 'gain_metallicize' | 'gain_intangible';
+
+export interface PotionEffect {
+  type: PotionEffectType;
+  value: number;
+  duration?: number; // For temporary effects (end of turn)
+}
+
+export interface PotionData {
+  id: string;
+  name: string;
+  character: 'cto' | 'ceo' | 'coo' | 'watcher' | 'shared';
+  rarity: PotionRarity;
+  target: PotionTarget;
+  description: string;
+  icon: string;
+  tooltip: TooltipData;
+  effects: PotionEffect[];
+  sacredBarkAffected: boolean; // Whether Sacred Bark doubles effects
+}
+
 export type MapNodeType = 'problem' | 'elite' | 'retrospective' | 'vendor' | 'opportunity' | 'treasure' | 'boss';
 
 export interface MapNode {
@@ -303,9 +339,11 @@ export interface GameState {
   pendingDiscard: number;
   deck: CardData[]; // Permanent deck
   pendingSelection?: {
-    context: 'hand' | 'discard_pile';
-    action: 'upgrade' | 'move_to_draw_pile' | 'exhaust';
+    type?: 'upgrade' | 'exhaust' | 'retrieve' | 'discard'; // Type of selection
+    context: 'hand' | 'discard_pile' | 'discard';
+    action: 'upgrade' | 'move_to_draw_pile' | 'exhaust' | 'add_to_hand';
     count: number;
+    message?: string; // Optional message to show during selection
   };
   currentEvent?: EventData;
   eventResult?: {
@@ -313,4 +351,10 @@ export interface GameState {
     resultMessage: string;
     success?: boolean;
   };
+  // === POTION SYSTEM ===
+  potions: (PotionData | null)[]; // Array of potion slots (null = empty)
+  potionSlotCount: number; // 3 standard, 2 for A11+
+  potionDropChance: number; // Starts at 40, adjusts by 10 per drop/no-drop (resets each act)
+  pendingPotionReward?: PotionData; // For potion reward selection
+  duplicateNextCard: boolean; // For Duplication Potion effect
 }

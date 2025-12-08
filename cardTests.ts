@@ -76,7 +76,12 @@ function createTestState(): GameState {
         map: [],
         currentMapPosition: null,
         vendorStock: [],
-        pendingDiscard: 0
+        pendingDiscard: 0,
+        // Potion system fields
+        potions: [null, null, null],
+        potionSlotCount: 3,
+        potionDropChance: 40,
+        duplicateNextCard: false
     };
 }
 

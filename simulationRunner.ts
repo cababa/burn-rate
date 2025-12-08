@@ -2,7 +2,7 @@
  * SimulationRunner - Runs automated game simulations with logging
  */
 
-import { GameState, CardData, EnemyData, MapNode, RelicData } from './types.ts';
+import { GameState, CardData, EnemyData, MapNode, RelicData, PotionData } from './types.ts';
 import { GAME_DATA } from './constants.ts';
 import {
     generateStarterDeck,
@@ -24,7 +24,13 @@ import {
     getTreasureRelic,
     getEliteRelic,
     getBossRelicChoices,
-    getBossRelicSkipGold
+    getBossRelicSkipGold,
+    // Potion functions
+    checkPotionDrop,
+    generateRandomPotion,
+    addPotionToSlot,
+    canAcquirePotion,
+    resolvePotionEffect
 } from './gameLogic.ts';
 import { GameLogger, LogCategory } from './logger.ts';
 import { AIPlayer, createAI, getAllStrategies } from './aiPlayer.ts';
@@ -91,7 +97,12 @@ export function runSimulation(
         map: generateMap(),
         currentMapPosition: null,
         vendorStock: [],
-        pendingDiscard: 0
+        pendingDiscard: 0,
+        // Potion system
+        potions: [null, null, null],
+        potionSlotCount: 3,
+        potionDropChance: 40,
+        duplicateNextCard: false
     };
 
     let totalTurns = 0;
@@ -155,6 +166,27 @@ export function runSimulation(
 
             while (gameState.status === 'PLAYING' && combatTurns < config.maxTurnsPerCombat) {
                 logger.setTurn(gameState.turn);
+
+                // AI considers using potions at start of combat turn
+                if (ai.selectPotion) {
+                    let potionUsed = true;
+                    while (potionUsed && gameState.status === 'PLAYING') {
+                        const potionDecision = ai.selectPotion(gameState);
+                        if (potionDecision) {
+                            const { potion, slotIndex, targetEnemyId } = potionDecision;
+                            logger.log('POTION_USE', `Used "${potion.name}"`, {
+                                potionName: potion.name,
+                                slotIndex,
+                                targetEnemyId,
+                                potionRarity: potion.rarity
+                            });
+
+                            gameState = resolvePotionEffect(gameState, potion, slotIndex, targetEnemyId);
+                        } else {
+                            potionUsed = false;
+                        }
+                    }
+                }
 
                 // Player turn - play cards until AI says stop
                 let cardsPlayed = 0;
@@ -373,6 +405,27 @@ export function runSimulation(
                     deckSize: gameState.deck.length
                 });
             }
+
+            // Potion reward (check drop based on potionDropChance)
+            const potionDropResult = checkPotionDrop(gameState.potionDropChance);
+            gameState.potionDropChance = potionDropResult.newChance;
+
+            if (potionDropResult.dropped && canAcquirePotion(gameState.potions)) {
+                const newPotion = generateRandomPotion('cto', false);
+                if (newPotion) {
+                    gameState.potions = addPotionToSlot(gameState.potions, newPotion);
+                    logger.log('POTION_DROP', `Combat dropped "${newPotion.name}"!`, {
+                        potionName: newPotion.name,
+                        potionRarity: newPotion.rarity,
+                        newDropChance: gameState.potionDropChance
+                    });
+                }
+            } else if (!potionDropResult.dropped) {
+                logger.log('POTION_DROP', `No potion drop (chance now ${gameState.potionDropChance}%)`, {
+                    newDropChance: gameState.potionDropChance
+                });
+            }
+
 
             // Relic reward for elite/boss victories
             if (gameState.currentMapPosition) {
