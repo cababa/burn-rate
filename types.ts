@@ -289,18 +289,21 @@ export interface EventChoice {
 }
 
 export interface EventEffect {
-  type: 'gain_gold' | 'lose_gold' | 'gain_hp' | 'lose_hp' | 'lose_max_hp' |
+  type: 'gain_gold' | 'lose_gold' | 'gain_hp' | 'lose_hp' | 'lose_max_hp' | 'gain_max_hp' |
   'gain_card' | 'remove_card' | 'upgrade_card' | 'transform_card' |
+  'remove_card_choice' | 'upgrade_card_choice' | 'transform_card_choice' | 'exhaust_card_choice' |
   'exhaust_card' | 'add_status_card' | 'gain_relic' | 'gain_strength' |
   'apply_status' | 'fight_elite' | 'random_chance' | 'nothing';
   value?: number;
   cardRarity?: 'common' | 'uncommon' | 'rare' | 'random';
+  relicRarity?: 'starter' | 'common' | 'uncommon' | 'rare' | 'boss' | 'special';
   statusId?: string;
   relicId?: string;
   chance?: number; // For random_chance type (0-100)
   successEffects?: EventEffect[];
   failureEffects?: EventEffect[];
 }
+
 
 export interface EventData {
   id: string;
@@ -339,12 +342,14 @@ export interface GameState {
   pendingDiscard: number;
   deck: CardData[]; // Permanent deck
   pendingSelection?: {
-    type?: 'upgrade' | 'exhaust' | 'retrieve' | 'discard'; // Type of selection
-    context: 'hand' | 'discard_pile' | 'discard';
-    action: 'upgrade' | 'move_to_draw_pile' | 'exhaust' | 'add_to_hand';
+    type?: 'upgrade' | 'exhaust' | 'retrieve' | 'discard' | 'remove' | 'transform'; // Type of selection
+    context: 'hand' | 'discard_pile' | 'discard' | 'deck';
+    action: 'upgrade' | 'move_to_draw_pile' | 'exhaust' | 'add_to_hand' | 'remove' | 'transform';
     count: number;
     message?: string; // Optional message to show during selection
+    eventContext?: boolean; // True if this selection is from an event (returns to MAP after)
   };
+
   currentEvent?: EventData;
   eventResult?: {
     choiceLabel: string;

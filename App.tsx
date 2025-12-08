@@ -5,7 +5,7 @@ import { MapScreen } from './components/MapScreen';
 import { DeckViewer } from './components/DeckViewer';
 import { GAME_DATA, MAX_HAND_SIZE, ACT1_EVENTS } from './constants';
 import { CardData, GameState, EnemyIntent, MapLayer, MapNode, CharacterStats, RelicData, EntityStatus, EnemyData, CardEffect, EventData, EventChoice, EventEffect, PotionData } from './types';
-import { Battery, DollarSign, CheckCircle2, AlertOctagon, RefreshCw, Play, Layers, Archive, Gift, ArrowRight, Coffee, Hammer, Store, Trash2, Gem, Wrench, FastForward, Heart, Plus, Bug, Ghost, Rocket, Lock, User, Briefcase, ChevronRight, Zap, X, HelpCircle } from 'lucide-react';
+import { Battery, DollarSign, CheckCircle2, AlertOctagon, RefreshCw, Play, Layers, Archive, Gift, ArrowRight, Coffee, Hammer, Store, Trash2, Gem, Wrench, FastForward, Heart, Plus, Bug, Ghost, Rocket, Lock, User, Briefcase, ChevronRight, Zap, X, HelpCircle, Shuffle } from 'lucide-react';
 import {
     calculateDamage, countCardsMatches, generateStarterDeck, getRandomRewardCards, shuffle, drawCards, upgradeCard,
     applyCombatStartRelics, applyCombatEndRelics, getTurnStartBandwidth, generateMap, resolveCardEffect, resolveEnemyTurn, resolveEndTurn, processDrawnCards,
@@ -214,7 +214,31 @@ const App: React.FC = () => {
         });
     };
 
+    // Dev tool: Trigger a specific event by ID (for testing)
+    // Usage in browser console: devTriggerEvent('refactoring_session') or devTriggerEvent() for random
+    const devTriggerEvent = (eventId?: string) => {
+        setGameState(prev => {
+            const event = eventId
+                ? ACT1_EVENTS.find(e => e.id === eventId) || ACT1_EVENTS[Math.floor(Math.random() * ACT1_EVENTS.length)]
+                : ACT1_EVENTS[Math.floor(Math.random() * ACT1_EVENTS.length)];
+            return {
+                ...prev,
+                status: 'EVENT',
+                currentEvent: event,
+                eventResult: undefined,
+                message: `DEV: Triggered event: ${event.name}`
+            };
+        });
+    };
+
+    // Make devTriggerEvent available on window for console testing
+    if (typeof window !== 'undefined') {
+        (window as any).devTriggerEvent = devTriggerEvent;
+        (window as any).listEvents = () => ACT1_EVENTS.map(e => ({ id: e.id, name: e.name }));
+    }
+
     const endTurn = () => {
+
         if (gameState.status !== 'PLAYING') return;
         setGameState(prev => resolveEndTurn(prev));
         setTimeout(processEnemyTurn, 1000);
@@ -299,7 +323,7 @@ const App: React.FC = () => {
         }
     };
 
-    // Generic Handler for selection actions (Hand or Discard Pile)
+    // Generic Handler for selection actions (Hand, Discard Pile, or Deck)
     const handleCardSelection = (card: CardData) => {
         setGameState(prev => {
             if (!prev.pendingSelection) return prev;
@@ -308,24 +332,30 @@ const App: React.FC = () => {
             let newDiscardPile = [...prev.discardPile];
             let newDrawPile = [...prev.drawPile];
             let newExhaustPile = [...prev.exhaustPile];
+            let newDeck = [...prev.deck];
             let newMessage = prev.message;
             let newMitigation = prev.playerStats.mitigation;
 
-            if (prev.pendingSelection.action === 'upgrade') {
-                // Upgrade the selected card
-                if (prev.pendingSelection.context === 'hand') {
-                    newHand = newHand.map(c => c.id === card.id ? upgradeCard(c) : c);
-                }
-                newMessage = `Upgraded ${card.name}.`;
+            const { action, context, eventContext } = prev.pendingSelection;
 
-            } else if (prev.pendingSelection.action === 'move_to_draw_pile') {
+            if (action === 'upgrade') {
+                // Upgrade the selected card
+                if (context === 'hand') {
+                    newHand = newHand.map(c => c.id === card.id ? upgradeCard(c) : c);
+                } else if (context === 'deck') {
+                    newDeck = newDeck.map(c => c.id === card.id ? upgradeCard(c) : c);
+                }
+                newMessage = `⬆️ Upgraded ${card.name}.`;
+
+            } else if (action === 'move_to_draw_pile') {
                 // Move from Discard to Top of Draw
                 newDiscardPile = newDiscardPile.filter(c => c.id !== card.id);
                 newDrawPile.push(card);
                 newMessage = `Placed ${card.name} on top of Draw Pile.`;
-            } else if (prev.pendingSelection.action === 'exhaust') {
-                // Exhaust the selected card
-                if (prev.pendingSelection.context === 'hand') {
+
+            } else if (action === 'exhaust') {
+                // Exhaust the selected card from hand
+                if (context === 'hand') {
                     newHand = newHand.filter(c => c.id !== card.id);
                     newExhaustPile.push(card);
                     if (prev.playerStats.statuses.feelNoPain > 0) {
@@ -333,16 +363,43 @@ const App: React.FC = () => {
                     }
                     newMessage = `Archived ${card.name}.`;
                 }
+
+            } else if (action === 'remove') {
+                // Remove from deck permanently (event context)
+                if (context === 'deck') {
+                    newDeck = newDeck.filter(c => c.id !== card.id);
+                    newMessage = `🗑️ Removed ${card.name} from deck.`;
+                }
+
+            } else if (action === 'transform') {
+                // Transform card in deck (event context)
+                if (context === 'deck') {
+                    const replacement = getRandomRewardCards(1)[0];
+                    newDeck = newDeck.filter(c => c.id !== card.id);
+                    newDeck.push(replacement);
+                    newMessage = `🔄 Transformed ${card.name} → ${replacement.name}.`;
+                }
             }
 
             // Decrease Count
             const newCount = prev.pendingSelection.count - 1;
-            let newStatus = prev.status;
-            let newPendingSelection = { ...prev.pendingSelection, count: newCount };
+            let newStatus: GameState['status'] = prev.status;
+            let newPendingSelection = newCount > 0 ? { ...prev.pendingSelection, count: newCount } : undefined;
+
+            // Mark node as completed if returning from event
+            let newMap = [...prev.map];
 
             if (newCount <= 0) {
-                newStatus = 'PLAYING';
-                newPendingSelection = undefined as any; // Clear it
+                // If this was an event context, return to MAP and mark node complete
+                if (eventContext) {
+                    newStatus = 'MAP';
+                    if (prev.currentMapPosition) {
+                        const { floor, nodeId } = prev.currentMapPosition;
+                        newMap[floor - 1] = newMap[floor - 1].map(n => n.id === nodeId ? { ...n, completed: true } : n);
+                    }
+                } else {
+                    newStatus = 'PLAYING';
+                }
             } else {
                 newMessage += ` Select ${newCount} more.`;
             }
@@ -353,13 +410,17 @@ const App: React.FC = () => {
                 discardPile: newDiscardPile,
                 drawPile: newDrawPile,
                 exhaustPile: newExhaustPile,
+                deck: newDeck,
+                map: newMap,
                 playerStats: { ...prev.playerStats, mitigation: newMitigation },
                 status: newStatus,
                 pendingSelection: newPendingSelection,
+                currentEvent: newCount <= 0 && eventContext ? undefined : prev.currentEvent,
                 message: newMessage
             };
         });
     };
+
 
     const handleCardDiscard = (card: CardData) => {
         setGameState(prev => {
@@ -896,6 +957,7 @@ const App: React.FC = () => {
             let newDeck = [...prev.deck];
             let newRelics = [...prev.relics];
             let message = '';
+            let pendingChoiceEffect: EventEffect | null = null;
 
             // Check condition if present
             if (choice.condition) {
@@ -961,17 +1023,35 @@ const App: React.FC = () => {
                         }
                         break;
                     case 'upgrade_card':
+                        // Random upgrade with explicit UI feedback
+                        const upgradedCards: string[] = [];
                         for (let i = 0; i < (effect.value || 1); i++) {
                             const upgradeable = newDeck.filter(c => !c.name.endsWith('+'));
                             if (upgradeable.length > 0) {
                                 const cardToUpgrade = upgradeable[Math.floor(Math.random() * upgradeable.length)];
                                 const idx = newDeck.findIndex(c => c.id === cardToUpgrade.id);
                                 if (idx !== -1) {
+                                    const oldName = newDeck[idx].name;
                                     newDeck[idx] = upgradeCard(newDeck[idx]);
-                                    message += ` Upgraded ${cardToUpgrade.name}.`;
+                                    upgradedCards.push(`${oldName} → ${newDeck[idx].name}`);
                                 }
                             }
                         }
+                        if (upgradedCards.length > 0) {
+                            message += ` ⬆️ Upgraded: ${upgradedCards.join(', ')}.`;
+                        }
+                        break;
+                    case 'upgrade_card_choice':
+                    case 'remove_card_choice':
+                    case 'transform_card_choice':
+                    case 'exhaust_card_choice':
+                        // These are handled specially - require pendingEventChoice
+                        pendingChoiceEffect = effect;
+                        break;
+                    case 'gain_max_hp':
+                        newStats.maxHp += effect.value || 0;
+                        newStats.hp = Math.min(newStats.hp + (effect.value || 0), newStats.maxHp);
+                        message += ` +${effect.value} max Runway.`;
                         break;
                     case 'transform_card':
                         for (let i = 0; i < (effect.value || 1); i++) {
@@ -980,18 +1060,23 @@ const App: React.FC = () => {
                                 const removed = newDeck.splice(idx, 1)[0];
                                 const replacement = getRandomRewardCards(1)[0];
                                 newDeck.push(replacement);
-                                message += ` Transformed ${removed.name} into ${replacement.name}.`;
+                                message += ` 🔄 Transformed ${removed.name} → ${replacement.name}.`;
                             }
                         }
                         break;
                     case 'gain_strength':
                         newStats.statuses.strength += effect.value || 0;
-                        message += ` Gained ${effect.value} permanent Strength.`;
+                        message += ` Gained ${effect.value} permanent Velocity.`;
                         break;
                     case 'gain_relic':
-                        const availableRelics = Object.values(GAME_DATA.relics).filter(r => !newRelics.some(pr => pr.id === r.id));
-                        if (availableRelics.length > 0) {
-                            const relic = availableRelics[Math.floor(Math.random() * availableRelics.length)];
+                        const ownedRelicIds = newRelics.map(pr => pr.id);
+                        const availableRelics = Object.values(GAME_DATA.relics).filter(r => !ownedRelicIds.includes(r.id));
+                        const rarityPool = effect.relicRarity
+                            ? availableRelics.filter(r => r.rarity === effect.relicRarity)
+                            : availableRelics;
+                        const candidates = rarityPool.length > 0 ? rarityPool : availableRelics;
+                        if (candidates.length > 0) {
+                            const relic = candidates[Math.floor(Math.random() * candidates.length)];
                             newRelics.push(relic);
                             message += ` Gained relic: ${relic.name}.`;
                         }
@@ -1025,7 +1110,51 @@ const App: React.FC = () => {
                 }
             };
 
+
             choice.effects.forEach(e => processEffect(e));
+
+            // Check for choice-based effects that require card selection
+            if (pendingChoiceEffect) {
+                // Map effect type to selection action
+                const actionMap: Record<string, 'upgrade' | 'exhaust' | 'remove' | 'transform'> = {
+                    'upgrade_card_choice': 'upgrade',
+                    'remove_card_choice': 'remove',
+                    'transform_card_choice': 'transform',
+                    'exhaust_card_choice': 'exhaust'
+                };
+                const action = actionMap[pendingChoiceEffect.type] || 'upgrade';
+                const count = pendingChoiceEffect.value || 1;
+
+                const messageMap: Record<string, string> = {
+                    'upgrade': 'Select a card to upgrade',
+                    'remove': 'Select a card to remove',
+                    'transform': 'Select a card to transform',
+                    'exhaust': 'Select a card to archive'
+                };
+
+                return {
+                    ...prev,
+                    playerStats: newStats,
+                    deck: newDeck,
+                    relics: newRelics,
+                    status: 'CARD_SELECTION',
+                    pendingSelection: {
+                        type: action === 'remove' ? 'exhaust' : action, // Map remove to exhaust type
+                        context: 'deck' as 'hand' | 'discard_pile' | 'discard' | 'deck',
+                        action: action,
+                        count: count,
+                        message: messageMap[action],
+                        eventContext: true // Mark this as event context to return to MAP after
+                    },
+                    eventResult: {
+                        choiceLabel: choice.label,
+                        resultMessage: message.trim() || 'Select a card...',
+                        success: true
+                    },
+                    message: messageMap[action]
+                };
+            }
+
 
             // Check for elite fight
             const triggerEliteFight = choice.effects.some(e => e.type === 'fight_elite');
@@ -1113,6 +1242,10 @@ const App: React.FC = () => {
 
                     <button onClick={devSpawnLegacy} className="flex items-center gap-2 text-xs font-mono bg-purple-500/10 text-purple-500 border border-purple-500/30 hover:bg-purple-500/20 p-2 rounded transition text-left">
                         <Ghost size={14} /> Spawn Legacy Systems
+                    </button>
+
+                    <button onClick={() => devTriggerEvent()} className="flex items-center gap-2 text-xs font-mono bg-blue-500/10 text-blue-500 border border-blue-500/30 hover:bg-blue-500/20 p-2 rounded transition text-left">
+                        <HelpCircle size={14} /> Trigger Random Event
                     </button>
 
                     {gameState.status === 'PLAYING' && (
@@ -1841,6 +1974,65 @@ const App: React.FC = () => {
                     </div>
                 )}
 
+                {/* Deck Card Selection Modal (for events) */}
+                {gameState.status === 'CARD_SELECTION' && gameState.pendingSelection?.context === 'deck' && (
+                    <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+                        <h2 className="text-2xl font-display font-bold text-white mb-2 flex items-center gap-2">
+                            {gameState.pendingSelection.action === 'upgrade' && <><Hammer className="text-warning" /> Select Card to Upgrade</>}
+                            {gameState.pendingSelection.action === 'remove' && <><Trash2 className="text-danger" /> Select Card to Remove</>}
+                            {gameState.pendingSelection.action === 'transform' && <><Shuffle className="text-primary" /> Select Card to Transform</>}
+                        </h2>
+                        <p className="text-gray-400 font-mono text-sm mb-8">{gameState.pendingSelection.message || gameState.message}</p>
+
+                        <div className="flex flex-wrap justify-center gap-4 max-w-5xl max-h-[60vh] overflow-y-auto p-4">
+                            {gameState.deck.filter(card => {
+                                // For upgrade, only show non-upgraded cards (cards without '+' in name)
+                                if (gameState.pendingSelection?.action === 'upgrade') {
+                                    return !card.name.endsWith('+');
+                                }
+                                return true; // Show all for remove/transform
+                            }).map((card) => (
+
+                                <div
+                                    key={card.id}
+                                    onClick={() => handleCardSelection(card)}
+                                    className="cursor-pointer hover:scale-105 transition-transform duration-150"
+                                >
+                                    <Card card={card} onDragStart={() => { }} disabled={false} selectable />
+                                </div>
+                            ))}
+                            {gameState.deck.length === 0 && (
+                                <div className="text-gray-500 italic">Deck is empty.</div>
+                            )}
+                        </div>
+
+                        <button
+                            onClick={() => {
+                                // Cancel returns to MAP and marks node complete
+                                setGameState(prev => {
+                                    let newMap = [...prev.map];
+                                    if (prev.pendingSelection?.eventContext && prev.currentMapPosition) {
+                                        const { floor, nodeId } = prev.currentMapPosition;
+                                        newMap[floor - 1] = newMap[floor - 1].map(n => n.id === nodeId ? { ...n, completed: true } : n);
+                                    }
+                                    return {
+                                        ...prev,
+                                        status: prev.pendingSelection?.eventContext ? 'MAP' : 'PLAYING',
+                                        map: newMap,
+                                        pendingSelection: undefined,
+                                        currentEvent: undefined,
+                                        message: 'Selection cancelled.'
+                                    };
+                                });
+                            }}
+                            className="mt-8 text-gray-400 hover:text-white font-mono text-sm flex items-center gap-2 border border-transparent hover:border-white/20 px-4 py-2 rounded transition-all"
+                        >
+                            <X size={14} /> Skip
+                        </button>
+                    </div>
+                )}
+
+
                 {gameState.status === 'VICTORY' && (
                     <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
                         <div className="relative z-50 bg-surface border border-primary p-8 rounded-2xl flex flex-col items-center text-center max-w-2xl shadow-[0_0_50px_rgba(0,255,136,0.1)]">
@@ -1962,8 +2154,8 @@ const App: React.FC = () => {
                                                     <div className="text-info font-bold flex items-center gap-2">
                                                         {gameState.pendingPotionReward.name}
                                                         <span className={`text-[10px] uppercase px-1.5 py-0.5 rounded ${gameState.pendingPotionReward.rarity === 'rare' ? 'bg-warning/20 text-warning' :
-                                                                gameState.pendingPotionReward.rarity === 'uncommon' ? 'bg-info/20 text-info' :
-                                                                    'bg-white/10 text-gray-400'
+                                                            gameState.pendingPotionReward.rarity === 'uncommon' ? 'bg-info/20 text-info' :
+                                                                'bg-white/10 text-gray-400'
                                                             }`}>{gameState.pendingPotionReward.rarity}</span>
                                                     </div>
                                                     <div className="text-sm text-gray-400">
@@ -1975,8 +2167,8 @@ const App: React.FC = () => {
                                                         onClick={handleTakePotion}
                                                         disabled={!canAcquirePotion(gameState.potions)}
                                                         className={`px-4 py-2 rounded font-mono text-sm transition-colors ${canAcquirePotion(gameState.potions)
-                                                                ? 'bg-info/20 border border-info text-info hover:bg-info hover:text-black'
-                                                                : 'bg-gray-800 border border-gray-600 text-gray-500 cursor-not-allowed'
+                                                            ? 'bg-info/20 border border-info text-info hover:bg-info hover:text-black'
+                                                            : 'bg-gray-800 border border-gray-600 text-gray-500 cursor-not-allowed'
                                                             }`}
                                                     >
                                                         {canAcquirePotion(gameState.potions) ? 'Take Potion' : 'Slots Full'}

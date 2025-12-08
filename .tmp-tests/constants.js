@@ -1,10 +1,6 @@
-
-import { CardData, EnemyData, CharacterStats, RelicData, EncounterTemplate, EventData, PotionData } from './types.ts';
-
 export const MAX_HAND_SIZE = 10;
-
 // Keyword glossary for verbose tooltips - explains all gameplay terms
-export const KEYWORD_GLOSSARY: Record<string, { icon: string; color: string; description: string }> = {
+export const KEYWORD_GLOSSARY = {
     // Core mechanics
     Execute: { icon: "⚔️", color: "text-danger", description: "Deal damage to enemy Complexity" },
     Buffer: { icon: "🛡️", color: "text-info", description: "Temporary protection that blocks incoming damage" },
@@ -12,25 +8,20 @@ export const KEYWORD_GLOSSARY: Record<string, { icon: string; color: string; des
     Bandwidth: { icon: "⚡", color: "text-primary", description: "Energy to play cards each turn" },
     Runway: { icon: "💰", color: "text-primary", description: "Your health - reach $0 and you fail" },
     Complexity: { icon: "🎯", color: "text-danger", description: "Enemy health - reduce to 0 to defeat" },
-
     // Status effects (debuffs)
     Exposed: { icon: "🎯", color: "text-danger", description: "Takes 50% more Execute damage" },
     Drained: { icon: "😓", color: "text-purple-400", description: "Deals 25% less Execute damage" },
     Fragile: { icon: "🩹", color: "text-orange-400", description: "Gains 25% less Buffer" },
-
     // Card mechanics
     Archive: { icon: "📁", color: "text-gray-400", description: "Remove from deck for this combat only" },
     Fleeting: { icon: "👻", color: "text-blue-300", description: "If not played, Archives at end of turn" },
     Retain: { icon: "📌", color: "text-yellow-200", description: "Keep in hand instead of discarding" },
     Unplayable: { icon: "🚫", color: "text-gray-500", description: "Cannot be played, clogs your hand" },
-
     // Deck zones
     Backlog: { icon: "📚", color: "text-gray-300", description: "Your draw pile of undrawn cards" },
-
     // Power effects
     Momentum: { icon: "📊", color: "text-info", description: "Gain Velocity at the start of each turn" },
 };
-
 export const CARD_TYPE_CONFIG = {
     attack: {
         label: "Execution",
@@ -57,7 +48,6 @@ export const CARD_TYPE_CONFIG = {
         borderColor: "border-gray-500/50 hover:border-gray-500"
     }
 };
-
 export const GAME_DATA = {
     character: {
         id: "cto",
@@ -71,7 +61,7 @@ export const GAME_DATA = {
             capital: 99,
             mitigation: 0,
             statuses: { vulnerable: 0, weak: 0, strength: 0, dexterity: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, frail: 0, growth: 0, corruption: 0 }
-        } as CharacterStats
+        }
     },
     relics: {
         // --- STARTER RELIC ---
@@ -88,8 +78,7 @@ export const GAME_DATA = {
                 term: "Version Control",
                 definition: "A system that records changes to a file or set of files over time so that you can recall specific versions later."
             }
-        } as RelicData,
-
+        },
         // --- COMMON RELICS (8) ---
         sticky_note: {
             id: "relic_sticky_note",
@@ -101,7 +90,7 @@ export const GAME_DATA = {
             description: "At the start of combat, apply 1 Exposed to ALL enemies.",
             icon: "📝",
             tooltip: { term: "Focus", definition: "A simple tool for keeping priorities clear." }
-        } as RelicData,
+        },
         opening_move: {
             id: "relic_opening_move",
             character: "shared",
@@ -112,7 +101,7 @@ export const GAME_DATA = {
             description: "Your first attack each combat deals +8 Execution.",
             icon: "🎯",
             tooltip: { term: "First Mover", definition: "The advantage of being first to act." }
-        } as RelicData,
+        },
         safety_net: {
             id: "relic_safety_net",
             character: "shared",
@@ -123,7 +112,7 @@ export const GAME_DATA = {
             description: "Start each combat with 10 Buffer.",
             icon: "🛡️",
             tooltip: { term: "Preparation", definition: "Having backup plans ready." }
-        } as RelicData,
+        },
         fresh_eyes: {
             id: "relic_fresh_eyes",
             character: "shared",
@@ -134,7 +123,7 @@ export const GAME_DATA = {
             description: "Gain +1 Velocity.",
             icon: "👀",
             tooltip: { term: "Perspective", definition: "New viewpoints reveal hidden solutions." }
-        } as RelicData,
+        },
         fresh_start: {
             id: "relic_fresh_start",
             character: "shared",
@@ -145,7 +134,7 @@ export const GAME_DATA = {
             description: "Gain +1 Bandwidth on the first turn of combat.",
             icon: "⚡",
             tooltip: { term: "New Beginnings", definition: "Extra energy when starting fresh." }
-        } as RelicData,
+        },
         fallback_position: {
             id: "relic_fallback_position",
             character: "shared",
@@ -156,7 +145,7 @@ export const GAME_DATA = {
             description: "If you end your turn with 0 Buffer, gain 6.",
             icon: "🏠",
             tooltip: { term: "Safety", definition: "Automatic protection when exposed." }
-        } as RelicData,
+        },
         thick_skin: {
             id: "relic_thick_skin",
             character: "shared",
@@ -167,7 +156,7 @@ export const GAME_DATA = {
             description: "When you take Runway damage, deal 3 back to the attacker.",
             icon: "🦔",
             tooltip: { term: "Resilience", definition: "Pushing back against setbacks." }
-        } as RelicData,
+        },
         smart_money: {
             id: "relic_smart_money",
             character: "shared",
@@ -178,8 +167,7 @@ export const GAME_DATA = {
             description: "Gain +$8k whenever you receive a card reward.",
             icon: "💰",
             tooltip: { term: "Investment", definition: "Those who believe in you multiply your gains." }
-        } as RelicData,
-
+        },
         // --- UNCOMMON RELICS (6) ---
         momentum: {
             id: "relic_momentum",
@@ -191,7 +179,7 @@ export const GAME_DATA = {
             description: "Every time you play 3 Attacks in a turn, gain +1 Velocity.",
             icon: "🚀",
             tooltip: { term: "Acceleration", definition: "Building speed compounds over time." }
-        } as RelicData,
+        },
         quick_learner: {
             id: "relic_quick_learner",
             character: "shared",
@@ -202,7 +190,7 @@ export const GAME_DATA = {
             description: "Every time you play 3 Attacks in a turn, gain +1 Dexterity.",
             icon: "📚",
             tooltip: { term: "Adaptation", definition: "Learning fast improves your defenses." }
-        } as RelicData,
+        },
         second_wind: {
             id: "relic_second_wind",
             character: "shared",
@@ -213,7 +201,7 @@ export const GAME_DATA = {
             description: "If your Runway is ≤50% after combat, heal 12.",
             icon: "💨",
             tooltip: { term: "Recovery", definition: "The ability to bounce back from near-failure." }
-        } as RelicData,
+        },
         force_multiplier: {
             id: "relic_force_multiplier",
             character: "shared",
@@ -224,7 +212,7 @@ export const GAME_DATA = {
             description: "When an enemy dies, gain 1 Bandwidth and draw 1 card.",
             icon: "🤝",
             tooltip: { term: "Leverage", definition: "Victories snowball with the right approach." }
-        } as RelicData,
+        },
         focus_mode: {
             id: "relic_focus_mode",
             character: "shared",
@@ -235,7 +223,7 @@ export const GAME_DATA = {
             description: "Every time you play 3 Attacks in a turn, gain 4 Buffer.",
             icon: "🎯",
             tooltip: { term: "Concentration", definition: "Focus creates protection." }
-        } as RelicData,
+        },
         secret_weapon: {
             id: "relic_secret_weapon",
             character: "shared",
@@ -246,8 +234,7 @@ export const GAME_DATA = {
             description: "Choose a skill card. Start each combat with it in hand.",
             icon: "🃏",
             tooltip: { term: "Reliability", definition: "Your go-to tool, always ready." }
-        } as RelicData,
-
+        },
         // --- BOSS RELICS (6) ---
         pivoting_power: {
             id: "relic_pivoting_power",
@@ -259,7 +246,7 @@ export const GAME_DATA = {
             description: "Draw 2 extra cards per turn. Card costs are randomized (0-3).",
             icon: "🔀",
             tooltip: { term: "Chaos", definition: "Changing direction opens options but adds uncertainty." }
-        } as RelicData,
+        },
         memory_bank: {
             id: "relic_memory_bank",
             character: "shared",
@@ -270,7 +257,7 @@ export const GAME_DATA = {
             description: "Cards are not discarded at the end of your turn.",
             icon: "🧠",
             tooltip: { term: "Retention", definition: "Saving resources for the right moment." }
-        } as RelicData,
+        },
         rate_limiter: {
             id: "relic_rate_limiter",
             character: "shared",
@@ -281,7 +268,7 @@ export const GAME_DATA = {
             description: "+1 Bandwidth per turn. You can only play 6 cards per turn.",
             icon: "⏱️",
             tooltip: { term: "Focus", definition: "Focus over frenzy - quality over quantity." }
-        } as RelicData,
+        },
         cutting_corners: {
             id: "relic_cutting_corners",
             character: "shared",
@@ -292,7 +279,7 @@ export const GAME_DATA = {
             description: "+1 Bandwidth per turn. Add 2 Bug cards to your deck.",
             icon: "✂️",
             tooltip: { term: "Tradeoff", definition: "Short-term gains with long-term costs." }
-        } as RelicData,
+        },
         no_rest_for_the_bold: {
             id: "relic_no_rest_for_bold",
             character: "shared",
@@ -303,7 +290,7 @@ export const GAME_DATA = {
             description: "+1 Bandwidth per turn. You cannot rest at Retrospective nodes.",
             icon: "🌙",
             tooltip: { term: "Hustle", definition: "The grind never stops for those who want to win." }
-        } as RelicData,
+        },
         aggressive_growth: {
             id: "relic_aggressive_growth",
             character: "shared",
@@ -314,8 +301,7 @@ export const GAME_DATA = {
             description: "+1 Bandwidth per turn. Enemies start combat with +1 Velocity.",
             icon: "📈",
             tooltip: { term: "Risk", definition: "Moving fast, but facing tougher opposition." }
-        } as RelicData,
-
+        },
         // --- EXISTING RARE (keep for compatibility) ---
         coffee_drip: {
             id: "relic_coffee_drip",
@@ -330,12 +316,10 @@ export const GAME_DATA = {
                 term: "Caffeine",
                 definition: "A central nervous system stimulant of the methylxanthine class."
             }
-        } as RelicData,
-
+        },
         // ==============================================
         // CTO-EXCLUSIVE RELICS (Ironclad equivalent)
         // ==============================================
-
         // --- CTO COMMON (Red Skull equivalent) ---
         crunch_mode: {
             id: "relic_crunch_mode",
@@ -347,8 +331,7 @@ export const GAME_DATA = {
             description: "While your Runway is ≤50%, gain +3 Velocity.",
             icon: "🔥",
             tooltip: { term: "Crunch", definition: "When the deadline looms, productivity spikes." }
-        } as RelicData,
-
+        },
         // --- CTO UNCOMMON (Paper Phrog equivalent) ---
         growth_mindset: {
             id: "relic_growth_mindset",
@@ -360,8 +343,7 @@ export const GAME_DATA = {
             description: "Exposed enemies take 75% more damage instead of 50%.",
             icon: "🌱",
             tooltip: { term: "Iteration", definition: "Every weakness is an opportunity to learn." }
-        } as RelicData,
-
+        },
         // --- CTO UNCOMMON (Self-Forming Clay equivalent) ---
         antifragile: {
             id: "relic_antifragile",
@@ -373,8 +355,7 @@ export const GAME_DATA = {
             description: "Whenever you lose Runway, gain 3 Buffer next turn.",
             icon: "💎",
             tooltip: { term: "Antifragile", definition: "Systems that grow stronger under stress." }
-        } as RelicData,
-
+        },
         // --- CTO RARE (Champion Belt equivalent) ---
         pressure_cooker: {
             id: "relic_pressure_cooker",
@@ -386,8 +367,7 @@ export const GAME_DATA = {
             description: "Whenever you apply Exposed, also apply 1 Drained.",
             icon: "🫕",
             tooltip: { term: "Pressure", definition: "High stakes bring out flaws in everyone." }
-        } as RelicData,
-
+        },
         // --- CTO RARE (Charon's Ashes equivalent) ---
         phoenix_protocol: {
             id: "relic_phoenix_protocol",
@@ -399,8 +379,7 @@ export const GAME_DATA = {
             description: "Whenever you Archive a card, deal 3 damage to ALL enemies.",
             icon: "🔥",
             tooltip: { term: "Rebirth", definition: "From deprecated code, new value emerges." }
-        } as RelicData,
-
+        },
         // --- CTO RARE (Magic Flower equivalent) ---
         wellness_program: {
             id: "relic_wellness_program",
@@ -412,8 +391,7 @@ export const GAME_DATA = {
             description: "Healing is 50% more effective during combat.",
             icon: "🧘",
             tooltip: { term: "Wellbeing", definition: "Invest in your team's health for better output." }
-        } as RelicData,
-
+        },
         // --- CTO BOSS (Black Blood equivalent - replaces Git Repository) ---
         unicorn_status: {
             id: "relic_unicorn_status",
@@ -425,8 +403,7 @@ export const GAME_DATA = {
             description: "At the end of combat, heal 12 Runway. (Replaces Git Repository)",
             icon: "🦄",
             tooltip: { term: "Unicorn", definition: "A startup valued at $1B+. Legendary status." }
-        } as RelicData,
-
+        },
         // --- CTO BOSS (Runic Cube equivalent) ---
         data_driven: {
             id: "relic_data_driven",
@@ -438,28 +415,25 @@ export const GAME_DATA = {
             description: "Whenever you lose Runway, draw 1 card.",
             icon: "📊",
             tooltip: { term: "Analytics", definition: "Pain points reveal what needs attention." }
-        } as RelicData,
-
+        },
         // --- CTO SHOP (Brimstone equivalent) ---
         market_dominance: {
             id: "relic_market_dominance",
             character: "cto",
             name: "Market Dominance",
-            rarity: "uncommon",  // Shop relics are typically uncommon rarity
+            rarity: "uncommon", // Shop relics are typically uncommon rarity
             trigger: "turn_start",
             effect: { type: "strength_both", value: 2, enemy_strength: 1 },
             description: "At the start of your turn, gain 2 Velocity. Enemies also gain 1 Velocity.",
             icon: "👑",
             tooltip: { term: "Dominance", definition: "Leading the market attracts stronger competition." }
-        } as RelicData
+        }
     },
-
     // ==============================================
     // POTIONS - Quick Resources (1:1 STS mapping)
     // ==============================================
     potions: {
         // === COMMON POTIONS (65% drop rate) ===
-
         angel_check: {
             id: 'potion_angel_check',
             name: 'Angel Check',
@@ -471,8 +445,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Angel Investment', definition: 'A quick capital injection to accelerate your attack.' },
             effects: [{ type: 'damage', value: 20 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         emergency_fund: {
             id: 'potion_emergency_fund',
             name: 'Emergency Fund',
@@ -484,8 +457,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Reserve Capital', definition: 'Cash set aside for unexpected challenges.' },
             effects: [{ type: 'block', value: 12 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         sprint_boost: {
             id: 'potion_sprint_boost',
             name: 'Sprint Boost',
@@ -497,8 +469,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Sprint', definition: 'A focused period of rapid execution.' },
             effects: [{ type: 'draw', value: 3 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         talent_surge: {
             id: 'potion_talent_surge',
             name: 'Talent Surge',
@@ -510,8 +481,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Talent', definition: 'Great people make great products.' },
             effects: [{ type: 'gain_strength', value: 2 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         process_upgrade: {
             id: 'potion_process_upgrade',
             name: 'Process Upgrade',
@@ -523,8 +493,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Systems', definition: 'Better processes protect the team.' },
             effects: [{ type: 'gain_dexterity', value: 2 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         espresso_shot: {
             id: 'potion_espresso_shot',
             name: 'Espresso Shot',
@@ -536,8 +505,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Caffeine', definition: 'Fuel for the all-nighter.' },
             effects: [{ type: 'gain_energy', value: 2 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         pr_blast: {
             id: 'potion_pr_blast',
             name: 'PR Blast',
@@ -549,8 +517,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Press Release', definition: 'Broadcast your message to everyone.' },
             effects: [{ type: 'damage_all', value: 10 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         fud_campaign: {
             id: 'potion_fud_campaign',
             name: 'FUD Campaign',
@@ -562,8 +529,7 @@ export const GAME_DATA = {
             tooltip: { term: 'FUD', definition: 'Fear, Uncertainty, and Doubt — used against competitors.' },
             effects: [{ type: 'apply_vulnerable', value: 3 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         bad_press: {
             id: 'potion_bad_press',
             name: 'Bad Press',
@@ -575,8 +541,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Negative Coverage', definition: 'Bad publicity weakens even strong rivals.' },
             effects: [{ type: 'apply_weak', value: 3 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         adrenaline_rush: {
             id: 'potion_adrenaline_rush',
             name: 'Adrenaline Rush',
@@ -588,8 +553,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Adrenaline', definition: 'Temporary burst of power under pressure.' },
             effects: [{ type: 'temporary_strength', value: 5, duration: 1 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         agile_sprint: {
             id: 'potion_agile_sprint',
             name: 'Agile Sprint',
@@ -601,8 +565,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Agile', definition: 'Rapid iteration with temporary focus.' },
             effects: [{ type: 'temporary_dexterity', value: 5, duration: 1 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         pitch_deck: {
             id: 'potion_pitch_deck',
             name: 'Pitch Deck',
@@ -614,8 +577,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Pitch Deck', definition: 'Ready-made execution plans for investors.' },
             effects: [{ type: 'add_random_attack', value: 1 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         playbook: {
             id: 'potion_playbook',
             name: 'Playbook',
@@ -627,8 +589,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Playbook', definition: 'Tactical options on demand.' },
             effects: [{ type: 'add_random_skill', value: 1 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         strategy_brief: {
             id: 'potion_strategy_brief',
             name: 'Strategy Brief',
@@ -640,8 +601,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Strategy', definition: 'Long-term advantages from well-planned moves.' },
             effects: [{ type: 'add_random_power', value: 1 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         wild_card: {
             id: 'potion_wild_card',
             name: 'Wild Card',
@@ -653,8 +613,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Wild Card', definition: 'Unconventional tactics from outside the playbook.' },
             effects: [{ type: 'add_random_colorless', value: 1 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         team_offsite: {
             id: 'potion_team_offsite',
             name: 'Team Offsite',
@@ -666,8 +625,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Offsite', definition: 'Team retreat that enhances capabilities.' },
             effects: [{ type: 'upgrade_hand', value: 1 }],
             sacredBarkAffected: false
-        } as PotionData,
-
+        },
         // CTO-specific Common
         founder_sacrifice: {
             id: 'potion_founder_sacrifice',
@@ -680,10 +638,8 @@ export const GAME_DATA = {
             tooltip: { term: 'Founder Sacrifice', definition: 'Putting personal resources back into the company.' },
             effects: [{ type: 'heal_percent', value: 20 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         // === UNCOMMON POTIONS (25% drop rate) ===
-
         term_sheet: {
             id: 'potion_term_sheet',
             name: 'Term Sheet',
@@ -695,8 +651,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Term Sheet', definition: 'Legal protection from unfavorable terms.' },
             effects: [{ type: 'gain_artifact', value: 1 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         insurance_policy: {
             id: 'potion_insurance_policy',
             name: 'Insurance Policy',
@@ -708,8 +663,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Insurance', definition: 'Ongoing protection against future damage.' },
             effects: [{ type: 'gain_plated_armor', value: 4 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         recurring_revenue: {
             id: 'potion_recurring_revenue',
             name: 'Recurring Revenue',
@@ -721,8 +675,7 @@ export const GAME_DATA = {
             tooltip: { term: 'MRR', definition: 'Monthly Recurring Revenue heals your runway over time.' },
             effects: [{ type: 'gain_regen', value: 5 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         troll_toll: {
             id: 'potion_troll_toll',
             name: 'Troll Toll',
@@ -734,8 +687,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Patent Troll', definition: 'Punish anyone who attacks.' },
             effects: [{ type: 'gain_thorns', value: 3 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         version_restore: {
             id: 'potion_version_restore',
             name: 'Version Restore',
@@ -747,8 +699,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Restore', definition: 'Retrieve past work from version history.' },
             effects: [{ type: 'return_from_discard', value: 1 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         pivot_juice: {
             id: 'potion_pivot_juice',
             name: 'Pivot Juice',
@@ -760,8 +711,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Pivot', definition: 'Swap your current strategy for something better.' },
             effects: [{ type: 'gambler', value: 0 }],
             sacredBarkAffected: false
-        } as PotionData,
-
+        },
         rapid_prototype: {
             id: 'potion_rapid_prototype',
             name: 'Rapid Prototype',
@@ -773,8 +723,7 @@ export const GAME_DATA = {
             tooltip: { term: 'MVP', definition: 'Minimum Viable Product — ship fast and iterate.' },
             effects: [{ type: 'play_top_cards', value: 3 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         clone_script: {
             id: 'potion_clone_script',
             name: 'Clone Script',
@@ -786,8 +735,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Clone', definition: 'Duplicate your best move for double impact.' },
             effects: [{ type: 'duplicate_next', value: 1 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         // CTO-specific Uncommon
         spring_cleaning: {
             id: 'potion_spring_cleaning',
@@ -800,10 +748,8 @@ export const GAME_DATA = {
             tooltip: { term: 'Refactor', definition: 'Clear out the cruft and technical debt.' },
             effects: [{ type: 'exhaust_choice', value: 0 }],
             sacredBarkAffected: false
-        } as PotionData,
-
+        },
         // === RARE POTIONS (10% drop rate) ===
-
         viral_coefficient: {
             id: 'potion_viral_coefficient',
             name: 'Viral Coefficient',
@@ -815,8 +761,7 @@ export const GAME_DATA = {
             tooltip: { term: 'K-Factor', definition: 'Compounding growth that builds on itself each turn.' },
             effects: [{ type: 'gain_ritual', value: 1 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         equity_grant: {
             id: 'potion_equity_grant',
             name: 'Equity Grant',
@@ -828,8 +773,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Equity', definition: 'Permanent value increase in the company.' },
             effects: [{ type: 'gain_max_hp', value: 5 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         backup_plan: {
             id: 'potion_backup_plan',
             name: 'Backup Plan',
@@ -841,8 +785,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Contingency', definition: 'Emergency failsafe when everything goes wrong.' },
             effects: [{ type: 'fairy', value: 30 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         exit_strategy: {
             id: 'potion_exit_strategy',
             name: 'Exit Strategy',
@@ -854,8 +797,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Exit', definition: 'Strategic retreat to fight another day.' },
             effects: [{ type: 'escape', value: 1 }],
             sacredBarkAffected: false
-        } as PotionData,
-
+        },
         market_chaos: {
             id: 'potion_market_chaos',
             name: 'Market Chaos',
@@ -867,8 +809,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Volatility', definition: 'Embrace chaos for potential gains.' },
             effects: [{ type: 'snecko', value: 5 }],
             sacredBarkAffected: true
-        } as PotionData,
-
+        },
         venture_round: {
             id: 'potion_venture_round',
             name: 'Venture Round',
@@ -880,8 +821,7 @@ export const GAME_DATA = {
             tooltip: { term: 'Series Funding', definition: 'Massive funding haul fills your reserves.' },
             effects: [{ type: 'fill_potions', value: 1 }],
             sacredBarkAffected: false
-        } as PotionData,
-
+        },
         // CTO-specific Rare
         devops_pipeline: {
             id: 'potion_devops_pipeline',
@@ -894,9 +834,8 @@ export const GAME_DATA = {
             tooltip: { term: 'CI/CD', definition: 'Automated deployment provides ongoing protection.' },
             effects: [{ type: 'gain_metallicize', value: 6 }],
             sacredBarkAffected: true
-        } as PotionData
+        }
     },
-
     cards: {
         // --- BASIC ---
         cto_commit: {
@@ -911,7 +850,7 @@ export const GAME_DATA = {
             icon: "🚀",
             keywords: [],
             tooltip: { term: "Commit", definition: "Shipping small code chunks. Not pretty, but progress." }
-        } as CardData,
+        },
         cto_rollback: {
             id: "cto_rollback",
             character: "cto",
@@ -924,7 +863,7 @@ export const GAME_DATA = {
             icon: "⏪",
             keywords: [],
             tooltip: { term: "Rollback", definition: "Reverting to a stable state. Prevents the crash." }
-        } as CardData,
+        },
         cto_hotfix: {
             id: "cto_hotfix",
             character: "cto",
@@ -940,10 +879,9 @@ export const GAME_DATA = {
             icon: "🔥",
             keywords: [],
             tooltip: { term: "Hotfix", definition: "A messy fix that works. Leaves the system exposed." }
-        } as CardData,
-
+        },
         // --- COMMON ---
-        cto_quick_fix: { // Anger
+        cto_quick_fix: {
             id: "cto_quick_fix",
             character: "cto",
             name: "Quick Fix",
@@ -958,8 +896,8 @@ export const GAME_DATA = {
             icon: "🩹",
             keywords: [],
             tooltip: { term: "Quick Fix", definition: "A temporary solution that gets the job done but might need revisiting." }
-        } as CardData,
-        cto_brute_force: { // Heavy Blade
+        },
+        cto_brute_force: {
             id: "cto_brute_force",
             character: "cto",
             name: "Brute Force",
@@ -973,8 +911,8 @@ export const GAME_DATA = {
             icon: "🔨",
             keywords: [],
             tooltip: { term: "Brute Force", definition: "Solving a problem through raw computational power or effort, ignoring elegance." }
-        } as CardData,
-        cto_sprint_planning: { // Pommel Strike
+        },
+        cto_sprint_planning: {
             id: "cto_sprint_planning",
             character: "cto",
             name: "Sprint Plan",
@@ -989,8 +927,8 @@ export const GAME_DATA = {
             icon: "📅",
             keywords: [],
             tooltip: { term: "Sprint Planning", definition: "Setting goals for the next iteration. Clears the path for execution." }
-        } as CardData,
-        cto_risk_mitigation: { // Clothesline
+        },
+        cto_risk_mitigation: {
             id: "cto_risk_mitigation",
             character: "cto",
             name: "Risk Mitigation",
@@ -1005,8 +943,8 @@ export const GAME_DATA = {
             icon: "👔",
             keywords: [],
             tooltip: { term: "Risk Mitigation", definition: "Strategies to reduce the impact of potential threats." }
-        } as CardData,
-        cto_refactor: { // True Grit
+        },
+        cto_refactor: {
             id: "cto_refactor",
             character: "cto",
             name: "Refactor",
@@ -1021,8 +959,8 @@ export const GAME_DATA = {
             icon: "♻️",
             keywords: [],
             tooltip: { term: "Refactor", definition: "Restructuring code without changing its external behavior. Improves maintainability." }
-        } as CardData,
-        cto_ship_it: { // Clash
+        },
+        cto_ship_it: {
             id: "cto_ship_it",
             character: "cto",
             name: "Ship It!",
@@ -1037,8 +975,8 @@ export const GAME_DATA = {
             icon: "🚢",
             keywords: [],
             tooltip: { term: "Ship It!", definition: "Deploying to production. The ultimate goal of the sprint." }
-        } as CardData,
-        cto_tooling: { // Armaments
+        },
+        cto_tooling: {
             id: "cto_tooling",
             character: "cto",
             name: "Tooling",
@@ -1053,8 +991,8 @@ export const GAME_DATA = {
             icon: "🛠️",
             keywords: [],
             tooltip: { term: "Tooling", definition: "Investing in developer experience and infrastructure. Makes everything better." }
-        } as CardData,
-        cto_leverage: { // Body Slam
+        },
+        cto_leverage: {
             id: "cto_leverage",
             character: "cto",
             name: "Leverage",
@@ -1068,8 +1006,8 @@ export const GAME_DATA = {
             icon: "🏗️",
             keywords: [],
             tooltip: { term: "Leverage", definition: "Using existing assets to achieve outsized results." }
-        } as CardData,
-        cto_batch_deploy: { // Cleave
+        },
+        cto_batch_deploy: {
             id: "cto_batch_deploy",
             character: "cto",
             name: "Batch Deploy",
@@ -1083,8 +1021,8 @@ export const GAME_DATA = {
             icon: "📦",
             keywords: [],
             tooltip: { term: "Batch Deploy", definition: "Releasing multiple changes at once. Efficient but risky." }
-        } as CardData,
-        cto_cherry_pick: { // Headbutt
+        },
+        cto_cherry_pick: {
             id: "cto_cherry_pick",
             character: "cto",
             name: "Cherry Pick",
@@ -1099,8 +1037,8 @@ export const GAME_DATA = {
             icon: "🍒",
             keywords: [],
             tooltip: { term: "Cherry Pick", definition: "Selecting specific commits to apply to another branch." }
-        } as CardData,
-        cto_dual_track: { // Iron Wave
+        },
+        cto_dual_track: {
             id: "cto_dual_track",
             character: "cto",
             name: "Dual Track",
@@ -1115,8 +1053,8 @@ export const GAME_DATA = {
             icon: "🛤️",
             keywords: [],
             tooltip: { term: "Dual Track", definition: "Discovery and Delivery happening in parallel." }
-        } as CardData,
-        cto_compounding_commits: { // Perfected Strike
+        },
+        cto_compounding_commits: {
             id: "cto_compounding_commits",
             character: "cto",
             name: "Compounding",
@@ -1130,8 +1068,8 @@ export const GAME_DATA = {
             icon: "📚",
             keywords: [],
             tooltip: { term: "Compounding", definition: "Small improvements adding up to massive value over time." }
-        } as CardData,
-        cto_yolo_deploy: { // Reckless Charge
+        },
+        cto_yolo_deploy: {
             id: "cto_yolo_deploy",
             character: "cto",
             name: "YOLO Deploy",
@@ -1146,8 +1084,8 @@ export const GAME_DATA = {
             icon: "🤠",
             keywords: [],
             tooltip: { term: "YOLO Deploy", definition: "Deploying on Friday at 5pm without tests. What could go wrong?" }
-        } as CardData,
-        cto_shotgun_debug: { // Sword Boomerang
+        },
+        cto_shotgun_debug: {
             id: "cto_shotgun_debug",
             character: "cto",
             name: "Shotgun Debug",
@@ -1163,8 +1101,8 @@ export const GAME_DATA = {
             icon: "🔫",
             keywords: [],
             tooltip: { term: "Shotgun Debugging", definition: "Changing random things until it works. Not recommended." }
-        } as CardData,
-        cto_pair_programming: { // Twin Strike
+        },
+        cto_pair_programming: {
             id: "cto_pair_programming",
             character: "cto",
             name: "Pair Prog",
@@ -1179,8 +1117,8 @@ export const GAME_DATA = {
             icon: "👥",
             keywords: [],
             tooltip: { term: "Pair Programming", definition: "Two developers, one keyboard. Higher quality, shared context." }
-        } as CardData,
-        cto_tech_shortcut: { // Wild Strike
+        },
+        cto_tech_shortcut: {
             id: "cto_tech_shortcut",
             character: "cto",
             name: "Tech Shortcut",
@@ -1195,10 +1133,9 @@ export const GAME_DATA = {
             icon: "✂️",
             keywords: [],
             tooltip: { term: "Technical Shortcut", definition: "Quick solution that creates debt. Fast now, painful later." }
-        } as CardData,
-
+        },
         // --- UNCOMMON ---
-        cto_root_cause: { // Uppercut
+        cto_root_cause: {
             id: "cto_root_cause",
             character: "cto",
             name: "Root Cause",
@@ -1214,8 +1151,8 @@ export const GAME_DATA = {
             icon: "🔍",
             keywords: [],
             tooltip: { term: "Root Cause Analysis", definition: "Finding the fundamental reason for a problem to prevent recurrence." }
-        } as CardData,
-        cto_troubleshooting: { // Evolve
+        },
+        cto_troubleshooting: {
             id: "cto_troubleshooting",
             character: "cto",
             name: "Troubleshoot",
@@ -1229,8 +1166,8 @@ export const GAME_DATA = {
             icon: "💡",
             keywords: [],
             tooltip: { term: "Troubleshooting", definition: "Systematic search for the source of a problem." }
-        } as CardData,
-        cto_lean_ops: { // Feel No Pain
+        },
+        cto_lean_ops: {
             id: "cto_lean_ops",
             character: "cto",
             name: "Lean Ops",
@@ -1244,8 +1181,8 @@ export const GAME_DATA = {
             icon: "🧘",
             keywords: [],
             tooltip: { term: "Lean Operations", definition: "Maximizing value while minimizing waste." }
-        } as CardData,
-        cto_caching: { // Metallicize
+        },
+        cto_caching: {
             id: "cto_caching",
             character: "cto",
             name: "Caching",
@@ -1259,8 +1196,8 @@ export const GAME_DATA = {
             icon: "💾",
             keywords: [],
             tooltip: { term: "Caching", definition: "Storing data in a temporary storage area for faster access." }
-        } as CardData,
-        cto_code_review: { // Inflame
+        },
+        cto_code_review: {
             id: "cto_code_review",
             character: "cto",
             name: "Code Review",
@@ -1272,8 +1209,8 @@ export const GAME_DATA = {
             icon: "👓",
             keywords: [],
             tooltip: { term: "Code Review", definition: "Systematic examination of computer source code." }
-        } as CardData,
-        cto_resource_allocation: { // Spot Weakness
+        },
+        cto_resource_allocation: {
             id: "cto_resource_allocation",
             character: "cto",
             name: "Resource Alloc",
@@ -1287,8 +1224,8 @@ export const GAME_DATA = {
             icon: "🎯",
             keywords: [],
             tooltip: { term: "Resource Allocation", definition: "Assigning available resources to the most critical tasks." }
-        } as CardData,
-        cto_flow_state: { // Battle Trance
+        },
+        cto_flow_state: {
             id: "cto_flow_state",
             character: "cto",
             name: "Flow State",
@@ -1303,8 +1240,8 @@ export const GAME_DATA = {
             icon: "🌊",
             keywords: [],
             tooltip: { term: "Flow State", definition: "A mental state of complete immersion and focus." }
-        } as CardData,
-        cto_market_window: { // Carnage
+        },
+        cto_market_window: {
             id: "cto_market_window",
             character: "cto",
             name: "Market Window",
@@ -1319,8 +1256,8 @@ export const GAME_DATA = {
             icon: "⏱️",
             keywords: ["fleeting"],
             tooltip: { term: "Market Window", definition: "A limited time opportunity to launch a product." }
-        } as CardData,
-        cto_talent_poach: { // Disarm
+        },
+        cto_talent_poach: {
             id: "cto_talent_poach",
             character: "cto",
             name: "Talent Poach",
@@ -1335,8 +1272,8 @@ export const GAME_DATA = {
             icon: "🎣",
             keywords: ["exhaust"],
             tooltip: { term: "Talent Poaching", definition: "Hiring key employees from competitors to weaken them." }
-        } as CardData,
-        cto_viral_loop: { // Dropkick
+        },
+        cto_viral_loop: {
             id: "cto_viral_loop",
             character: "cto",
             name: "Viral Loop",
@@ -1351,8 +1288,8 @@ export const GAME_DATA = {
             icon: "➰",
             keywords: [],
             tooltip: { term: "Viral Loop", definition: "A mechanism that encourages users to invite others, creating exponential growth." }
-        } as CardData,
-        cto_firewall: { // Flame Barrier
+        },
+        cto_firewall: {
             id: "cto_firewall",
             character: "cto",
             name: "Firewall",
@@ -1367,8 +1304,8 @@ export const GAME_DATA = {
             icon: "🔥🧱",
             keywords: [],
             tooltip: { term: "Firewall", definition: "A network security system that monitors and controls incoming and outgoing traffic." }
-        } as CardData,
-        cto_hackathon: { // Pummel
+        },
+        cto_hackathon: {
             id: "cto_hackathon",
             character: "cto",
             name: "Hackathon",
@@ -1386,8 +1323,8 @@ export const GAME_DATA = {
             icon: "🍕",
             keywords: ["exhaust"],
             tooltip: { term: "Hackathon", definition: "An event where people engage in rapid collaborative engineering." }
-        } as CardData,
-        cto_antifragile: { // Rupture
+        },
+        cto_antifragile: {
             id: "cto_antifragile",
             character: "cto",
             name: "Antifragile",
@@ -1401,8 +1338,8 @@ export const GAME_DATA = {
             icon: "💪",
             keywords: [],
             tooltip: { term: "Antifragile", definition: "Systems that benefit from shocks, volatility, and stress." }
-        } as CardData,
-        cto_network_effects: { // Demon Form
+        },
+        cto_network_effects: {
             id: "cto_network_effects",
             character: "cto",
             name: "Network Effects",
@@ -1416,8 +1353,8 @@ export const GAME_DATA = {
             icon: "🕸️",
             keywords: [],
             tooltip: { term: "Network Effects", definition: "Expensive to build, but once running, your execution compounds infinitely." }
-        } as CardData,
-        cto_tech_debt: { // Corruption
+        },
+        cto_tech_debt: {
             id: "cto_tech_debt",
             character: "cto",
             name: "Tech Debt",
@@ -1431,8 +1368,8 @@ export const GAME_DATA = {
             icon: "💳",
             keywords: [],
             tooltip: { term: "Tech Debt", definition: "Move incredibly fast now, but you're burning infrastructure. Win before you run out." }
-        } as CardData,
-        cto_bridge_round: { // Seeing Red
+        },
+        cto_bridge_round: {
             id: "cto_bridge_round",
             character: "cto",
             name: "Bridge Round",
@@ -1447,8 +1384,8 @@ export const GAME_DATA = {
             icon: "🌉",
             keywords: ["exhaust"],
             tooltip: { term: "Bridge Round", definition: "Short-term funding to keep the company afloat until the next major round." }
-        } as CardData,
-        cto_market_disruption: { // Shockwave
+        },
+        cto_market_disruption: {
             id: "cto_market_disruption",
             character: "cto",
             name: "Disruption",
@@ -1464,8 +1401,8 @@ export const GAME_DATA = {
             icon: "💥",
             keywords: ["exhaust"],
             tooltip: { term: "Market Disruption", definition: "A new market innovation that displaces established market-leading firms." }
-        } as CardData,
-        cto_blitzscaling: { // Whirlwind
+        },
+        cto_blitzscaling: {
             id: "cto_blitzscaling",
             character: "cto",
             name: "Blitzscaling",
@@ -1479,10 +1416,9 @@ export const GAME_DATA = {
             icon: "🌪️",
             keywords: [],
             tooltip: { term: "Blitzscaling", definition: "Prioritizing speed over efficiency in an environment of uncertainty." }
-        } as CardData,
-
+        },
         // --- STATUS ---
-        status_legacy_code: { // Wound
+        status_legacy_code: {
             id: "status_legacy_code",
             character: "status",
             name: "Legacy Code",
@@ -1496,8 +1432,8 @@ export const GAME_DATA = {
             icon: "🏚️",
             keywords: ["retain", "unplayable"],
             tooltip: { term: "Legacy Code", definition: "Code inherited from someone else or an older version of the software." }
-        } as CardData,
-        status_bug: { // Dazed
+        },
+        status_bug: {
             id: "status_bug",
             character: "status",
             name: "Bug",
@@ -1511,8 +1447,8 @@ export const GAME_DATA = {
             icon: "🐛",
             keywords: ["fleeting", "unplayable"],
             tooltip: { term: "Software Bug", definition: "An error, flaw or fault in a computer program or system." }
-        } as CardData,
-        status_burnout: { // Burn
+        },
+        status_burnout: {
             id: "status_burnout",
             character: "status",
             name: "Burnout",
@@ -1527,8 +1463,8 @@ export const GAME_DATA = {
             icon: "🔥",
             keywords: ["unplayable"],
             tooltip: { term: "Burnout", definition: "State of emotional, physical, and mental exhaustion caused by excessive and prolonged stress." }
-        } as CardData,
-        status_scope_creep: { // Slimed
+        },
+        status_scope_creep: {
             id: "status_scope_creep",
             character: "status",
             name: "Scope Creep",
@@ -1541,8 +1477,8 @@ export const GAME_DATA = {
             icon: "🐙",
             keywords: ["exhaust"],
             tooltip: { term: "Scope Creep", definition: "Uncontrolled changes or continuous growth in a project's scope." }
-        } as CardData,
-        status_context_switch: { // Void
+        },
+        status_context_switch: {
             id: "status_context_switch",
             character: "status",
             name: "Context Switch",
@@ -1558,7 +1494,7 @@ export const GAME_DATA = {
             icon: "🔀",
             keywords: ["fleeting", "unplayable", "exhaust"],
             tooltip: { term: "Context Switching", definition: "Storing and restoring the state of a process so that execution can be resumed from the same point later." }
-        } as CardData,
+        },
         card_bug: {
             id: "card_bug",
             character: "status",
@@ -1573,11 +1509,11 @@ export const GAME_DATA = {
             icon: "🐛",
             keywords: ["fleeting"],
             tooltip: { term: "Bug", definition: "A minor issue. Unplayable. Fades away at end of turn." }
-        } as CardData
+        }
     },
     enemies: {
         // --- COMMON ---
-        fanboy: { // Cultist
+        fanboy: {
             id: "fanboy",
             name: "Feature Creep",
             act: 1,
@@ -1598,8 +1534,8 @@ export const GAME_DATA = {
                 capital: { min: 10, max: 15 },
                 card_reward: true
             }
-        } as EnemyData,
-        spaghetti_code: { // Jaw Worm
+        },
+        spaghetti_code: {
             id: "spaghetti_code",
             name: "The Copycat",
             act: 1,
@@ -1620,8 +1556,8 @@ export const GAME_DATA = {
                 capital: { min: 12, max: 18 },
                 card_reward: true
             }
-        } as EnemyData,
-        critical_bug: { // Louse Red
+        },
+        critical_bug: {
             id: "critical_bug",
             name: "The Doubter",
             act: 1,
@@ -1642,8 +1578,8 @@ export const GAME_DATA = {
                 capital: { min: 5, max: 10 },
                 card_reward: true
             }
-        } as EnemyData,
-        minor_bug: { // Louse Green
+        },
+        minor_bug: {
             id: "minor_bug",
             name: "The Naysayer",
             act: 1,
@@ -1664,8 +1600,8 @@ export const GAME_DATA = {
                 capital: { min: 5, max: 10 },
                 card_reward: true
             }
-        } as EnemyData,
-        quick_hack: { // Acid Slime S
+        },
+        quick_hack: {
             id: "quick_hack",
             name: "The Shortcut Taker",
             act: 1,
@@ -1686,8 +1622,8 @@ export const GAME_DATA = {
                 capital: { min: 3, max: 7 },
                 card_reward: false
             }
-        } as EnemyData,
-        tech_debt: { // Acid Slime M
+        },
+        tech_debt: {
             id: "tech_debt",
             name: "The Procrastinator",
             act: 1,
@@ -1708,8 +1644,8 @@ export const GAME_DATA = {
                 capital: { min: 8, max: 12 },
                 card_reward: true
             }
-        } as EnemyData,
-        legacy_module: { // Acid Slime L
+        },
+        legacy_module: {
             id: "legacy_module",
             name: "The Old Guard",
             act: 1,
@@ -1730,8 +1666,8 @@ export const GAME_DATA = {
                 capital: { min: 15, max: 20 },
                 card_reward: true
             }
-        } as EnemyData,
-        hotfix: { // Spike Slime S
+        },
+        hotfix: {
             id: "hotfix",
             name: "The Gambler",
             act: 1,
@@ -1752,8 +1688,8 @@ export const GAME_DATA = {
                 capital: { min: 3, max: 7 },
                 card_reward: false
             }
-        } as EnemyData,
-        bad_merge: { // Spike Slime M
+        },
+        bad_merge: {
             id: "bad_merge",
             name: "The Gossip",
             act: 1,
@@ -1774,8 +1710,8 @@ export const GAME_DATA = {
                 capital: { min: 8, max: 12 },
                 card_reward: true
             }
-        } as EnemyData,
-        merge_conflict: { // Spike Slime L
+        },
+        merge_conflict: {
             id: "merge_conflict",
             name: "The Politician",
             act: 1,
@@ -1796,8 +1732,8 @@ export const GAME_DATA = {
                 capital: { min: 15, max: 20 },
                 card_reward: true
             }
-        } as EnemyData,
-        micromanager: { // Blue Slaver
+        },
+        micromanager: {
             id: "micromanager",
             name: "The Micromanager",
             act: 1,
@@ -1818,8 +1754,8 @@ export const GAME_DATA = {
                 capital: { min: 12, max: 18 },
                 card_reward: true
             }
-        } as EnemyData,
-        feature_pusher: { // Red Slaver
+        },
+        feature_pusher: {
             id: "feature_pusher",
             name: "The Dreamer",
             act: 1,
@@ -1840,8 +1776,8 @@ export const GAME_DATA = {
                 capital: { min: 12, max: 18 },
                 card_reward: true
             }
-        } as EnemyData,
-        headhunter: { // Looter
+        },
+        headhunter: {
             id: "headhunter",
             name: "The Poacher",
             act: 1,
@@ -1862,8 +1798,8 @@ export const GAME_DATA = {
                 capital: { min: 15, max: 25 },
                 card_reward: true
             }
-        } as EnemyData,
-        memory_leak: { // Fungi Beast
+        },
+        memory_leak: {
             id: "memory_leak",
             name: "The Energy Vampire",
             act: 1,
@@ -1884,10 +1820,9 @@ export const GAME_DATA = {
                 capital: { min: 8, max: 12 },
                 card_reward: true
             }
-        } as EnemyData,
-
+        },
         // --- ELITES ---
-        scope_creep: { // Gremlin Nob
+        scope_creep: {
             id: "scope_creep",
             name: "The Scope Creep",
             act: 1,
@@ -1908,8 +1843,8 @@ export const GAME_DATA = {
                 capital: { min: 25, max: 35 },
                 card_reward: true
             }
-        } as EnemyData,
-        over_engineer: { // Lagavulin
+        },
+        over_engineer: {
             id: "over_engineer",
             name: "The Deadline",
             act: 1,
@@ -1930,8 +1865,8 @@ export const GAME_DATA = {
                 capital: { min: 25, max: 35 },
                 card_reward: true
             }
-        } as EnemyData,
-        legacy_monolith: { // Sentry 1
+        },
+        legacy_monolith: {
             id: "legacy_monolith",
             name: "The Gatekeeper",
             act: 1,
@@ -1952,8 +1887,8 @@ export const GAME_DATA = {
                 capital: { min: 10, max: 15 },
                 card_reward: true
             }
-        } as EnemyData,
-        legacy_hack: { // Sentry 2
+        },
+        legacy_hack: {
             id: "legacy_hack",
             name: "The Critic",
             act: 1,
@@ -1974,8 +1909,8 @@ export const GAME_DATA = {
                 capital: { min: 10, max: 15 },
                 card_reward: false
             }
-        } as EnemyData,
-        legacy_patch: { // Sentry 3
+        },
+        legacy_patch: {
             id: "legacy_patch",
             name: "The Bureaucrat",
             act: 1,
@@ -1996,10 +1931,9 @@ export const GAME_DATA = {
                 capital: { min: 10, max: 15 },
                 card_reward: false
             }
-        } as EnemyData,
-
+        },
         // --- BOSSES ---
-        boss_the_pivot: { // The Guardian
+        boss_the_pivot: {
             id: "boss_the_pivot",
             name: "The Pivot",
             act: 1,
@@ -2020,8 +1954,8 @@ export const GAME_DATA = {
                 capital: { min: 100, max: 100 },
                 card_reward: true
             }
-        } as EnemyData,
-        boss_burn_rate: { // Hexaghost
+        },
+        boss_burn_rate: {
             id: "boss_burn_rate",
             name: "The Burn Rate",
             act: 1,
@@ -2042,8 +1976,8 @@ export const GAME_DATA = {
                 capital: { min: 100, max: 100 },
                 card_reward: true
             }
-        } as EnemyData,
-        boss_the_monolith: { // Slime Boss
+        },
+        boss_the_monolith: {
             id: "boss_the_monolith",
             name: "The Goliath",
             act: 1,
@@ -2064,10 +1998,9 @@ export const GAME_DATA = {
                 capital: { min: 100, max: 100 },
                 card_reward: true
             }
-        } as EnemyData
+        }
     }
 };
-
 // Status effect icons and labels for startup theme
 export const STATUS_CONFIG = {
     vulnerable: { icon: "🎯", label: "Exposed", description: "Takes 50% more Execution" },
@@ -2086,7 +2019,6 @@ export const STATUS_CONFIG = {
     malleable: { icon: "🍃", label: "Adaptive", description: "Gains {0}+ Buffer when attacked" },
     asleep: { icon: "😴", label: "Dormant", description: "Inactive until damaged" },
 };
-
 // Intent icons for enemy actions
 export const INTENT_ICONS = {
     attack: { icon: "⚔️", label: "Execution", color: "danger" },
@@ -2095,7 +2027,6 @@ export const INTENT_ICONS = {
     defend: { icon: "🛡️", label: "Fortify", color: "info" },
     unknown: { icon: "❓", label: "Planning", color: "gray-400" },
 };
-
 // Status card icons  
 export const STATUS_CARD_ICONS = {
     bug: "🐛",
@@ -2104,16 +2035,14 @@ export const STATUS_CARD_ICONS = {
     scope_creep: "🐙",
     context_switch: "🔀",
 };
-
 // Act 1 Encounter Templates
-export const ENCOUNTER_TEMPLATES: EncounterTemplate[] = [
+export const ENCOUNTER_TEMPLATES = [
     // Easy Pool (Floors 1-2) - "Day 1 Problems"
     { id: 'solo_fanboy', name: 'The Hype Man', enemies: [{ enemyId: 'fanboy', count: [1, 1] }], weight: 10, pool: 'easy' },
     { id: 'solo_spaghetti', name: 'The Copycat', enemies: [{ enemyId: 'spaghetti_code', count: [1, 1] }], weight: 10, pool: 'easy' },
     { id: 'bug_duo', name: 'The Naysayers', enemies: [{ enemyId: 'minor_bug', count: [2, 2] }], weight: 8, pool: 'easy' },
     { id: 'bug_trio', name: 'Crisis of Confidence', enemies: [{ enemyId: 'critical_bug', count: [1, 1] }, { enemyId: 'minor_bug', count: [1, 2] }], weight: 8, pool: 'easy' },
     { id: 'quick_patches', name: 'Corner Cutters', enemies: [{ enemyId: 'quick_hack', count: [2, 2] }], weight: 6, pool: 'easy' },
-
     // Hard Pool (Floors 3-13) - "Growth Pains"
     { id: 'tech_debt_solo', name: 'The Procrastinator', enemies: [{ enemyId: 'tech_debt', count: [1, 1] }], weight: 8, pool: 'hard' },
     { id: 'merge_hell', name: 'Office Politics', enemies: [{ enemyId: 'bad_merge', count: [1, 1] }, { enemyId: 'tech_debt', count: [1, 1] }], weight: 6, pool: 'hard' },
@@ -2123,9 +2052,8 @@ export const ENCOUNTER_TEMPLATES: EncounterTemplate[] = [
     { id: 'memory_leak', name: 'Energy Vampires', enemies: [{ enemyId: 'memory_leak', count: [1, 1] }, { enemyId: 'quick_hack', count: [1, 2] }], weight: 5, pool: 'hard' },
     { id: 'infestation', name: 'Mob of Doubters', enemies: [{ enemyId: 'minor_bug', count: [3, 4] }], weight: 4, pool: 'hard' },
 ];
-
 // Act 1 Events - "The Incubator"
-export const ACT1_EVENTS: EventData[] = [
+export const ACT1_EVENTS = [
     {
         id: 'angel_investor',
         name: 'The Angel Investor',
@@ -2553,31 +2481,26 @@ export const ACT1_EVENTS: EventData[] = [
         ]
     }
 ];
-
-
 // Map Generation Constants
 export const MAP_CONFIG = {
     FLOORS: 15,
     COLUMNS: 7,
     NUM_PATHS: 6,
-
     // Node type probabilities (floor 3-13)
     NODE_PROBABILITIES: {
-        problem: 45,      // Monster
-        elite: 8,         // Elite (floor 6+ only)
+        problem: 45, // Monster
+        elite: 8, // Elite (floor 6+ only)
         retrospective: 12, // Rest site
-        vendor: 5,        // Shop
-        opportunity: 22,  // Unknown (?)
-        treasure: 8       // Only at floor 8
+        vendor: 5, // Shop
+        opportunity: 22, // Unknown (?)
+        treasure: 8 // Only at floor 8
     },
-
     // Opportunity node distribution
     OPPORTUNITY_DISTRIBUTION: {
-        vendor: 25,   // Becomes shop
-        problem: 25,  // Becomes monster
-        event: 50     // Actual event
+        vendor: 25, // Becomes shop
+        problem: 25, // Becomes monster
+        event: 50 // Actual event
     },
-
     // Floor constraints
     CONSTRAINTS: {
         EASY_POOL_FLOORS: [1, 2],
