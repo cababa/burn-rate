@@ -79,6 +79,43 @@ export const drawCards = (currentDraw: CardData[], currentDiscard: CardData[], c
     return { drawn, newDraw, newDiscard };
 };
 
+/**
+ * Draw cards with Innate prioritization (for combat start only)
+ * Innate cards are guaranteed to be in the opening hand.
+ * StS behavior: Innate cards are drawn first, then remaining slots filled normally.
+ */
+export const drawCardsWithInnate = (deck: CardData[], count: number): { drawn: CardData[], newDraw: CardData[], newDiscard: CardData[] } => {
+    // Separate innate cards from the rest
+    const innateCards = deck.filter(c => c.innate);
+    const nonInnateCards = deck.filter(c => !c.innate);
+
+    // Shuffle non-innate cards
+    const shuffledNonInnate = shuffle(nonInnateCards);
+
+    // Build the draw pile: innate cards on top (so they're drawn first)
+    // In StS, innate cards are guaranteed to be in opening hand
+    let drawn: CardData[] = [];
+
+    // Draw innate cards first (up to hand size)
+    const innateCount = Math.min(innateCards.length, count);
+    drawn = [...innateCards.slice(0, innateCount)];
+
+    // Fill remaining slots with non-innate cards
+    const remainingSlots = count - drawn.length;
+    for (let i = 0; i < remainingSlots && shuffledNonInnate.length > 0; i++) {
+        const card = shuffledNonInnate.pop();
+        if (card) drawn.push(card);
+    }
+
+    // Build new draw pile: remaining innate cards (if any overflow) + remaining non-innate cards
+    const remainingInnate = innateCards.slice(innateCount);
+    const newDraw = shuffle([...remainingInnate, ...shuffledNonInnate]);
+
+    getGlobalLogger().log('INNATE_DRAW', `Drew ${innateCount} innate cards, ${remainingSlots} normal cards`);
+
+    return { drawn, newDraw, newDiscard: [] };
+};
+
 export const processDrawnCards = (
     drawn: CardData[],
     hand: CardData[],

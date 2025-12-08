@@ -41,6 +41,7 @@ export interface CardData {
   ethereal?: boolean;
   retain?: boolean;
   playCondition?: 'only_attacks_in_hand';
+  innate?: boolean; // Card always starts in opening hand
 }
 
 export interface PlayerStatuses {
@@ -325,7 +326,7 @@ export interface GameState {
   relics: RelicData[];
   turn: number;
   floor: number;
-  status: 'MENU' | 'CHARACTER_SELECT' | 'PLAYING' | 'VICTORY' | 'GAME_OVER' | 'ENEMY_TURN' | 'REWARD_SELECTION' | 'MAP' | 'RETROSPECTIVE' | 'VENDOR' | 'DISCARD_SELECTION' | 'CARD_SELECTION' | 'EVENT' | 'VICTORY_ALL';
+  status: 'MENU' | 'CHARACTER_SELECT' | 'NEOW_BLESSING' | 'PLAYING' | 'VICTORY' | 'GAME_OVER' | 'ENEMY_TURN' | 'REWARD_SELECTION' | 'MAP' | 'RETROSPECTIVE' | 'VENDOR' | 'DISCARD_SELECTION' | 'CARD_SELECTION' | 'EVENT' | 'VICTORY_ALL';
   rewardOptions: CardData[];
   message: string;
   map: MapLayer[];
@@ -362,4 +363,40 @@ export interface GameState {
   potionDropChance: number; // Starts at 40, adjusts by 10 per drop/no-drop (resets each act)
   pendingPotionReward?: PotionData; // For potion reward selection
   duplicateNextCard: boolean; // For Duplication Potion effect
+
+  // === FRIENDS & FAMILY ROUND (Neow's Blessing) ===
+  pendingBlessingOptions?: NeowBlessing[]; // 4 blessing choices at run start
 }
+
+// === FRIENDS & FAMILY ROUND (Neow's Blessing) ===
+// At the start of each run, choose one bonus from your family/friends
+
+export type NeowBlessingType =
+  | 'heal'           // Restore HP
+  | 'max_hp'         // Increase max HP
+  | 'gold'           // Gain starting capital
+  | 'random_card'    // Gain a random card
+  | 'upgrade_card'   // Upgrade a card
+  | 'remove_card'    // Remove a card
+  | 'random_relic'   // Gain a random relic
+  | 'transform_card' // Transform a card
+  | 'random_colorless' // Gain random colorless card
+  | 'boss_relic'     // Swap starter relic for boss relic (with downside)
+  | 'composite';     // Multiple smaller effects
+
+export interface NeowBlessingEffect {
+  type: NeowBlessingType;
+  value?: number;
+  percent?: number; // For percentage-based effects
+}
+
+export interface NeowBlessing {
+  id: string;
+  category: 'gift' | 'sacrifice' | 'trade' | 'gamble'; // StS has 4 categories
+  giver: string;        // Who's giving this blessing (Mom, Dad, Uncle, etc.)
+  description: string;  // Player-facing description
+  icon: string;
+  effects: NeowBlessingEffect[];
+  downside?: NeowBlessingEffect; // For the "risky" blessings
+}
+

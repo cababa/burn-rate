@@ -1,5 +1,5 @@
 
-import { CardData, EnemyData, CharacterStats, RelicData, EncounterTemplate, EventData, PotionData } from './types.ts';
+import { CardData, EnemyData, CharacterStats, RelicData, EncounterTemplate, EventData, PotionData, NeowBlessing } from './types.ts';
 
 export const MAX_HAND_SIZE = 10;
 
@@ -2123,6 +2123,138 @@ export const ENCOUNTER_TEMPLATES: EncounterTemplate[] = [
     { id: 'memory_leak', name: 'Energy Vampires', enemies: [{ enemyId: 'memory_leak', count: [1, 1] }, { enemyId: 'quick_hack', count: [1, 2] }], weight: 5, pool: 'hard' },
     { id: 'infestation', name: 'Mob of Doubters', enemies: [{ enemyId: 'minor_bug', count: [3, 4] }], weight: 4, pool: 'hard' },
 ];
+
+// =================================================================
+// FRIENDS & FAMILY ROUND (Neow's Blessing equivalent)
+// At run start, loved ones help you get your startup off the ground
+// =================================================================
+
+
+
+// All possible blessings - 4 will be randomly selected each run
+export const FRIENDS_AND_FAMILY_BLESSINGS: NeowBlessing[] = [
+    // === GIFT BLESSINGS (Pure benefit, no downside) ===
+    {
+        id: 'dad_retirement',
+        category: 'gift',
+        giver: 'Dad',
+        description: '"Don\'t tell your mother." Gain $100k Capital.',
+        icon: '👨',
+        effects: [{ type: 'gold', value: 100 }]
+    },
+    {
+        id: 'grandma_wisdom',
+        category: 'gift',
+        giver: 'Grandma',
+        description: '"Stay healthy, dear." Gain 7 max Runway.',
+        icon: '👵',
+        effects: [{ type: 'max_hp', value: 7 }]
+    },
+
+    // === SACRIFICE BLESSINGS (Lose something else for gain) ===
+    {
+        id: 'uncle_advice',
+        category: 'sacrifice',
+        giver: 'Rich Uncle',
+        description: '"Cut the fat." Remove a card from your deck.',
+        icon: '🎩',
+        effects: [{ type: 'remove_card', value: 1 }]
+    },
+    {
+        id: 'aunt_coaching',
+        category: 'sacrifice',
+        giver: 'Aunt',
+        description: '"Optimize what you have." Upgrade a card.',
+        icon: '👩‍🏫',
+        effects: [{ type: 'upgrade_card', value: 1 }]
+    },
+    {
+        id: 'cousin_hustle',
+        category: 'sacrifice',
+        giver: 'Hustler Cousin',
+        description: '"This fell off a truck." Gain a random relic, lose 10% max Runway.',
+        icon: '😎',
+        effects: [{ type: 'random_relic' }],
+        downside: { type: 'max_hp', percent: -10 }
+    },
+
+    // === TRADE BLESSINGS (Exchange something for something else) ===
+    {
+        id: 'college_roommate',
+        category: 'trade',
+        giver: 'College Roommate',
+        description: '"Remember that CS project?" Gain a random uncommon card.',
+        icon: '🎓',
+        effects: [{ type: 'random_card', value: 1 }]
+    },
+    {
+        id: 'former_boss',
+        category: 'trade',
+        giver: 'Former Boss',
+        description: '"You always had potential." Gain 2 random cards, add 1 Burnout.',
+        icon: '👔',
+        effects: [{ type: 'random_card', value: 2 }],
+        downside: { type: 'composite', value: 1 } // Add burnout status
+    },
+    {
+        id: 'little_sibling',
+        category: 'trade',
+        giver: 'Little Sibling',
+        description: '"Here\'s my allowance." Gain $25k, upgrade a card.',
+        icon: '👧',
+        effects: [{ type: 'gold', value: 25 }, { type: 'upgrade_card', value: 1 }]
+    },
+
+    // === GAMBLE BLESSINGS (High risk, high reward) ===
+    {
+        id: 'poker_buddy',
+        category: 'gamble',
+        giver: 'Poker Buddy',
+        description: '"All in." Swap your starter relic for a random boss relic.',
+        icon: '🃏',
+        effects: [{ type: 'boss_relic' }]
+    },
+    {
+        id: 'crypto_friend',
+        category: 'gamble',
+        giver: 'Crypto Bro',
+        description: '"Trust me bro." Transform 2 cards, gain $50k.',
+        icon: '🚀',
+        effects: [{ type: 'transform_card', value: 2 }, { type: 'gold', value: 50 }]
+    },
+    {
+        id: 'neighbor',
+        category: 'gamble',
+        giver: 'Nosy Neighbor',
+        description: '"What\'s all that racket?" Lose 10 Runway, gain random rare relic.',
+        icon: '🏠',
+        effects: [{ type: 'random_relic' }],
+        downside: { type: 'heal', value: -10 }
+    }
+];
+
+/**
+ * Generate 4 blessing options following StS rules:
+ * 1. One "gift" (pure benefit)
+ * 2. One "sacrifice" (remove/upgrade)
+ * 3. One "trade" (exchange)
+ * 4. One "gamble" (high risk/reward)
+ */
+export const generateBlessingOptions = (): NeowBlessing[] => {
+    const gifts = FRIENDS_AND_FAMILY_BLESSINGS.filter(b => b.category === 'gift');
+    const sacrifices = FRIENDS_AND_FAMILY_BLESSINGS.filter(b => b.category === 'sacrifice');
+    const trades = FRIENDS_AND_FAMILY_BLESSINGS.filter(b => b.category === 'trade');
+    const gambles = FRIENDS_AND_FAMILY_BLESSINGS.filter(b => b.category === 'gamble');
+
+    const pick = (arr: NeowBlessing[]) => arr[Math.floor(Math.random() * arr.length)];
+
+    return [
+        pick(gifts),
+        pick(sacrifices),
+        pick(trades),
+        pick(gambles)
+    ];
+};
 
 // Act 1 Events - "The Incubator"
 export const ACT1_EVENTS: EventData[] = [

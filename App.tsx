@@ -3,11 +3,11 @@ import { Unit } from './components/Unit';
 import { Card } from './components/Card';
 import { MapScreen } from './components/MapScreen';
 import { DeckViewer } from './components/DeckViewer';
-import { GAME_DATA, MAX_HAND_SIZE, ACT1_EVENTS } from './constants';
-import { CardData, GameState, EnemyIntent, MapLayer, MapNode, CharacterStats, RelicData, EntityStatus, EnemyData, CardEffect, EventData, EventChoice, EventEffect, PotionData } from './types';
+import { GAME_DATA, MAX_HAND_SIZE, ACT1_EVENTS, generateBlessingOptions } from './constants';
+import { CardData, GameState, EnemyIntent, MapLayer, MapNode, CharacterStats, RelicData, EntityStatus, EnemyData, CardEffect, EventData, EventChoice, EventEffect, PotionData, NeowBlessing } from './types';
 import { Battery, DollarSign, CheckCircle2, AlertOctagon, RefreshCw, Play, Layers, Archive, Gift, ArrowRight, Coffee, Hammer, Store, Trash2, Gem, Wrench, FastForward, Heart, Plus, Bug, Ghost, Rocket, Lock, User, Briefcase, ChevronRight, Zap, X, HelpCircle, Shuffle } from 'lucide-react';
 import {
-    calculateDamage, countCardsMatches, generateStarterDeck, getRandomRewardCards, shuffle, drawCards, upgradeCard,
+    calculateDamage, countCardsMatches, generateStarterDeck, getRandomRewardCards, shuffle, drawCards, drawCardsWithInnate, upgradeCard,
     applyCombatStartRelics, applyCombatEndRelics, getTurnStartBandwidth, generateMap, resolveCardEffect, resolveEnemyTurn, resolveEndTurn, processDrawnCards,
     applyOnAttackRelics, applyOnEnemyDeathRelics, applyTurnEndRelics, hasRetainHand, getCardLimit, canRestAtSite,
     getRelicWoundsToAdd, applyOnCardReward, getSecretWeaponCard, getEncounterForFloor, getEliteEncounter, getBossEncounter,
@@ -77,9 +77,9 @@ const App: React.FC = () => {
             relics: initialRelics,
             turn: 0,
             floor: 1,
-            status: 'MAP', // Go straight to map
+            status: 'NEOW_BLESSING', // Show Friends & Family blessing first
             rewardOptions: [],
-            message: 'Sprint 1 Planning...',
+            message: 'Friends & Family Round...',
             map: generateMap(),
             currentMapPosition: null,
             lastVictoryReward: undefined,
@@ -88,7 +88,9 @@ const App: React.FC = () => {
             potions: [null, null, null],
             potionSlotCount: 3,
             potionDropChance: 40,
-            duplicateNextCard: false
+            duplicateNextCard: false,
+            // Blessing options
+            pendingBlessingOptions: generateBlessingOptions()
         });
     };
 
@@ -397,6 +399,9 @@ const App: React.FC = () => {
                         const { floor, nodeId } = prev.currentMapPosition;
                         newMap[floor - 1] = newMap[floor - 1].map(n => n.id === nodeId ? { ...n, completed: true } : n);
                     }
+                } else if (prev.turn === 0) {
+                    // Pre-combat selection (blessing) - go to MAP
+                    newStatus = 'MAP';
                 } else {
                     newStatus = 'PLAYING';
                 }
@@ -480,10 +485,14 @@ const App: React.FC = () => {
         const cardsToExhaust: CardData[] = [];
         const cardsToRetain: CardData[] = [];
 
+        // Check if player has Memory Bank relic (retain all cards)
+        const retainAllCards = hasRetainHand(gameState.relics);
+
         gameState.hand.forEach(card => {
             if (card.ethereal) {
                 cardsToExhaust.push(card);
-            } else if (card.retain) {
+            } else if (card.retain || retainAllCards) {
+                // Retain if card has retain OR if relic gives global retain
                 cardsToRetain.push(card);
             } else {
                 cardsToDiscard.push(card);
@@ -817,11 +826,11 @@ const App: React.FC = () => {
         const woundCards = getRelicWoundsToAdd(newState.relics);
 
         // Reset Deck for Combat (including any wound cards from relics)
-        const combatDeck = shuffle([...prev.deck, ...woundCards]);
+        const combatDeck = [...prev.deck, ...woundCards];
 
-        // Draw Initial Hand
+        // Draw Initial Hand (using Innate-aware drawing to prioritize innate cards)
         const drawCount = 5;
-        const { drawn, newDraw, newDiscard } = drawCards(combatDeck, [], drawCount);
+        const { drawn, newDraw, newDiscard } = drawCardsWithInnate(combatDeck, drawCount);
 
         // Check for Secret Weapon relic (start with a skill card in hand)
         const secretWeaponCard = getSecretWeaponCard(newState.relics, combatDeck);
@@ -1004,7 +1013,7 @@ const App: React.FC = () => {
                         message += ` Lost ${lostHp} max Runway.`;
                         break;
                     case 'gain_card':
-                        const rarityPool = effect.cardRarity === 'random'
+                        const cardRarityPool = effect.cardRarity === 'random'
                             ? ['common', 'uncommon', 'rare'][Math.floor(Math.random() * 3)]
                             : effect.cardRarity;
                         const cards = getRandomRewardCards(1);
@@ -1070,15 +1079,15 @@ const App: React.FC = () => {
                         break;
                     case 'gain_relic':
                         const ownedRelicIds = newRelics.map(pr => pr.id);
-                        const availableRelics = Object.values(GAME_DATA.relics).filter(r => !ownedRelicIds.includes(r.id));
-                        const rarityPool = effect.relicRarity
-                            ? availableRelics.filter(r => r.rarity === effect.relicRarity)
-                            : availableRelics;
-                        const candidates = rarityPool.length > 0 ? rarityPool : availableRelics;
+                        const availableRelicsForEvent = Object.values(GAME_DATA.relics).filter(r => !ownedRelicIds.includes(r.id));
+                        const relicRarityPool = effect.relicRarity
+                            ? availableRelicsForEvent.filter(r => r.rarity === effect.relicRarity)
+                            : availableRelicsForEvent;
+                        const candidates = relicRarityPool.length > 0 ? relicRarityPool : availableRelicsForEvent;
                         if (candidates.length > 0) {
-                            const relic = candidates[Math.floor(Math.random() * candidates.length)];
-                            newRelics.push(relic);
-                            message += ` Gained relic: ${relic.name}.`;
+                            const relicChoice = candidates[Math.floor(Math.random() * candidates.length)];
+                            newRelics.push(relicChoice);
+                            message += ` Gained relic: ${(relicChoice as RelicData).name}.`;
                         }
                         break;
                     case 'add_status_card':
@@ -1402,6 +1411,208 @@ const App: React.FC = () => {
                                 Locked
                             </button>
                         </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // --- FRIENDS & FAMILY ROUND (Neow's Blessing) ---
+
+    const handleSelectBlessing = (blessing: NeowBlessing) => {
+        setGameState(prev => {
+            let newStats = { ...prev.playerStats };
+            let newDeck = [...prev.deck];
+            let newRelics = [...prev.relics];
+            let newDrawPile = [...prev.drawPile];
+            let message = `${blessing.giver}: ${blessing.description}`;
+
+            // Track if we need card selection UI
+            let needsCardSelection = false;
+            let pendingSelection: GameState['pendingSelection'] = undefined;
+
+            // First, process downside if present (downsides apply immediately)
+            if (blessing.downside) {
+                const { type, value, percent } = blessing.downside;
+                if (type === 'max_hp' && percent) {
+                    const loss = Math.floor(newStats.maxHp * Math.abs(percent) / 100);
+                    newStats.maxHp -= loss;
+                    newStats.hp = Math.min(newStats.hp, newStats.maxHp);
+                }
+                if (type === 'heal' && value && value < 0) {
+                    newStats.hp = Math.max(1, newStats.hp + value);
+                }
+                if (type === 'composite') {
+                    // Add burnout curse
+                    const burnout = GAME_DATA.cards.status_burnout;
+                    if (burnout) {
+                        newDeck.push({ ...burnout, id: `burnout_${Date.now()}` });
+                        newDrawPile.push({ ...burnout, id: `burnout_${Date.now()}_draw` });
+                    }
+                }
+            }
+
+            // Process blessing effects
+            for (const effect of blessing.effects) {
+                switch (effect.type) {
+                    case 'heal':
+                        if (effect.percent) {
+                            newStats.hp = Math.min(newStats.maxHp, Math.floor(newStats.maxHp * (effect.percent / 100)));
+                        } else if (effect.value) {
+                            newStats.hp = Math.min(newStats.maxHp, newStats.hp + effect.value);
+                        }
+                        break;
+
+                    case 'max_hp':
+                        newStats.maxHp += effect.value || 0;
+                        newStats.hp += effect.value || 0;
+                        break;
+
+                    case 'gold':
+                        newStats.capital += effect.value || 0;
+                        break;
+
+                    case 'random_card':
+                        const cards = getRandomRewardCards(effect.value || 1);
+                        newDeck = [...newDeck, ...cards];
+                        break;
+
+                    case 'random_relic':
+                        const availableRelics = Object.values(GAME_DATA.relics).filter(
+                            r => !newRelics.some(nr => nr.id === r.id) && r.rarity !== 'starter'
+                        );
+                        if (availableRelics.length > 0) {
+                            const relic = availableRelics[Math.floor(Math.random() * availableRelics.length)];
+                            newRelics.push(relic);
+                            message += ` Gained ${relic.name}!`;
+                        }
+                        break;
+
+                    // === CARD SELECTION REQUIRED EFFECTS ===
+                    case 'upgrade_card':
+                        needsCardSelection = true;
+                        pendingSelection = {
+                            type: 'upgrade',
+                            context: 'deck',
+                            action: 'upgrade',
+                            count: effect.value || 1,
+                            message: 'Select a card to upgrade',
+                            eventContext: false // Not an event, but blessing
+                        };
+                        break;
+
+                    case 'remove_card':
+                        needsCardSelection = true;
+                        pendingSelection = {
+                            type: 'remove',
+                            context: 'deck',
+                            action: 'remove',
+                            count: effect.value || 1,
+                            message: 'Select a card to remove',
+                            eventContext: false
+                        };
+                        break;
+
+                    case 'transform_card':
+                        needsCardSelection = true;
+                        pendingSelection = {
+                            type: 'transform',
+                            context: 'deck',
+                            action: 'transform',
+                            count: effect.value || 1,
+                            message: 'Select a card to transform',
+                            eventContext: false
+                        };
+                        break;
+
+                    case 'boss_relic':
+                        // Swap starter relic for random boss relic
+                        const bossRelics = Object.values(GAME_DATA.relics).filter(r => r.rarity === 'boss');
+                        if (bossRelics.length > 0) {
+                            const bossRelic = bossRelics[Math.floor(Math.random() * bossRelics.length)];
+                            newRelics = [bossRelic]; // Replace starter
+                            message += ` Swapped for ${bossRelic.name}!`;
+                        }
+                        break;
+                }
+            }
+
+            // If card selection is needed, go to CARD_SELECTION status
+            if (needsCardSelection && pendingSelection) {
+                return {
+                    ...prev,
+                    playerStats: newStats,
+                    deck: newDeck,
+                    drawPile: newDrawPile,
+                    relics: newRelics,
+                    status: 'CARD_SELECTION' as const,
+                    pendingSelection: {
+                        ...pendingSelection,
+                        eventContext: false // After selection, go to MAP
+                    },
+                    pendingBlessingOptions: undefined,
+                    message: pendingSelection.message || message
+                };
+            }
+
+            // Otherwise, go directly to MAP
+            return {
+                ...prev,
+                playerStats: newStats,
+                deck: newDeck,
+                drawPile: newDrawPile,
+                relics: newRelics,
+                status: 'MAP',
+                pendingBlessingOptions: undefined,
+                message
+            };
+        });
+    };
+
+    if (gameState.status === 'NEOW_BLESSING') {
+        return (
+            <div className="min-h-screen bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1a1a1a] via-[#0a0a0a] to-[#000000] flex flex-col items-center justify-center p-8 text-white">
+                <div className="max-w-4xl w-full">
+                    {/* Header */}
+                    <div className="text-center mb-12">
+                        <div className="text-6xl mb-4">👨‍👩‍👧‍👦</div>
+                        <h1 className="text-4xl md:text-5xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary via-white to-warning">
+                            Friends & Family Round
+                        </h1>
+                        <p className="text-gray-400 mt-4 max-w-lg mx-auto font-sans">
+                            Before you start your venture, loved ones gather to help you get off the ground. Choose one offer of support.
+                        </p>
+                    </div>
+
+                    {/* Blessing Options */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {gameState.pendingBlessingOptions?.map((blessing) => (
+                            <button
+                                key={blessing.id}
+                                onClick={() => handleSelectBlessing(blessing)}
+                                className="group p-6 bg-surface border-2 border-gray-700 rounded-xl hover:border-primary hover:bg-primary/5 transition-all duration-300 text-left flex flex-col gap-4"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="text-4xl">{blessing.icon}</div>
+                                    <div>
+                                        <div className="text-xl font-bold text-white group-hover:text-primary transition-colors">
+                                            {blessing.giver}
+                                        </div>
+                                        <div className="text-xs font-mono text-gray-500 uppercase">
+                                            {blessing.category}
+                                        </div>
+                                    </div>
+                                </div>
+                                <p className="text-gray-300 font-sans text-sm leading-relaxed">
+                                    {blessing.description}
+                                </p>
+                                {blessing.downside && (
+                                    <div className="text-xs text-danger font-mono mt-2 border-t border-gray-800 pt-2">
+                                        ⚠️ Has a downside
+                                    </div>
+                                )}
+                            </button>
+                        ))}
                     </div>
                 </div>
             </div>
@@ -2295,7 +2506,10 @@ const App: React.FC = () => {
                         </button>
                     </div>
 
-                    <div className="flex gap-4 items-end justify-center perspective-[1000px] min-h-[240px]">
+                    <div
+                        className="flex items-end justify-center min-h-[240px] px-4"
+                        style={{ maxWidth: '900px', margin: '0 auto' }}
+                    >
                         {gameState.hand.map((card, index) => {
                             const isXCost = card.cost === -1;
                             const canAfford = isXCost ? gameState.playerStats.bandwidth > 0 : gameState.playerStats.bandwidth >= card.cost;
@@ -2313,14 +2527,19 @@ const App: React.FC = () => {
                                 if (hasNonAttack) isDisabled = true;
                             }
 
+                            // Calculate overlap based on hand size
+                            const handSize = gameState.hand.length;
+                            const overlapAmount = handSize > 5 ? Math.min(60, (handSize - 5) * 12) : 0;
+
                             return (
                                 <div
                                     key={card.id}
-                                    className="animate-draw-card origin-bottom-right"
+                                    className="animate-draw-card origin-bottom transition-all duration-150 hover:!z-[100] hover:-translate-y-4 hover:scale-105"
                                     style={{
-                                        transform: `translateY(${index % 2 === 0 ? '0px' : '4px'}) rotate(${(index - gameState.hand.length / 2) * 2}deg)`,
+                                        transform: `translateY(${index % 2 === 0 ? '0px' : '4px'}) rotate(${(index - handSize / 2) * 2}deg)`,
                                         zIndex: index,
-                                        animationDelay: `${index * 30}ms`
+                                        animationDelay: `${index * 30}ms`,
+                                        marginLeft: index === 0 ? '0' : `-${overlapAmount}px`
                                     }}
                                     onClick={() => handleCardClick(card)}
                                 >
