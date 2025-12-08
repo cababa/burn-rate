@@ -177,7 +177,10 @@ export type RelicTrigger =
   | 'on_card_reward'
   | 'on_attack_count'
   | 'combat_end_conditional'
-  | 'on_enemy_death';
+  | 'on_enemy_death'
+  | 'on_hp_loss'      // Ironclad: Self-Forming Clay, Runic Cube
+  | 'on_vulnerable'   // Ironclad: Champion Belt
+  | 'on_exhaust';     // Ironclad: Charon's Ashes
 
 export interface RelicEffect {
   type: string;  // Flexible type for various relic effects

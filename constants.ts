@@ -188,7 +188,7 @@ export const GAME_DATA = {
             rarity: "uncommon",
             trigger: "on_attack_count",
             effect: { type: "strength_per_attacks", value: 1, threshold: 3 },
-            description: "Every 3 attacks you play, gain +1 Velocity.",
+            description: "Every time you play 3 Attacks in a turn, gain +1 Velocity.",
             icon: "🚀",
             tooltip: { term: "Acceleration", definition: "Building speed compounds over time." }
         } as RelicData,
@@ -199,7 +199,7 @@ export const GAME_DATA = {
             rarity: "uncommon",
             trigger: "on_attack_count",
             effect: { type: "dexterity_per_attacks", value: 1, threshold: 3 },
-            description: "Every 3 attacks you play, gain +1 Dexterity (Buffer bonus).",
+            description: "Every time you play 3 Attacks in a turn, gain +1 Dexterity.",
             icon: "📚",
             tooltip: { term: "Adaptation", definition: "Learning fast improves your defenses." }
         } as RelicData,
@@ -232,7 +232,7 @@ export const GAME_DATA = {
             rarity: "uncommon",
             trigger: "on_attack_count",
             effect: { type: "block_per_attacks", value: 4, threshold: 3 },
-            description: "Every 3 attacks you play, gain 4 Buffer.",
+            description: "Every time you play 3 Attacks in a turn, gain 4 Buffer.",
             icon: "🎯",
             tooltip: { term: "Concentration", definition: "Focus creates protection." }
         } as RelicData,
@@ -287,7 +287,7 @@ export const GAME_DATA = {
             character: "shared",
             name: "Cutting Corners",
             rarity: "boss",
-            trigger: "combat_start",
+            trigger: "turn_start",
             effect: { type: "gain_bandwidth", value: 1, add_wounds: 2 },
             description: "+1 Bandwidth per turn. Add 2 Bug cards to your deck.",
             icon: "✂️",
@@ -330,6 +330,127 @@ export const GAME_DATA = {
                 term: "Caffeine",
                 definition: "A central nervous system stimulant of the methylxanthine class."
             }
+        } as RelicData,
+
+        // ==============================================
+        // CTO-EXCLUSIVE RELICS (Ironclad equivalent)
+        // ==============================================
+
+        // --- CTO COMMON (Red Skull equivalent) ---
+        crunch_mode: {
+            id: "relic_crunch_mode",
+            character: "cto",
+            name: "Crunch Mode",
+            rarity: "common",
+            trigger: "passive",
+            effect: { type: "strength_when_low", value: 3, threshold: 50 },
+            description: "While your Runway is ≤50%, gain +3 Velocity.",
+            icon: "🔥",
+            tooltip: { term: "Crunch", definition: "When the deadline looms, productivity spikes." }
+        } as RelicData,
+
+        // --- CTO UNCOMMON (Paper Phrog equivalent) ---
+        growth_mindset: {
+            id: "relic_growth_mindset",
+            character: "cto",
+            name: "Growth Mindset",
+            rarity: "uncommon",
+            trigger: "passive",
+            effect: { type: "vulnerable_bonus", value: 25 },
+            description: "Exposed enemies take 75% more damage instead of 50%.",
+            icon: "🌱",
+            tooltip: { term: "Iteration", definition: "Every weakness is an opportunity to learn." }
+        } as RelicData,
+
+        // --- CTO UNCOMMON (Self-Forming Clay equivalent) ---
+        antifragile: {
+            id: "relic_antifragile",
+            character: "cto",
+            name: "Antifragile",
+            rarity: "uncommon",
+            trigger: "on_hp_loss",
+            effect: { type: "block_next_turn", value: 3 },
+            description: "Whenever you lose Runway, gain 3 Buffer next turn.",
+            icon: "💎",
+            tooltip: { term: "Antifragile", definition: "Systems that grow stronger under stress." }
+        } as RelicData,
+
+        // --- CTO RARE (Champion Belt equivalent) ---
+        pressure_cooker: {
+            id: "relic_pressure_cooker",
+            character: "cto",
+            name: "Pressure Cooker",
+            rarity: "rare",
+            trigger: "on_vulnerable",
+            effect: { type: "apply_weak_on_vulnerable", value: 1 },
+            description: "Whenever you apply Exposed, also apply 1 Drained.",
+            icon: "🫕",
+            tooltip: { term: "Pressure", definition: "High stakes bring out flaws in everyone." }
+        } as RelicData,
+
+        // --- CTO RARE (Charon's Ashes equivalent) ---
+        phoenix_protocol: {
+            id: "relic_phoenix_protocol",
+            character: "cto",
+            name: "Phoenix Protocol",
+            rarity: "rare",
+            trigger: "on_exhaust",
+            effect: { type: "damage_all_on_exhaust", value: 3 },
+            description: "Whenever you Archive a card, deal 3 damage to ALL enemies.",
+            icon: "🔥",
+            tooltip: { term: "Rebirth", definition: "From deprecated code, new value emerges." }
+        } as RelicData,
+
+        // --- CTO RARE (Magic Flower equivalent) ---
+        wellness_program: {
+            id: "relic_wellness_program",
+            character: "cto",
+            name: "Wellness Program",
+            rarity: "rare",
+            trigger: "passive",
+            effect: { type: "healing_bonus", value: 50 },
+            description: "Healing is 50% more effective during combat.",
+            icon: "🧘",
+            tooltip: { term: "Wellbeing", definition: "Invest in your team's health for better output." }
+        } as RelicData,
+
+        // --- CTO BOSS (Black Blood equivalent - replaces Git Repository) ---
+        unicorn_status: {
+            id: "relic_unicorn_status",
+            character: "cto",
+            name: "Unicorn Status",
+            rarity: "boss",
+            trigger: "combat_end",
+            effect: { type: "heal", value: 12 },
+            description: "At the end of combat, heal 12 Runway. (Replaces Git Repository)",
+            icon: "🦄",
+            tooltip: { term: "Unicorn", definition: "A startup valued at $1B+. Legendary status." }
+        } as RelicData,
+
+        // --- CTO BOSS (Runic Cube equivalent) ---
+        data_driven: {
+            id: "relic_data_driven",
+            character: "cto",
+            name: "Data-Driven",
+            rarity: "boss",
+            trigger: "on_hp_loss",
+            effect: { type: "draw_on_hp_loss", value: 1 },
+            description: "Whenever you lose Runway, draw 1 card.",
+            icon: "📊",
+            tooltip: { term: "Analytics", definition: "Pain points reveal what needs attention." }
+        } as RelicData,
+
+        // --- CTO SHOP (Brimstone equivalent) ---
+        market_dominance: {
+            id: "relic_market_dominance",
+            character: "cto",
+            name: "Market Dominance",
+            rarity: "uncommon",  // Shop relics are typically uncommon rarity
+            trigger: "turn_start",
+            effect: { type: "strength_both", value: 2, enemy_strength: 1 },
+            description: "At the start of your turn, gain 2 Velocity. Enemies also gain 1 Velocity.",
+            icon: "👑",
+            tooltip: { term: "Dominance", definition: "Leading the market attracts stronger competition." }
         } as RelicData
     },
     cards: {

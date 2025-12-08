@@ -31,7 +31,7 @@ import { AIPlayer, createAI, getAllStrategies } from './aiPlayer.ts';
 
 export interface SimulationConfig {
     runs: number;
-    aiStrategy: 'aggressive' | 'defensive' | 'balanced' | 'random';
+    aiStrategy: 'aggressive' | 'defensive' | 'balanced' | 'smart' | 'random';
     verboseLogging: boolean;
     maxTurnsPerCombat: number;
     maxFloors: number;
@@ -681,8 +681,8 @@ function calculateSummary(results: SimulationResult[]): SummaryStats {
  * Run simulations with all AI strategies
  */
 export function runAllStrategies(runsPerStrategy: number, verbose: boolean = false): void {
-    const strategies: ('aggressive' | 'defensive' | 'balanced' | 'random')[] = [
-        'aggressive', 'defensive', 'balanced', 'random'
+    const strategies: ('aggressive' | 'defensive' | 'balanced' | 'smart' | 'random')[] = [
+        'aggressive', 'defensive', 'balanced', 'smart', 'random'
     ];
 
     const config: SimulationConfig = {

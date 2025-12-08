@@ -4,11 +4,24 @@ import { getGlobalLogger } from './logger.ts';
 
 // --- Math Helpers ---
 
-export const calculateDamage = (baseDamage: number, attackerStatus: EntityStatus, defenderStatus: EntityStatus, strengthMultiplier: number = 1): number => {
+export const calculateDamage = (baseDamage: number, attackerStatus: EntityStatus, defenderStatus: EntityStatus, strengthMultiplier: number = 1, relics?: RelicData[]): number => {
     let damage = baseDamage + (attackerStatus.strength * strengthMultiplier);
     if (attackerStatus.weak > 0) damage = damage * 0.75;
-    if (defenderStatus.vulnerable > 0) damage = damage * 1.5;
+    if (defenderStatus.vulnerable > 0) {
+        // Growth Mindset (Paper Phrog): Vulnerable = 75% instead of 50%
+        const vulnerableMultiplier = relics ? getVulnerableMultiplierInternal(relics) : 1.5;
+        damage = damage * vulnerableMultiplier;
+    }
     return Math.floor(damage);
+};
+
+// Internal helper for calculateDamage (avoids circular dependency issues)
+const getVulnerableMultiplierInternal = (relics: RelicData[]): number => {
+    const growthMindset = relics.find(r => r.effect.type === 'vulnerable_bonus');
+    if (growthMindset) {
+        return 1.75; // 75% more damage
+    }
+    return 1.5; // Default 50% more damage
 };
 
 export const countCardsMatches = (cards: CardData[], matchString: string): number => {
@@ -159,10 +172,18 @@ export const applyCombatStartRelics = (currentStats: CharacterStats, relics: Rel
 
         // Sticky Note: Apply 1 Vulnerable to ALL enemies
         if (relic.trigger === 'combat_start' && relic.effect.type === 'apply_vulnerable_all') {
+            const pressureCookerWeak = getPressureCookerWeak(relics);
             newEnemies.forEach(e => {
                 e.statuses.vulnerable += relic.effect.value || 1;
+                // Pressure Cooker: Also apply Weak when applying Vulnerable
+                if (pressureCookerWeak > 0) {
+                    e.statuses.weak += pressureCookerWeak;
+                }
             });
-            messages.push(`${relic.name}: All enemies Vulnerable!`);
+            messages.push(`${relic.name}: All enemies Exposed!`);
+            if (pressureCookerWeak > 0) {
+                messages.push(`Pressure Cooker: All enemies Drained!`);
+            }
             getGlobalLogger().log('RELIC_EFFECT', `${relic.name} applied vulnerable to all enemies at combat start.`);
         }
 
@@ -302,6 +323,11 @@ export const getTurnStartBandwidth = (relics: RelicData[], turn: number = 1): nu
             bandwidth += relic.effect.value || 0;
             getGlobalLogger().log('RELIC_EFFECT', `${relic.name} granted ${relic.effect.value} bandwidth on first turn.`);
         }
+        // IMPORTANT: Reset attack counters at turn start for per-turn relics (StS behavior)
+        // Shuriken/Kunai/Ornamental Fan equivalents reset each turn, not each combat
+        if (relic.trigger === 'on_attack_count') {
+            relic.attackCounter = 0;
+        }
     });
     return bandwidth;
 };
@@ -438,6 +464,122 @@ export const hasSneckoEffect = (relics: RelicData[]): boolean => {
 
 export const hasRetainHand = (relics: RelicData[]): boolean => {
     return relics.some(r => r.effect.type === 'retain_hand');
+};
+
+// --- CTO-EXCLUSIVE RELIC HELPERS (Ironclad equivalents) ---
+
+/**
+ * Crunch Mode (Red Skull equivalent): +3 Strength while HP ≤50%
+ */
+export const getCrunchModeStrength = (relics: RelicData[], hp: number, maxHp: number): number => {
+    const crunchMode = relics.find(r => r.effect.type === 'strength_when_low');
+    if (!crunchMode) return 0;
+    const threshold = (crunchMode.effect.threshold || 50) / 100;
+    if (hp <= maxHp * threshold) {
+        return crunchMode.effect.value || 3;
+    }
+    return 0;
+};
+
+/**
+ * Growth Mindset (Paper Phrog equivalent): Vulnerable = 75% instead of 50%
+ */
+export const getVulnerableMultiplier = (relics: RelicData[]): number => {
+    const growthMindset = relics.find(r => r.effect.type === 'vulnerable_bonus');
+    if (growthMindset) {
+        return 1.75; // 75% more damage
+    }
+    return 1.5; // Default 50% more damage
+};
+
+/**
+ * Antifragile & Data-Driven (Self-Forming Clay / Runic Cube): On HP loss effects
+ */
+export const applyOnHpLossRelics = (relics: RelicData[], damageAmount: number): { blockNextTurn: number, drawCards: number, messages: string[] } => {
+    let blockNextTurn = 0;
+    let drawCards = 0;
+    const messages: string[] = [];
+
+    if (damageAmount > 0) {
+        relics.forEach(relic => {
+            // Antifragile: Gain 3 Block next turn
+            if (relic.trigger === 'on_hp_loss' && relic.effect.type === 'block_next_turn') {
+                blockNextTurn += relic.effect.value || 3;
+                messages.push(`${relic.name}: +${relic.effect.value} Buffer next turn!`);
+                getGlobalLogger().log('RELIC_EFFECT', `${relic.name} will grant ${relic.effect.value} block next turn.`);
+            }
+            // Data-Driven: Draw 1 card
+            if (relic.trigger === 'on_hp_loss' && relic.effect.type === 'draw_on_hp_loss') {
+                drawCards += relic.effect.value || 1;
+                messages.push(`${relic.name}: Draw ${relic.effect.value}!`);
+                getGlobalLogger().log('RELIC_EFFECT', `${relic.name} drew ${relic.effect.value} cards on HP loss.`);
+            }
+        });
+    }
+
+    return { blockNextTurn, drawCards, messages };
+};
+
+/**
+ * Pressure Cooker (Champion Belt equivalent): Apply Weak when applying Vulnerable
+ */
+export const getPressureCookerWeak = (relics: RelicData[]): number => {
+    const pressureCooker = relics.find(r => r.effect.type === 'apply_weak_on_vulnerable');
+    if (pressureCooker) {
+        return pressureCooker.effect.value || 1;
+    }
+    return 0;
+};
+
+/**
+ * Phoenix Protocol (Charon's Ashes equivalent): Deal damage to ALL when exhausting
+ */
+export const getPhoenixProtocolDamage = (relics: RelicData[]): number => {
+    const phoenix = relics.find(r => r.effect.type === 'damage_all_on_exhaust');
+    if (phoenix) {
+        return phoenix.effect.value || 3;
+    }
+    return 0;
+};
+
+/**
+ * Wellness Program (Magic Flower equivalent): Healing is 50% more effective
+ */
+export const getHealingMultiplier = (relics: RelicData[]): number => {
+    const wellness = relics.find(r => r.effect.type === 'healing_bonus');
+    if (wellness) {
+        return 1 + ((wellness.effect.value || 50) / 100);
+    }
+    return 1;
+};
+
+/**
+ * Market Dominance (Brimstone equivalent): +2 Strength at turn start, enemies +1
+ */
+export const applyMarketDominanceRelics = (relics: RelicData[], stats: CharacterStats, enemies: EnemyData[]): { stats: CharacterStats, enemies: EnemyData[], messages: string[] } => {
+    let newStats = { ...stats, statuses: { ...stats.statuses } };
+    let newEnemies = enemies.map(e => ({ ...e, statuses: { ...e.statuses } }));
+    const messages: string[] = [];
+
+    relics.forEach(relic => {
+        if (relic.effect.type === 'strength_both') {
+            // Player gains strength
+            newStats.statuses.strength += relic.effect.value || 2;
+            messages.push(`${relic.name}: +${relic.effect.value} Velocity`);
+            getGlobalLogger().log('RELIC_EFFECT', `${relic.name} granted ${relic.effect.value} strength at turn start.`);
+
+            // Enemies also gain strength
+            if (relic.effect.enemy_strength) {
+                newEnemies.forEach(e => {
+                    e.statuses.strength += relic.effect.enemy_strength || 1;
+                });
+                messages.push(`(Enemies +${relic.effect.enemy_strength})`);
+                getGlobalLogger().log('RELIC_EFFECT', `${relic.name} also granted ${relic.effect.enemy_strength} strength to enemies.`);
+            }
+        }
+    });
+
+    return { stats: newStats, enemies: newEnemies, messages };
 };
 
 export const getRelicsByRarity = (rarity: 'common' | 'uncommon' | 'rare' | 'boss'): RelicData[] => {
@@ -1286,6 +1428,21 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
             if (unblockedDamage > 0) {
                 newMessage += ` ${enemy.name} caused ${unblockedDamage} Burn.`;
                 getGlobalLogger().log('DAMAGE_TAKEN', `${enemy.name} hit player for ${unblockedDamage} unblocked Burn. Player HP: ${newPlayerHp}`);
+
+                // Antifragile & Data-Driven relics: On HP loss effects
+                const hpLossEffects = applyOnHpLossRelics(prev.relics, unblockedDamage);
+                if (hpLossEffects.blockNextTurn > 0) {
+                    // Store pending block in antifragile status (will be applied at turn start)
+                    newPlayerStatuses.antifragile += hpLossEffects.blockNextTurn;
+                    newMessage += ` ${hpLossEffects.messages.join(' ')}`;
+                }
+                if (hpLossEffects.drawCards > 0) {
+                    // Data-Driven: Draw cards when taking damage
+                    const result = drawCards(nextDrawPile, prev.discardPile, hpLossEffects.drawCards);
+                    nextDrawPile = result.newDraw;
+                    // Note: Cards drawn mid-enemy turn go to hand next player turn
+                    newMessage += ` ${hpLossEffects.messages.join(' ')}`;
+                }
             } else {
                 newMessage += ` Blocked ${enemy.name}.`;
             }
@@ -1495,13 +1652,31 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
     });
 
     const nextBandwidth = getTurnStartBandwidth(prev.relics);
+
+    // Apply Antifragile pending block (Self-Forming Clay) from previous turn damage
+    let pendingBlock = 0;
+    if (newPlayerStatuses.antifragile > 0) {
+        pendingBlock = newPlayerStatuses.antifragile;
+        newPlayerStatuses.antifragile = 0; // Reset after applying
+        newMessage += ` Antifragile: +${pendingBlock} Buffer!`;
+        getGlobalLogger().log('RELIC_EFFECT', `Antifragile granted ${pendingBlock} Block at turn start.`);
+    }
+
     let nextPlayerStats = {
         ...prev.playerStats,
         hp: Math.max(0, newPlayerHp),
-        mitigation: 0,
+        mitigation: pendingBlock, // Start with pending block instead of 0
         bandwidth: nextBandwidth,
         statuses: { ...newPlayerStatuses, thorns: 0 }
     };
+
+    // Market Dominance (Brimstone): +2 Strength at turn start, enemies +1
+    const marketDominance = applyMarketDominanceRelics(prev.relics, nextPlayerStats, newEnemies);
+    if (marketDominance.messages.length > 0) {
+        nextPlayerStats = marketDominance.stats;
+        newEnemies = marketDominance.enemies;
+        newMessage += ` ${marketDominance.messages.join(' ')}`;
+    }
 
     if (newStatus === 'VICTORY') {
         // Don't auto-apply gold - player will claim it from reward screen
@@ -1601,7 +1776,13 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                 else if (target === 'enemy' && targetEnemy) targets = [targetEnemy];
 
                 targets.forEach(t => {
-                    let finalDamage = calculateDamage(effect.value, prev.playerStats.statuses, t.statuses, effect.strengthMultiplier || 1);
+                    // Apply Crunch Mode (Red Skull) bonus strength when HP ≤50%
+                    const crunchBonus = getCrunchModeStrength(newRelics, prev.playerStats.hp, prev.playerStats.maxHp);
+                    const effectiveStatuses = crunchBonus > 0
+                        ? { ...prev.playerStats.statuses, strength: prev.playerStats.statuses.strength + crunchBonus }
+                        : prev.playerStats.statuses;
+
+                    let finalDamage = calculateDamage(effect.value, effectiveStatuses, t.statuses, effect.strengthMultiplier || 1, newRelics);
                     if (t.statuses.vulnerable > 0) newMessage += " (Exposed!)";
                     if (prev.playerStats.statuses.weak > 0) newMessage += " (Drained...)";
 
@@ -1660,7 +1841,12 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                 if (target === 'enemy' && targetEnemy) targets = [targetEnemy];
 
                 targets.forEach(t => {
-                    let finalDamage = calculateDamage(dmg, prev.playerStats.statuses, t.statuses);
+                    // Apply Crunch Mode (Red Skull) bonus strength when HP ≤50%
+                    const crunchBonus = getCrunchModeStrength(newRelics, prev.playerStats.hp, prev.playerStats.maxHp);
+                    const effectiveStatuses = crunchBonus > 0
+                        ? { ...prev.playerStats.statuses, strength: prev.playerStats.statuses.strength + crunchBonus }
+                        : prev.playerStats.statuses;
+                    let finalDamage = calculateDamage(dmg, effectiveStatuses, t.statuses, 1, newRelics);
                     if (t.mitigation > 0) {
                         const blocked = Math.min(t.mitigation, finalDamage);
                         t.mitigation -= blocked;
@@ -1686,7 +1872,12 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                 if (target === 'enemy' && targetEnemy) targets = [targetEnemy];
 
                 targets.forEach(t => {
-                    let finalDamage = calculateDamage(totalDmg, prev.playerStats.statuses, t.statuses);
+                    // Apply Crunch Mode (Red Skull) bonus strength when HP ≤50%
+                    const crunchBonus = getCrunchModeStrength(newRelics, prev.playerStats.hp, prev.playerStats.maxHp);
+                    const effectiveStatuses = crunchBonus > 0
+                        ? { ...prev.playerStats.statuses, strength: prev.playerStats.statuses.strength + crunchBonus }
+                        : prev.playerStats.statuses;
+                    let finalDamage = calculateDamage(totalDmg, effectiveStatuses, t.statuses, 1, newRelics);
                     if (t.mitigation > 0) {
                         const blocked = Math.min(t.mitigation, finalDamage);
                         t.mitigation -= blocked;
@@ -1735,16 +1926,35 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                     if (statusType === 'thorns') newPlayerStatuses.thorns += amount;
                     if (statusType === 'antifragile') newPlayerStatuses.antifragile += amount;
                     if (statusType === 'artifact') newPlayerStatuses.artifact += amount;
+                    if (statusType === 'growth') newPlayerStatuses.growth += amount;
+                    if (statusType === 'corruption') newPlayerStatuses.corruption += amount;
                 } else if (effect.target === 'all_enemies') {
                     // Apply to ALL enemies - must check before targetEnemy to work correctly!
                     newEnemies.forEach(e => {
-                        if (statusType === 'vulnerable') e.statuses.vulnerable += amount;
+                        if (statusType === 'vulnerable') {
+                            e.statuses.vulnerable += amount;
+                            // Pressure Cooker (Champion Belt): Also apply Weak when applying Vulnerable
+                            const pressureCookerWeak = getPressureCookerWeak(newRelics);
+                            if (pressureCookerWeak > 0) {
+                                e.statuses.weak += pressureCookerWeak;
+                                getGlobalLogger().log('RELIC_EFFECT', `Pressure Cooker applied ${pressureCookerWeak} Weak alongside Vulnerable.`);
+                            }
+                        }
                         if (statusType === 'weak') e.statuses.weak += amount;
                         if (statusType === 'strength') e.statuses.strength += amount;
                     });
                     newMessage += ` Applied ${amount} ${statusType} to all enemies.`;
                 } else if (targetEnemy) {
-                    if (statusType === 'vulnerable') targetEnemy.statuses.vulnerable += amount;
+                    if (statusType === 'vulnerable') {
+                        targetEnemy.statuses.vulnerable += amount;
+                        // Pressure Cooker (Champion Belt): Also apply Weak when applying Vulnerable
+                        const pressureCookerWeak = getPressureCookerWeak(newRelics);
+                        if (pressureCookerWeak > 0) {
+                            targetEnemy.statuses.weak += pressureCookerWeak;
+                            newMessage += ` (Pressure Cooker: +${pressureCookerWeak} Drained!)`;
+                            getGlobalLogger().log('RELIC_EFFECT', `Pressure Cooker applied ${pressureCookerWeak} Weak alongside Vulnerable.`);
+                        }
+                    }
                     if (statusType === 'weak') targetEnemy.statuses.weak += amount;
                     if (statusType === 'strength') targetEnemy.statuses.strength += amount; // Disarm (negative strength)
                 }
@@ -1828,6 +2038,16 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                     newExhaustPile.push(exhausted);
                     newMessage += ` Exhausted ${exhausted.name}.`;
                     if (newPlayerStatuses.feelNoPain > 0) newMitigation += newPlayerStatuses.feelNoPain;
+
+                    // Phoenix Protocol (Charon's Ashes): Deal damage to ALL on exhaust
+                    const phoenixDamage = getPhoenixProtocolDamage(newRelics);
+                    if (phoenixDamage > 0) {
+                        newEnemies.forEach(e => {
+                            e.hp = Math.max(0, e.hp - phoenixDamage);
+                        });
+                        newMessage += ` Phoenix Protocol: ${phoenixDamage} to all!`;
+                        getGlobalLogger().log('RELIC_EFFECT', `Phoenix Protocol dealt ${phoenixDamage} damage to all enemies.`);
+                    }
                 }
             } else if (effect.type === 'exhaust_targeted') {
                 if (currentHand.length > 0) {
@@ -1863,6 +2083,23 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
     if (card.exhaust) {
         newExhaustPile.push(card);
         if (newPlayerStatuses.feelNoPain > 0) newMitigation += newPlayerStatuses.feelNoPain;
+
+        // Phoenix Protocol (Charon's Ashes): Deal damage to ALL enemies on exhaust
+        const phoenixDamage = getPhoenixProtocolDamage(newRelics);
+        if (phoenixDamage > 0) {
+            newEnemies.forEach(e => {
+                e.hp = Math.max(0, e.hp - phoenixDamage);
+            });
+            newMessage += ` Phoenix Protocol: ${phoenixDamage} to all!`;
+            getGlobalLogger().log('RELIC_EFFECT', `Phoenix Protocol dealt ${phoenixDamage} damage to all enemies.`);
+
+            // Check for victory after Phoenix Protocol damage
+            if (newEnemies.every(e => e.hp <= 0)) {
+                newStatus = 'VICTORY';
+                newMessage = "PROBLEM SOLVED. FEATURE DEPLOYED.";
+                getGlobalLogger().log('COMBAT_VICTORY', 'All enemies defeated by Phoenix Protocol.');
+            }
+        }
     } else {
         newDiscardPile.push(card);
     }
