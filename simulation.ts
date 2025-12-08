@@ -51,7 +51,8 @@ const runSimulation = (simId: number): { win: boolean, floor: number, reason: st
         potions: [null, null, null],
         potionSlotCount: 3,
         potionDropChance: 40,
-        duplicateNextCard: false
+        duplicateNextCard: false,
+        seed: 'TEST'
     };
 
     // Loop through floors

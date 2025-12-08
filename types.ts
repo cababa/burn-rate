@@ -366,6 +366,9 @@ export interface GameState {
 
   // === FRIENDS & FAMILY ROUND (Neow's Blessing) ===
   pendingBlessingOptions?: NeowBlessing[]; // 4 blessing choices at run start
+
+  // === SEED SYSTEM ===
+  seed: string; // Run seed (displayed to player, enables deterministic reruns)
 }
 
 // === FRIENDS & FAMILY ROUND (Neow's Blessing) ===

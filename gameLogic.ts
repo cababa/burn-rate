@@ -1,6 +1,7 @@
 import { CardData, GameState, EnemyIntent, MapLayer, MapNode, MapNodeType, CharacterStats, RelicData, EntityStatus, EnemyData, CardEffect, PlayerStatuses, EnemyStatuses, EncounterTemplate, PotionData, PotionRarity } from './types.ts';
 import { GAME_DATA, MAX_HAND_SIZE, MAP_CONFIG, ENCOUNTER_TEMPLATES } from './constants.ts';
 import { getGlobalLogger } from './logger.ts';
+import { SeededRandom } from './rng.ts';
 // Effect handler system for modular card effect processing
 import { EFFECT_HANDLERS, EffectContext, EffectResult, createInitialResult, executeEffectHandler } from './effectHandlers.ts';
 
@@ -40,9 +41,9 @@ export const generateStarterDeck = (): CardData[] => {
     return deck;
 };
 
-export const getRandomRewardCards = (count: number): CardData[] => {
+export const getRandomRewardCards = (count: number, rng?: SeededRandom): CardData[] => {
     const getRarity = (): 'common' | 'uncommon' | 'rare' => {
-        const roll = Math.random() * 100;
+        const roll = rng ? rng.next() * 100 : Math.random() * 100;
         if (roll < 60) return 'common';
         if (roll < 97) return 'uncommon';
         return 'rare';
@@ -53,13 +54,14 @@ export const getRandomRewardCards = (count: number): CardData[] => {
         const targetRarity = getRarity();
         const rarityPool = pool.filter(c => c.rarity === targetRarity);
         const finalPool = rarityPool.length > 0 ? rarityPool : pool;
-        const randomCard = finalPool[Math.floor(Math.random() * finalPool.length)];
+        const randomCard = rng ? rng.pick(finalPool) : finalPool[Math.floor(Math.random() * finalPool.length)];
         rewards.push({ ...randomCard, id: `reward_${Date.now()}_${i}` });
     }
     return rewards;
 };
 
-export const shuffle = (cards: CardData[]) => {
+export const shuffle = (cards: CardData[], rng?: SeededRandom): CardData[] => {
+    if (rng) return rng.shuffle(cards);
     return [...cards].sort(() => Math.random() - 0.5);
 };
 
@@ -1256,7 +1258,7 @@ const STS_MAP = {
 };
 
 // Step 1: Build 6 path spines from floor 1 to floor 15
-const buildPathSpines = (): number[][] => {
+const buildPathSpines = (rng?: SeededRandom): number[][] => {
     const paths: number[][] = [];
     const usedStartPositions: Set<number> = new Set();
 
@@ -1268,12 +1270,12 @@ const buildPathSpines = (): number[][] => {
         if (pathIdx < 2) {
             // First two paths MUST start in different bottom rooms
             do {
-                startCol = Math.floor(Math.random() * STS_MAP.LANES);
+                startCol = rng ? rng.nextInt(0, STS_MAP.LANES - 1) : Math.floor(Math.random() * STS_MAP.LANES);
             } while (usedStartPositions.has(startCol));
             usedStartPositions.add(startCol);
         } else {
             // Paths 3-6 can start anywhere
-            startCol = Math.floor(Math.random() * STS_MAP.LANES);
+            startCol = rng ? rng.nextInt(0, STS_MAP.LANES - 1) : Math.floor(Math.random() * STS_MAP.LANES);
         }
         path.push(startCol);
 
@@ -1294,7 +1296,7 @@ const buildPathSpines = (): number[][] => {
 
             // Pick a random valid move (fallback to any move if all would cross)
             const moves = validMoves.length > 0 ? validMoves : possibleMoves;
-            const nextCol = moves[Math.floor(Math.random() * moves.length)];
+            const nextCol = rng ? rng.pick(moves) : moves[Math.floor(Math.random() * moves.length)];
             path.push(nextCol);
         }
 
@@ -1394,7 +1396,7 @@ const buildNodesFromPaths = (paths: number[][]): Map<string, NodeData> => {
 };
 
 // Step 3: Assign room types using bucket system
-const assignRoomTypes = (nodes: Map<string, NodeData>): Map<string, MapNodeType> => {
+const assignRoomTypes = (nodes: Map<string, NodeData>, rng?: SeededRandom): Map<string, MapNodeType> => {
     const types: Map<string, MapNodeType> = new Map();
 
     // Pre-assign fixed floors
@@ -1434,7 +1436,7 @@ const assignRoomTypes = (nodes: Map<string, NodeData>): Map<string, MapNodeType>
 
     // Shuffle bucket
     for (let i = bucket.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
+        const j = rng ? rng.nextInt(0, i) : Math.floor(Math.random() * (i + 1));
         [bucket[i], bucket[j]] = [bucket[j], bucket[i]];
     }
 
@@ -1518,15 +1520,15 @@ const isValidAssignment = (
 };
 
 // Main map generation function
-export const generateMap = (): MapLayer[] => {
+export const generateMap = (rng?: SeededRandom): MapLayer[] => {
     // Step 1: Build path spines
-    const paths = buildPathSpines();
+    const paths = buildPathSpines(rng);
 
     // Step 2: Create nodes from paths
     const nodeData = buildNodesFromPaths(paths);
 
     // Step 3: Assign room types
-    const nodeTypes = assignRoomTypes(nodeData);
+    const nodeTypes = assignRoomTypes(nodeData, rng);
 
     // Step 4: Convert to MapLayer format
     const layers: MapLayer[] = [];
@@ -1588,14 +1590,14 @@ export const generateMap = (): MapLayer[] => {
 };
 
 // Encounter Spawning with Variance
-export const getEncounterForFloor = (floor: number): EnemyData[] => {
+export const getEncounterForFloor = (floor: number, rng?: SeededRandom): EnemyData[] => {
     // Floor 1 uses easy pool, floors 2+ use hard pool
     const pool = floor === 1 ? 'easy' : 'hard';
     const templates = ENCOUNTER_TEMPLATES.filter(t => t.pool === pool);
 
     // Weighted random selection
     const totalWeight = templates.reduce((sum, t) => sum + t.weight, 0);
-    let roll = Math.random() * totalWeight;
+    let roll = rng ? rng.next() * totalWeight : Math.random() * totalWeight;
 
     let selectedTemplate: EncounterTemplate | null = null;
     for (const template of templates) {
@@ -1611,12 +1613,14 @@ export const getEncounterForFloor = (floor: number): EnemyData[] => {
     // Spawn enemies with variance
     const enemies: EnemyData[] = [];
     selectedTemplate.enemies.forEach(enemyConfig => {
-        const count = Math.floor(Math.random() * (enemyConfig.count[1] - enemyConfig.count[0] + 1)) + enemyConfig.count[0];
+        const count = rng
+            ? rng.nextInt(enemyConfig.count[0], enemyConfig.count[1])
+            : Math.floor(Math.random() * (enemyConfig.count[1] - enemyConfig.count[0] + 1)) + enemyConfig.count[0];
         const baseEnemy = GAME_DATA.enemies[enemyConfig.enemyId as keyof typeof GAME_DATA.enemies];
 
         if (baseEnemy) {
             for (let i = 0; i < count; i++) {
-                const hpVariance = Math.floor(Math.random() * 5) - 2; // +/- 2 HP variance
+                const hpVariance = rng ? rng.nextInt(-2, 2) : Math.floor(Math.random() * 5) - 2;
                 enemies.push({
                     ...baseEnemy,
                     id: `${baseEnemy.id}_${Date.now()}_${i}`,
@@ -1632,9 +1636,9 @@ export const getEncounterForFloor = (floor: number): EnemyData[] => {
 };
 
 // Get Elite Encounter
-export const getEliteEncounter = (): EnemyData[] => {
+export const getEliteEncounter = (rng?: SeededRandom): EnemyData[] => {
     const eliteIds = ['scope_creep', 'over_engineer'];
-    const eliteId = eliteIds[Math.floor(Math.random() * eliteIds.length)];
+    const eliteId = rng ? rng.pick(eliteIds) : eliteIds[Math.floor(Math.random() * eliteIds.length)];
 
     if (eliteId === 'over_engineer') {
         const elite = GAME_DATA.enemies.over_engineer;
@@ -1664,9 +1668,9 @@ export const getEliteEncounter = (): EnemyData[] => {
 };
 
 // Get Boss Encounter (random from pool)
-export const getBossEncounter = (): EnemyData[] => {
+export const getBossEncounter = (rng?: SeededRandom): EnemyData[] => {
     const bossIds = ['boss_the_pivot', 'boss_burn_rate', 'boss_the_monolith'];
-    const bossId = bossIds[Math.floor(Math.random() * bossIds.length)];
+    const bossId = rng ? rng.pick(bossIds) : bossIds[Math.floor(Math.random() * bossIds.length)];
     const boss = GAME_DATA.enemies[bossId as keyof typeof GAME_DATA.enemies];
 
     return [{
@@ -1919,7 +1923,7 @@ export const resolveEndTurn = (prev: GameState): GameState => {
     };
 };
 
-export const resolveEnemyTurn = (prev: GameState): GameState => {
+export const resolveEnemyTurn = (prev: GameState, rng?: SeededRandom): GameState => {
     getGlobalLogger().log('TURN_START', `Enemy Turn Started`);
 
     let newPlayerHp = prev.playerStats.hp;
@@ -2255,7 +2259,7 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
     }
 
     // Generate card rewards for victory
-    const cardRewards = newStatus === 'VICTORY' ? getRandomRewardCards(3) : [];
+    const cardRewards = newStatus === 'VICTORY' ? getRandomRewardCards(3, rng) : [];
 
     // Check if any enemy gives card rewards
     const shouldGetCardReward = newStatus === 'VICTORY' && newEnemies.some(e => e.rewards?.card_reward !== false);
@@ -2313,7 +2317,7 @@ export const resolveEnemyTurn = (prev: GameState): GameState => {
     return nextState;
 };
 
-export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enemy' | 'self', targetEnemyId?: string): GameState => {
+export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enemy' | 'self', targetEnemyId?: string, rng?: SeededRandom): GameState => {
     const costPaid = card.cost === -1 ? prev.playerStats.bandwidth : card.cost;
 
     if (prev.playerStats.bandwidth < costPaid) {
@@ -2744,7 +2748,7 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
     });
 
     // Generate card rewards for victory
-    const cardRewards = newStatus === 'VICTORY' ? getRandomRewardCards(3) : [];
+    const cardRewards = newStatus === 'VICTORY' ? getRandomRewardCards(3, rng) : [];
     const shouldGetCardReward = newStatus === 'VICTORY' && prev.enemies.some(e => e.rewards?.card_reward !== false);
 
     // Check for potion drop on victory

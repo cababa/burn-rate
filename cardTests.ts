@@ -81,7 +81,9 @@ function createTestState(): GameState {
         potions: [null, null, null],
         potionSlotCount: 3,
         potionDropChance: 40,
-        duplicateNextCard: false
+        duplicateNextCard: false,
+        // Seed system
+        seed: 'TEST'
     };
 }
 

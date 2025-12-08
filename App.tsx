@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Unit } from './components/Unit';
 import { Card } from './components/Card';
 import { MapScreen } from './components/MapScreen';
 import { DeckViewer } from './components/DeckViewer';
 import { GAME_DATA, MAX_HAND_SIZE, ACT1_EVENTS, generateBlessingOptions } from './constants';
 import { CardData, GameState, EnemyIntent, MapLayer, MapNode, CharacterStats, RelicData, EntityStatus, EnemyData, CardEffect, EventData, EventChoice, EventEffect, PotionData, NeowBlessing } from './types';
-import { Battery, DollarSign, CheckCircle2, AlertOctagon, RefreshCw, Play, Layers, Archive, Gift, ArrowRight, Coffee, Hammer, Store, Trash2, Gem, Wrench, FastForward, Heart, Plus, Bug, Ghost, Rocket, Lock, User, Briefcase, ChevronRight, Zap, X, HelpCircle, Shuffle } from 'lucide-react';
+import { Battery, DollarSign, CheckCircle2, AlertOctagon, RefreshCw, Play, Layers, Archive, Gift, ArrowRight, Coffee, Hammer, Store, Trash2, Gem, Wrench, FastForward, Heart, Plus, Bug, Ghost, Rocket, Lock, User, Briefcase, ChevronRight, Zap, X, HelpCircle, Shuffle, Hash } from 'lucide-react';
 import {
     calculateDamage, countCardsMatches, generateStarterDeck, getRandomRewardCards, shuffle, drawCards, drawCardsWithInnate, upgradeCard,
     applyCombatStartRelics, applyCombatEndRelics, getTurnStartBandwidth, generateMap, resolveCardEffect, resolveEnemyTurn, resolveEndTurn, processDrawnCards,
@@ -14,9 +14,13 @@ import {
     // Potion functions
     resolvePotionEffect, checkPotionDrop, generateRandomPotion, addPotionToSlot, removePotionFromSlot, canAcquirePotion, canUseExitStrategy
 } from './gameLogic';
+import { createGameRNG, GameRNG, generateRandomSeed } from './rng';
 
 const App: React.FC = () => {
     // --- Game State Initialization ---
+
+    // Seeded RNG manager - ref to persist across re-renders
+    const rngRef = useRef<GameRNG | null>(null);
 
     const [gameState, setGameState] = useState<GameState>({
         playerStats: GAME_DATA.character.stats, // Placeholder until start
@@ -39,7 +43,9 @@ const App: React.FC = () => {
         potions: [null, null, null],
         potionSlotCount: 3,
         potionDropChance: 40,
-        duplicateNextCard: false
+        duplicateNextCard: false,
+        // Seed system
+        seed: ''
     });
 
     const [viewingDeckForUpgrade, setViewingDeckForUpgrade] = useState(false);
@@ -61,7 +67,12 @@ const App: React.FC = () => {
     const handleStartRun = (characterId: string) => {
         if (characterId !== 'cto') return; // Only CTO implemented for now
 
-        const initialDeck = shuffle(generateStarterDeck());
+        // Create seeded RNG for this run
+        const seed = generateRandomSeed();
+        const rng = createGameRNG(seed);
+        rngRef.current = rng;
+
+        const initialDeck = shuffle(generateStarterDeck(), rng.shuffle);
         // Initial Relics
         const initialRelics = [GAME_DATA.relics.git_repository];
         const initialStats = { ...GAME_DATA.character.stats };
@@ -80,7 +91,7 @@ const App: React.FC = () => {
             status: 'NEOW_BLESSING', // Show Friends & Family blessing first
             rewardOptions: [],
             message: 'Friends & Family Round...',
-            map: generateMap(),
+            map: generateMap(rng.map),
             currentMapPosition: null,
             lastVictoryReward: undefined,
             pendingDiscard: 0,
@@ -90,7 +101,9 @@ const App: React.FC = () => {
             potionDropChance: 40,
             duplicateNextCard: false,
             // Blessing options
-            pendingBlessingOptions: generateBlessingOptions()
+            pendingBlessingOptions: generateBlessingOptions(),
+            // Seed
+            seed: seed
         });
     };
 
@@ -457,7 +470,7 @@ const App: React.FC = () => {
     };
 
     const playCard = (card: CardData, target: 'enemy' | 'self', targetEnemyId?: string) => {
-        setGameState(prev => resolveCardEffect(prev, card, target, targetEnemyId));
+        setGameState(prev => resolveCardEffect(prev, card, target, targetEnemyId, rngRef.current?.cards));
     };
 
 
@@ -524,7 +537,7 @@ const App: React.FC = () => {
     };
 
     const processEnemyTurn = () => {
-        setGameState(prev => resolveEnemyTurn(prev));
+        setGameState(prev => resolveEnemyTurn(prev, rngRef.current?.cards));
     };
 
 
@@ -774,17 +787,19 @@ const App: React.FC = () => {
             }
             if (node.type === 'opportunity') {
                 // 25% Shop, 25% Monster, 50% Event
-                const roll = Math.random() * 100;
+                const roll = rngRef.current ? rngRef.current.events.next() * 100 : Math.random() * 100;
                 if (roll < 25) {
-                    const stock = getRandomRewardCards(3);
+                    const stock = getRandomRewardCards(3, rngRef.current?.cards);
                     return { ...newState, status: 'VENDOR', vendorStock: stock, message: 'Opportunity: Hidden Vendor discovered!' };
                 } else if (roll < 50) {
                     // Fight hard pool monster
-                    const nextEnemies = getEncounterForFloor(node.floor);
+                    const nextEnemies = getEncounterForFloor(node.floor, rngRef.current?.encounters);
                     return startCombat(newState, prev, nextEnemies, 'Unexpected Problem appeared!');
                 }
                 // 50% - Actual Event
-                const randomEvent = ACT1_EVENTS[Math.floor(Math.random() * ACT1_EVENTS.length)];
+                const randomEvent = rngRef.current
+                    ? rngRef.current.events.pick(ACT1_EVENTS)
+                    : ACT1_EVENTS[Math.floor(Math.random() * ACT1_EVENTS.length)];
                 return {
                     ...newState,
                     status: 'EVENT',
@@ -797,12 +812,12 @@ const App: React.FC = () => {
             let nextEnemies: EnemyData[] = [];
 
             if (node.type === 'boss') {
-                nextEnemies = getBossEncounter();
+                nextEnemies = getBossEncounter(rngRef.current?.encounters);
             } else if (node.type === 'elite') {
-                nextEnemies = getEliteEncounter();
+                nextEnemies = getEliteEncounter(rngRef.current?.encounters);
             } else {
                 // Normal problem node
-                nextEnemies = getEncounterForFloor(node.floor);
+                nextEnemies = getEncounterForFloor(node.floor, rngRef.current?.encounters);
             }
 
             // Apply floor scaling
