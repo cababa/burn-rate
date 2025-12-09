@@ -1689,15 +1689,15 @@ const getNextIntent = (enemy: EnemyData, turn: number, playerHp: number): EnemyI
 
     // --- COMMON ---
     if (enemy.id.startsWith('fanboy')) {
-        if (turn === 1) return { type: 'buff', value: 3, icon: 'buff', description: "Ritual (Hype)" };
+        if (turn === 1) return { type: 'buff', value: 3, icon: 'buff', description: "Build Hype" };
         const dmg = 6 + enemy.statuses.strength;
-        return { type: 'attack', value: dmg, icon: 'attack', description: `${dmg} Dark Strike` };
+        return { type: 'attack', value: dmg, icon: 'attack', description: "Overwhelm" };
     }
 
     if (enemy.id.startsWith('spaghetti_code')) {
-        if (roll < 25) return { type: 'buff', value: 3, icon: 'buff', description: "Bellow (Block+Str)" };
-        if (roll < 55) return { type: 'attack', value: 7, icon: 'attack', description: "Thrash (7 Dmg + 5 Blk)" };
-        return { type: 'attack', value: 11, icon: 'attack', description: "Chomp (11 Dmg)" };
+        if (roll < 25) return { type: 'buff', value: 3, icon: 'buff', description: "Watch & Learn" };
+        if (roll < 55) return { type: 'attack', value: 7, icon: 'attack', description: "Quick Clone" };
+        return { type: 'attack', value: 11, icon: 'attack', description: "Steal Idea" };
     }
 
     if (enemy.id.startsWith('critical_bug')) {
@@ -1707,7 +1707,7 @@ const getNextIntent = (enemy: EnemyData, turn: number, playerHp: number): EnemyI
     }
 
     if (enemy.id.startsWith('minor_bug')) {
-        if (roll < 25) return { type: 'debuff', value: 2, icon: 'debuff', description: "Spit Web (Weak)" };
+        if (roll < 25) return { type: 'debuff', value: 2, icon: 'debuff', description: "Doubt" };
         const dmg = 5 + enemy.statuses.strength;
         return { type: 'attack', value: dmg, icon: 'attack', description: "Reject" };
     }
@@ -1724,72 +1724,72 @@ const getNextIntent = (enemy: EnemyData, turn: number, playerHp: number): EnemyI
 
     if (enemy.id.startsWith('legacy_module') || enemy.id.startsWith('merge_conflict')) {
         if (roll < 30) return { type: 'debuff', value: 2, icon: 'debuff', description: "Add Complexity" };
-        return { type: 'attack', value: 16, icon: 'attack', description: "Crush" };
+        return { type: 'attack', value: 16, icon: 'attack', description: "Veto" };
     }
 
-    // Micromanager (Blue Slaver) - Stab 13, Rake (7 + Weak)
+    // Micromanager (Blue Slaver) - Pile On 13, Nitpick (7 + Weak)
     if (enemy.id.startsWith('micromanager')) {
         if (roll < 40) {
             const dmg = 7 + enemy.statuses.strength;
-            return { type: 'attack', value: dmg, icon: 'attack', description: "Rake (Weak)" };
+            return { type: 'attack', value: dmg, icon: 'attack', description: "Nitpick" };
         }
         const dmg = 13 + enemy.statuses.strength;
-        return { type: 'attack', value: dmg, icon: 'attack', description: "Stab" };
+        return { type: 'attack', value: dmg, icon: 'attack', description: "Pile On" };
     }
 
-    // Feature Pusher (Red Slaver) - Stab 14, Scrape (9 + Vuln), Entangle
+    // Feature Pusher (Dreamer) - Demand More 14, Push Hard (9 + Vuln), Distract
     if (enemy.id.startsWith('feature_pusher')) {
-        if (turn === 1) return { type: 'debuff', value: 1, icon: 'debuff', description: "Entangle" };
+        if (turn === 1) return { type: 'debuff', value: 1, icon: 'debuff', description: "Distract" };
         if (roll < 45) {
             const dmg = 9 + enemy.statuses.strength;
-            return { type: 'attack', value: dmg, icon: 'attack', description: "Scrape (Vuln)" };
+            return { type: 'attack', value: dmg, icon: 'attack', description: "Push Hard" };
         }
         const dmg = 14 + enemy.statuses.strength;
-        return { type: 'attack', value: dmg, icon: 'attack', description: "Stab" };
+        return { type: 'attack', value: dmg, icon: 'attack', description: "Demand More" };
     }
 
-    // Headhunter (Looter) - Mug 10-12, Lunge 12, Escape
+    // Headhunter (Poacher) - Poach 10-12, Aggressive Bid 12, Exit with Hire
     if (enemy.id.startsWith('headhunter')) {
-        if (turn >= 3 && roll < 15) return { type: 'buff', value: 0, icon: 'buff', description: "Escape (Flee)" };
+        if (turn >= 3 && roll < 15) return { type: 'buff', value: 0, icon: 'buff', description: "Exit with Hire" };
         if (roll < 50) {
             const dmg = 10 + enemy.statuses.strength;
-            return { type: 'attack', value: dmg, icon: 'attack', description: "Mug (Steal Capital)" };
+            return { type: 'attack', value: dmg, icon: 'attack', description: "Poach" };
         }
         const dmg = 12 + enemy.statuses.strength;
-        return { type: 'attack', value: dmg, icon: 'attack', description: "Lunge" };
+        return { type: 'attack', value: dmg, icon: 'attack', description: "Aggressive Bid" };
     }
 
-    // Memory Leak (Fungi Beast) - Bite 6, Grow (Strength)
+    // Memory Leak (Energy Vampire) - Drain 6, Feed (Strength)
     if (enemy.id.startsWith('memory_leak')) {
-        if (roll < 40) return { type: 'buff', value: 3, icon: 'buff', description: "Grow (Strength)" };
+        if (roll < 40) return { type: 'buff', value: 3, icon: 'buff', description: "Feed" };
         const dmg = 6 + enemy.statuses.strength;
-        return { type: 'attack', value: dmg, icon: 'attack', description: "Bite" };
+        return { type: 'attack', value: dmg, icon: 'attack', description: "Drain" };
     }
 
     // --- ELITES ---
-    // Scope Creep (Gremlin Nob) - Enrage on skills, Skull Bash 6+Vuln, Rush 14
+    // Scope Creep - Escalate on skills, Derail 6+Vuln, Expand 14
     if (enemy.id.startsWith('scope_creep')) {
-        if (turn === 1) return { type: 'buff', value: 2, icon: 'buff', description: "Bellow (Enrage)" };
-        // Turn 2 is guaranteed Skull Bash (debuff + attack), then alternate debuff/attack
+        if (turn === 1) return { type: 'buff', value: 2, icon: 'buff', description: "Escalate" };
+        // Turn 2 is guaranteed Derail (debuff + attack), then alternate debuff/attack
         if (turn % 2 === 0) {
             const dmg = 6 + enemy.statuses.strength;
-            return { type: 'debuff', value: dmg, icon: 'attack', description: "Skull Bash (Vuln)" };
+            return { type: 'debuff', value: dmg, icon: 'attack', description: "Derail" };
         }
         const dmg = 12 + enemy.statuses.strength;
-        return { type: 'attack', value: dmg, icon: 'attack', description: "Rush" };
+        return { type: 'attack', value: dmg, icon: 'attack', description: "Expand" };
     }
 
     if (enemy.id.startsWith('over_engineer')) {
         if (enemy.statuses.asleep > 0) {
-            return { type: 'debuff', value: 1, icon: 'debuff', description: "Siphon (-1 Str/Dex)" };
+            return { type: 'debuff', value: 1, icon: 'debuff', description: "Stress Out" };
         }
-        if (turn % 3 === 0) return { type: 'debuff', value: 1, icon: 'debuff', description: "Siphon (-1 Str/Dex)" };
-        return { type: 'attack', value: 18, icon: 'attack', description: "Attack" };
+        if (turn % 3 === 0) return { type: 'debuff', value: 1, icon: 'debuff', description: "Stress Out" };
+        return { type: 'attack', value: 18, icon: 'attack', description: "Close In" };
     }
 
     if (enemy.id.startsWith('legacy_monolith') || enemy.id.startsWith('legacy_hack') || enemy.id.startsWith('legacy_patch')) {
-        if (turn % 2 === 0) return { type: 'attack', value: 9, icon: 'attack', description: "Beam" };
-        return { type: 'debuff', value: 2, icon: 'debuff', description: "Shuffle Bugs" };
+        if (turn % 2 === 0) return { type: 'attack', value: 9, icon: 'attack', description: "Block Path" };
+        return { type: 'debuff', value: 2, icon: 'debuff', description: "Pile Work" };
     }
 
     // --- BOSSES ---
@@ -1799,37 +1799,37 @@ const getNextIntent = (enemy: EnemyData, turn: number, playerHp: number): EnemyI
         const isDefensive = enemy.statuses.asleep > 0;
 
         if (isDefensive) {
-            // Defensive Mode: Roll Attack (9), then Twin Slam (8x2) to exit
+            // Defensive Mode: Momentum (9), then Commit (8x2) to exit
             if (enemy.statuses.asleep >= 3) {
-                // Twin Slam exits defensive mode
-                return { type: 'attack', value: 16, icon: 'attack', description: "Twin Slam (x2, Exit Defensive)" };
+                // Commit exits defensive mode
+                return { type: 'attack', value: 16, icon: 'attack', description: "Commit (x2)" };
             }
-            return { type: 'attack', value: 9, icon: 'attack', description: "Roll Attack" };
+            return { type: 'attack', value: 9, icon: 'attack', description: "Momentum" };
         } else {
-            // Offensive Mode: Charging Up, Fierce Bash, Vent Steam, Whirlwind
+            // Offensive Mode: Evaluate, Big Shift, Cut Off, Chaos
             const cycle = turn % 4;
-            if (cycle === 1) return { type: 'buff', value: 9, icon: 'buff', description: "Charging Up (Block)" };
-            if (cycle === 2) return { type: 'attack', value: 32, icon: 'attack', description: "Fierce Bash" };
-            if (cycle === 3) return { type: 'debuff', value: 2, icon: 'debuff', description: "Vent Steam (Vuln+Weak)" };
-            return { type: 'attack', value: 20, icon: 'attack', description: "Whirlwind (x4)" };
+            if (cycle === 1) return { type: 'buff', value: 9, icon: 'buff', description: "Evaluate" };
+            if (cycle === 2) return { type: 'attack', value: 32, icon: 'attack', description: "Big Shift" };
+            if (cycle === 3) return { type: 'debuff', value: 2, icon: 'debuff', description: "Cut Off" };
+            return { type: 'attack', value: 20, icon: 'attack', description: "Chaos (x4)" };
         }
     }
 
     if (enemy.id.startsWith('boss_burn_rate')) {
-        if (turn === 1) return { type: 'attack', value: 0, icon: 'attack', description: "Divider (x6)" };
+        if (turn === 1) return { type: 'attack', value: 0, icon: 'attack', description: "Divide Runway (x6)" };
         const cycle = (turn - 1) % 5;
-        if (cycle === 0) return { type: 'attack', value: 6, icon: 'attack', description: "Sear" };
+        if (cycle === 0) return { type: 'attack', value: 6, icon: 'attack', description: "Burn Cash" };
         if (cycle === 1) return { type: 'debuff', value: 1, icon: 'debuff', description: "Burn" };
-        if (cycle === 2) return { type: 'attack', value: 6, icon: 'attack', description: "Sear" };
+        if (cycle === 2) return { type: 'attack', value: 6, icon: 'attack', description: "Burn Cash" };
         if (cycle === 3) return { type: 'debuff', value: 2, icon: 'debuff', description: "Burn" };
-        return { type: 'attack', value: 2, icon: 'attack', description: "Inferno (x6)" };
+        return { type: 'attack', value: 2, icon: 'attack', description: "Cash Crisis (x6)" };
     }
 
     if (enemy.id.startsWith('boss_the_monolith')) {
         const cycle = turn % 3;
-        if (cycle === 1) return { type: 'debuff', value: 3, icon: 'debuff', description: "Goop Spray (Slimed)" };
+        if (cycle === 1) return { type: 'debuff', value: 3, icon: 'debuff', description: "Baggage" };
         if (cycle === 2) return { type: 'buff', value: 0, icon: 'buff', description: "Prepare" };
-        return { type: 'attack', value: 35, icon: 'attack', description: "Slam" };
+        return { type: 'attack', value: 35, icon: 'attack', description: "Collapse" };
     }
 
     return { type: 'attack', value: 5, icon: 'attack', description: "Attack" };
@@ -1985,7 +1985,7 @@ export const resolveEnemyTurn = (prev: GameState, rng?: SeededRandom): GameState
     newEnemies.forEach(enemy => {
         if (enemy.hp <= 0) return;
         const intent = enemy.currentIntent;
-        const isHybridAttack = intent.description.includes('Skull Bash');
+        const isHybridAttack = intent.description.includes('Derail');
 
         getGlobalLogger().log('ENEMY_ACTION', `${enemy.name} executing ${intent.type}`, { enemyName: enemy.name, intentType: intent.type, intentDescription: intent.description });
 
@@ -2008,12 +2008,12 @@ export const resolveEnemyTurn = (prev: GameState, rng?: SeededRandom): GameState
 
         if (intent.type === 'attack' || isHybridAttack) {
             let attackValue = intent.value;
-            if (enemy.id.startsWith('boss_burn_rate') && intent.description.includes('Divider')) {
+            if (enemy.id.startsWith('boss_burn_rate') && intent.description.includes('Divide Runway')) {
                 const hits = 6;
                 const dmgPerHit = Math.floor(newPlayerHp / 12) + 1;
                 attackValue = dmgPerHit * hits;
-                newMessage += ` Divider dealt ${hits}x${dmgPerHit} damage!`;
-                getGlobalLogger().log('ENEMY_ATTACK_SPECIAL', `Boss Burn Rate Divider: ${hits} hits, ${dmgPerHit} per hit.`);
+                newMessage += ` Divide Runway dealt ${hits}x${dmgPerHit} damage!`;
+                getGlobalLogger().log('ENEMY_ATTACK_SPECIAL', `Boss Burn Rate Divide Runway: ${hits} hits, ${dmgPerHit} per hit.`);
             }
 
             const damage = calculateDamage(attackValue, enemy.statuses, newPlayerStatuses);
@@ -2068,72 +2068,72 @@ export const resolveEnemyTurn = (prev: GameState, rng?: SeededRandom): GameState
             }
 
             // Handle combo attacks that deal damage + apply status
-            if (intent.description.includes('Rake') || intent.description.includes('Spit Web')) {
+            if (intent.description.includes('Nitpick') || intent.description.includes('Doubt')) {
                 newPlayerStatuses.weak += 2;
                 newMessage += ` Applied 2 Drained.`;
                 getGlobalLogger().log('STATUS_APPLIED', `Enemy applied 2 Drained.`);
             }
-            if (intent.description.includes('Scrape')) {
+            if (intent.description.includes('Push Hard')) {
                 newPlayerStatuses.vulnerable += 2;
                 newMessage += ` Applied 2 Exposed.`;
                 getGlobalLogger().log('STATUS_APPLIED', `Enemy applied 2 Exposed.`);
             }
-            if (intent.description.includes('Thrash')) {
+            if (intent.description.includes('Quick Clone')) {
                 enemy.mitigation += 5;
-                newMessage += ` ${enemy.name} Thrashed! (+5 Mitigation)`;
+                newMessage += ` ${enemy.name} cloned! (+5 Mitigation)`;
                 getGlobalLogger().log('ENEMY_BUFF', `${enemy.name} gained 5 Mitigation.`);
             }
-            if (intent.description.includes('Skull Bash')) {
+            if (intent.description.includes('Derail')) {
                 newPlayerStatuses.vulnerable += 2;
                 newMessage += ` Applied 2 Exposed.`;
                 getGlobalLogger().log('STATUS_APPLIED', `Enemy applied 2 Exposed.`);
             }
-            // Whirlwind (x4): 5*4 = 20 damage total
-            if (intent.description.includes('Whirlwind')) {
+            // Chaos (x4): 5*4 = 20 damage total
+            if (intent.description.includes('Chaos')) {
                 // Multi-hit already factored into damage value
                 newMessage += ` (x4 hits)`;
-                getGlobalLogger().log('ENEMY_ATTACK_SPECIAL', `Whirlwind: 4 hits.`);
+                getGlobalLogger().log('ENEMY_ATTACK_SPECIAL', `Chaos: 4 hits.`);
             }
-            // Inferno (x6): 2*6 = 12 damage total
-            if (intent.description.includes('Inferno')) {
+            // Cash Crisis (x6): 2*6 = 12 damage total
+            if (intent.description.includes('Cash Crisis')) {
                 newMessage += ` (x6 hits)`;
-                getGlobalLogger().log('ENEMY_ATTACK_SPECIAL', `Inferno: 6 hits.`);
+                getGlobalLogger().log('ENEMY_ATTACK_SPECIAL', `Cash Crisis: 6 hits.`);
             }
-            // Twin Slam: Exit defensive mode for The Pivot
-            if (intent.description.includes('Twin Slam') && enemy.id.startsWith('boss_the_pivot')) {
+            // Commit: Exit defensive mode for The Pivot
+            if (intent.description.includes('Commit') && enemy.id.startsWith('boss_the_pivot')) {
                 enemy.statuses.asleep = 0; // Exit defensive mode
                 enemy.statuses.thorns = 0; // Remove Sharp Hide
-                newMessage += ` Exited Defensive Mode!`;
-                getGlobalLogger().log('BOSS_MECHANIC', `The Pivot exited Defensive Mode.`);
+                newMessage += ` Committed to new direction!`;
+                getGlobalLogger().log('BOSS_MECHANIC', `The Pivot committed and exited Defensive Mode.`);
             }
 
-            // Vent Steam: Applies both Vuln and Weak
-            if (intent.description.includes('Vent Steam')) {
+            // Cut Off: Applies both Vuln and Weak
+            if (intent.description.includes('Cut Off')) {
                 newPlayerStatuses.vulnerable += 2;
                 newPlayerStatuses.weak += 2;
                 newMessage += ` Applied 2 Exposed + 2 Drained.`;
                 getGlobalLogger().log('STATUS_APPLIED', `Enemy applied 2 Exposed and 2 Drained.`);
             }
         } else if (intent.type === 'buff') {
-            if (intent.description.includes('Growth') || intent.description.includes('Ritual') || intent.description.includes('Grow')) {
+            if (intent.description.includes('Build Hype') || intent.description.includes('Feed') || intent.description.includes('Raise Concerns')) {
                 enemy.statuses.strength += intent.value;
                 newMessage += ` ${enemy.name} gained ${intent.value} Execution Power.`;
                 getGlobalLogger().log('ENEMY_BUFF', `${enemy.name} gained ${intent.value} Execution Power.`);
-            } else if (intent.description.includes('Bellow')) {
-                // Jaw Worm Bellow: +3 Str, +6 Block
+            } else if (intent.description.includes('Watch & Learn')) {
+                // Copycat Watch & Learn: +3 Str, +6 Block
                 enemy.statuses.strength += 3;
                 enemy.mitigation += 6;
-                newMessage += ` ${enemy.name} Bellowed! (+3 Pwr, +6 Mitigation)`;
-                getGlobalLogger().log('ENEMY_BUFF', `${enemy.name} Bellowed (+3 Power, +6 Mitigation).`);
-            } else if (intent.description.includes('Block') || intent.description.includes('Barricade') || intent.description.includes('Charging')) {
+                newMessage += ` ${enemy.name} is learning! (+3 Pwr, +6 Mitigation)`;
+                getGlobalLogger().log('ENEMY_BUFF', `${enemy.name} watched and learned (+3 Power, +6 Mitigation).`);
+            } else if (intent.description.includes('Evaluate')) {
                 enemy.mitigation += intent.value;
                 newMessage += ` ${enemy.name} gained ${intent.value} Mitigation.`;
                 getGlobalLogger().log('ENEMY_BUFF', `${enemy.name} gained ${intent.value} Mitigation.`);
-            } else if (intent.description.includes('Escape')) {
+            } else if (intent.description.includes('Exit with Hire')) {
                 enemy.hp = 0;
                 enemy.maxHp = 0;
-                newMessage += ` ${enemy.name} Escaped with your capital!`;
-                getGlobalLogger().log('ENEMY_ACTION_SPECIAL', `${enemy.name} escaped.`);
+                newMessage += ` ${enemy.name} left with your talent!`;
+                getGlobalLogger().log('ENEMY_ACTION_SPECIAL', `${enemy.name} escaped with hire.`);
             } else if (intent.description.includes('Split') && enemy.id.startsWith('boss_the_monolith')) {
                 const acidL = { ...GAME_DATA.enemies.legacy_module, id: `legacy_module_split_${Date.now()}_acid`, hp: 70, maxHp: 70 };
                 const spikeL = { ...GAME_DATA.enemies.merge_conflict, id: `merge_conflict_split_${Date.now()}_spike`, hp: 70, maxHp: 70 };
@@ -2141,28 +2141,28 @@ export const resolveEnemyTurn = (prev: GameState, rng?: SeededRandom): GameState
                 enemy.hp = 0;
                 newMessage += ` ${enemy.name} Split into two!`;
                 getGlobalLogger().log('BOSS_MECHANIC', `${enemy.name} split into two new enemies.`);
-            } else if (intent.description.includes('Enrage')) {
-                // Gremlin Nob setup - Enrage is tracked, triggered when player plays skills
-                newMessage += ` ${enemy.name} is enraged! (+2 Pwr per skill)`;
-                getGlobalLogger().log('ENEMY_BUFF', `${enemy.name} is enraged.`);
+            } else if (intent.description.includes('Escalate')) {
+                // Scope Creep Escalate - Enrage is tracked, triggered when player plays skills
+                newMessage += ` ${enemy.name} is escalating! (+2 Pwr per skill)`;
+                getGlobalLogger().log('ENEMY_BUFF', `${enemy.name} is escalating.`);
             }
         } else if (intent.type === 'debuff') {
-            if (intent.description.includes('Entangle')) {
-                // Red Slaver Entangle - prevents playing attacks for 1 turn
-                newMessage += ` ${enemy.name} Entangled you! (Cannot play attacks this turn)`;
-                getGlobalLogger().log('STATUS_APPLIED', `Player entangled.`);
-            } else if (enemy.id.startsWith('legacy_') && intent.description.includes('Shuffle Bugs')) {
+            if (intent.description.includes('Distract')) {
+                // Dreamer Distract - prevents playing attacks for 1 turn
+                newMessage += ` ${enemy.name} distracted you! (Cannot play attacks this turn)`;
+                getGlobalLogger().log('STATUS_APPLIED', `Player distracted.`);
+            } else if (enemy.id.startsWith('legacy_') && intent.description.includes('Pile Work')) {
                 const bugCard = GAME_DATA.cards.card_bug;
                 nextDrawPile.push({ ...bugCard, id: `card_bug_${Date.now()}_1` }, { ...bugCard, id: `card_bug_${Date.now()}_2` });
                 nextDrawPile = shuffle(nextDrawPile);
-                newMessage += ` ${enemy.name} shuffled 2 Bugs into your roadmap!`;
-                getGlobalLogger().log('CARD_EFFECT_ENEMY', `Enemy shuffled 2 Bugs into player's draw pile.`);
-            } else if (intent.description.includes('Slimed')) {
+                newMessage += ` ${enemy.name} piled work onto your roadmap!`;
+                getGlobalLogger().log('CARD_EFFECT_ENEMY', `Enemy piled 2 Bugs into player's draw pile.`);
+            } else if (intent.description.includes('Baggage')) {
                 const slime = { ...GAME_DATA.cards.status_scope_creep, id: `status_scope_creep_${Date.now()}` };
                 nextDrawPile.push(slime);
                 nextDrawPile = shuffle(nextDrawPile);
-                newMessage += ` ${enemy.name} Slimed you!`;
-                getGlobalLogger().log('CARD_EFFECT_ENEMY', `Enemy slimed player.`);
+                newMessage += ` ${enemy.name} added baggage to your roadmap!`;
+                getGlobalLogger().log('CARD_EFFECT_ENEMY', `Enemy added legacy baggage.`);
             } else if (intent.description.includes('Weak')) {
                 newPlayerStatuses.weak += intent.value;
                 newMessage += ` ${enemy.name} applied ${intent.value} Drained.`;
@@ -2175,10 +2175,10 @@ export const resolveEnemyTurn = (prev: GameState, rng?: SeededRandom): GameState
                 newPlayerStatuses.frail += intent.value;
                 newMessage += ` ${enemy.name} applied ${intent.value} Frail.`;
                 getGlobalLogger().log('STATUS_APPLIED', `Enemy applied ${intent.value} Frail.`);
-            } else if (intent.description.includes('Siphon')) {
-                // Over-Engineer Siphon: -1 Strength (can go negative)
+            } else if (intent.description.includes('Stress Out')) {
+                // Deadline Stress Out: -1 Strength (can go negative)
                 newPlayerStatuses.strength -= 1;
-                getGlobalLogger().log('STATUS_APPLIED', `Enemy Siphoned 1 Execution Power.`);
+                getGlobalLogger().log('STATUS_APPLIED', `Deadline stress reduced 1 Execution Power.`);
             } else {
                 // Default fallback: Apply Weak if no specific debuff keyword matched
                 // This handles intents like "Spread Rumors", "Add Complexity", "Delay", "Discourage", etc.

@@ -686,7 +686,7 @@ const App: React.FC = () => {
     // Cancel potion targeting
     const cancelPotionTargeting = () => {
         setPendingPotionUse(null);
-        setGameState(prev => ({ ...prev, message: 'Potion use cancelled.' }));
+        setGameState(prev => ({ ...prev, message: 'Stash use cancelled.' }));
     };
 
     // Discard a potion (right-click or shift-click)
@@ -696,7 +696,7 @@ const App: React.FC = () => {
         setGameState(prev => ({
             ...prev,
             potions: removePotionFromSlot(prev.potions, slotIndex),
-            message: 'Potion discarded.'
+            message: 'Item discarded.'
         }));
     };
 
@@ -705,7 +705,7 @@ const App: React.FC = () => {
         setGameState(prev => {
             if (!prev.pendingPotionReward) return prev;
             if (!canAcquirePotion(prev.potions)) {
-                return { ...prev, message: 'Potion slots full! Discard one first.' };
+                return { ...prev, message: 'Stash slots full! Discard one first.' };
             }
             return {
                 ...prev,
@@ -721,7 +721,7 @@ const App: React.FC = () => {
         setGameState(prev => ({
             ...prev,
             pendingPotionReward: undefined,
-            message: 'Skipped potion reward.'
+            message: 'Skipped stash item.'
         }));
     };
 
@@ -2027,7 +2027,7 @@ const App: React.FC = () => {
                         ))}
                     </div>
 
-                    {/* Potion Bar */}
+                    {/* Stash Bar */}
                     <div className="h-6 w-px bg-white/10 mx-2" />
                     <div className="flex items-center gap-2">
                         {gameState.potions.map((potion, index) => (
@@ -2044,7 +2044,7 @@ const App: React.FC = () => {
                                 `}
                                 onClick={() => potion && handlePotionClick(potion, index)}
                                 onContextMenu={(e) => potion && handleDiscardPotion(index, e)}
-                                title={potion ? `Click to use, Right-click to discard` : 'Empty potion slot'}
+                                title={potion ? `Click to use, Right-click to discard` : 'Empty stash slot'}
                             >
                                 {potion ? (
                                     <>
@@ -2153,7 +2153,7 @@ const App: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Potion Targeting Overlay */}
+                {/* Stash Targeting Overlay */}
                 {pendingPotionUse && (
                     <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 bg-info/20 border border-info px-6 py-3 rounded-lg backdrop-blur-sm animate-pulse">
                         <div className="flex items-center gap-4">
@@ -2374,7 +2374,7 @@ const App: React.FC = () => {
                                         </div>
                                     )}
 
-                                    {/* Potion Reward */}
+                                    {/* Stash Reward */}
                                     {gameState.pendingPotionReward && (
                                         <div className="bg-gradient-to-r from-info/20 to-info/5 border border-info/50 p-4 rounded-lg">
                                             <div className="flex items-center gap-4">
@@ -2402,7 +2402,7 @@ const App: React.FC = () => {
                                                             : 'bg-gray-800 border border-gray-600 text-gray-500 cursor-not-allowed'
                                                             }`}
                                                     >
-                                                        {canAcquirePotion(gameState.potions) ? 'Take Potion' : 'Slots Full'}
+                                                        {canAcquirePotion(gameState.potions) ? 'Take Stash Item' : 'Slots Full'}
                                                     </button>
                                                     <button
                                                         onClick={handleSkipPotion}
