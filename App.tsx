@@ -364,8 +364,13 @@ const App: React.FC = () => {
 
             } else if (action === 'move_to_draw_pile') {
                 // Move from Discard to Top of Draw
-                newDiscardPile = newDiscardPile.filter(c => c.id !== card.id);
-                newDrawPile.push(card);
+                if (context === 'hand') {
+                    newHand = newHand.filter(c => c.id !== card.id);
+                    newDrawPile.push(card);
+                } else {
+                    newDiscardPile = newDiscardPile.filter(c => c.id !== card.id);
+                    newDrawPile.push(card);
+                }
                 newMessage = `Placed ${card.name} on top of Draw Pile.`;
 
             } else if (action === 'exhaust') {

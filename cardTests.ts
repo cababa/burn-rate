@@ -24,6 +24,7 @@ import {
     drawCards,
     resolveCardEffect,
     processDrawnCards,
+    resolveEndTurn,
     calculateDamage
 } from './gameLogic.ts';
 
@@ -1085,7 +1086,11 @@ function testCardMappings() {
         'lose_bandwidth', 'add_copy', 'exhaust_random', 'exhaust_targeted',
         'conditional_strength', 'upgrade_hand', 'damage_scale_mitigation',
         'damage_scale_matches', 'retrieve_discard', 'gain_bandwidth',
-        'conditional_refund', 'lose_hp_turn_end', 'steal_capital', 'escape', 'split', 'siphon'
+        'conditional_refund', 'lose_hp_turn_end', 'steal_capital', 'escape', 'split', 'siphon',
+        // New Ironclad mechanics
+        'lose_hp', 'play_top_card', 'put_on_deck', 'exhaust_choice', 'exhaust_non_attacks', 'second_wind',
+        'sentinel_effect', 'double_block', 'add_card_to_hand', 'dual_wield', 'add_random_attack_zero_cost',
+        'damage_rampage', 'double_strength', 'damage_feed', 'damage_lifesteal', 'fiend_fire', 'exhume', 'blood_cost'
     ];
 
     let allEffectsValid = true;
@@ -1099,6 +1104,177 @@ function testCardMappings() {
         });
     });
     test('All card effect types are valid', allEffectsValid);
+}
+
+// ========== IRONCLAD MECHANICS (NEW EFFECTS) ==========
+
+function testIroncladMechanics() {
+    section('IRONCLAD MECHANICS');
+
+    // Blood Cost: refund bandwidth equal to HP lost (capped by cost paid)
+    {
+        let state = createTestState();
+        state.enemies = [createTestEnemy(30)];
+        const card = { ...GAME_DATA.cards.cto_bootstrapped, id: 'test_bootstrapped' };
+        state.hand = [card];
+        state.playerStats.bandwidth = 4; // pay full cost
+        state.playerStats.hp = state.playerStats.maxHp - 2; // lost 2 HP -> refund 2
+
+        state = resolveCardEffect(state, card, 'enemy', state.enemies[0].id);
+
+        test('Blood Cost refunds bandwidth by HP lost', state.playerStats.bandwidth === 2,
+            `Expected 2, got ${state.playerStats.bandwidth}`);
+    }
+
+    // Rampage scaling: damage increases by 5 each play
+    {
+        let state = createTestState();
+        state.enemies = [createTestEnemy(50)];
+        const card = { ...GAME_DATA.cards.cto_viral_growth, id: 'test_rampage' };
+        state.hand = [card];
+        state.playerStats.bandwidth = 1;
+
+        const enemyId = state.enemies[0].id;
+        state = resolveCardEffect(state, card, 'enemy', enemyId);
+        const hpAfterFirst = state.enemies[0].hp;
+
+        // Bring same card back to hand and play again
+        const rampageCard = state.discardPile.find(c => c.id === card.id)!;
+        state.discardPile = state.discardPile.filter(c => c.id !== rampageCard.id);
+        state.hand = [rampageCard];
+        state.playerStats.bandwidth = 1;
+
+        state = resolveCardEffect(state, rampageCard, 'enemy', enemyId);
+        const hpAfterSecond = state.enemies[0].hp;
+
+        const firstDamage = 50 - hpAfterFirst;
+        const secondDamage = hpAfterFirst - hpAfterSecond;
+        test('Rampage adds +5 damage per play', secondDamage === firstDamage + 5,
+            `Expected ${firstDamage + 5}, got ${secondDamage}`);
+    }
+
+    // Double Strength: doubles current strength
+    {
+        let state = createTestState();
+        const card = { ...GAME_DATA.cards.cto_10x_engineer, id: 'test_limit_break' };
+        state.hand = [card];
+        state.playerStats.bandwidth = 1;
+        state.playerStats.statuses = { ...state.playerStats.statuses, strength: 3 };
+
+        state = resolveCardEffect(state, card, 'self');
+
+        test('Double Strength doubles current strength', state.playerStats.statuses.strength === 6,
+            `Expected 6, got ${state.playerStats.statuses.strength}`);
+    }
+
+    // Double Tap: next attack plays twice
+    {
+        let state = createTestState();
+        state.enemies = [createTestEnemy(30)];
+        const doubleTap = { ...GAME_DATA.cards.cto_copy_paste, id: 'test_double_tap' };
+        const attack = { ...GAME_DATA.cards.cto_commit, id: 'test_double_tap_attack' };
+        state.hand = [doubleTap, attack];
+        state.playerStats.bandwidth = 2;
+
+        state = resolveCardEffect(state, doubleTap, 'self');
+        state = resolveCardEffect(state, attack, 'enemy', state.enemies[0].id);
+
+        test('Double Tap duplicates next attack damage', state.enemies[0].hp === 30 - (6 * 2),
+            `Expected ${30 - 12}, got ${state.enemies[0].hp}`);
+        test('Double Tap status is consumed after use', state.playerStats.statuses.doubleTap === 0,
+            `Expected 0, got ${state.playerStats.statuses.doubleTap}`);
+    }
+
+    // Rage: gain block when playing attacks this turn
+    {
+        let state = createTestState();
+        state.enemies = [createTestEnemy(30)];
+        const rageCard = { ...GAME_DATA.cards.cto_founder_mode, id: 'test_rage' };
+        const attack = { ...GAME_DATA.cards.cto_commit, id: 'test_rage_attack' };
+        state.hand = [rageCard, attack];
+        state.playerStats.bandwidth = 1;
+
+        state = resolveCardEffect(state, rageCard, 'self');
+        state = resolveCardEffect(state, attack, 'enemy', state.enemies[0].id);
+
+        test('Rage grants block per attack', state.playerStats.mitigation === 3,
+            `Expected 3, got ${state.playerStats.mitigation}`);
+    }
+
+    // Combust: end of turn HP loss + AoE damage
+    {
+        let state = createTestState();
+        state.enemies = [createTestEnemy(10)];
+        state.playerStats.statuses = { ...state.playerStats.statuses, combust: 1 };
+
+        state = resolveEndTurn(state);
+
+        test('Combust deals 5 AoE and loses 1 HP', state.enemies[0].hp === 5 && state.playerStats.hp === 74,
+            `Enemy HP ${state.enemies[0].hp}, player HP ${state.playerStats.hp}`);
+    }
+
+    // Lifesteal / Reaper analog
+    {
+        let state = createTestState();
+        state.enemies = [createTestEnemy(6), createTestEnemy(6, 'Enemy 2')];
+        const card = { ...GAME_DATA.cards.cto_hostile_takeover, id: 'test_reaper' };
+        state.hand = [card];
+        state.playerStats.bandwidth = 2;
+        state.playerStats.hp = 60;
+
+        state = resolveCardEffect(state, card, 'enemy', state.enemies[0].id);
+
+        test('Lifesteal heals for unblocked damage to all enemies', state.playerStats.hp === 68,
+            `Expected 68, got ${state.playerStats.hp}`);
+    }
+
+    // Feed: grants max HP on kill
+    {
+        let state = createTestState();
+        state.enemies = [createTestEnemy(10)];
+        const card = { ...GAME_DATA.cards.cto_acquihire, id: 'test_feed' };
+        state.hand = [card];
+        state.playerStats.bandwidth = 1;
+
+        state = resolveCardEffect(state, card, 'enemy', state.enemies[0].id);
+
+        test('Feed increases max HP on kill', state.playerStats.maxHp === 78 && state.playerStats.hp === 78,
+            `Expected 78/78, got ${state.playerStats.hp}/${state.playerStats.maxHp}`);
+        test('Feed sets victory when last enemy dies', state.status === 'VICTORY', `Expected VICTORY, got ${state.status}`);
+    }
+
+    // Fiend Fire: exhausts hand and scales damage
+    {
+        let state = createTestState();
+        state.enemies = [createTestEnemy(40)];
+        const fillerA = { ...GAME_DATA.cards.cto_commit, id: 'filler_a' };
+        const fillerB = { ...GAME_DATA.cards.cto_rollback, id: 'filler_b' };
+        const fiendFire = { ...GAME_DATA.cards.cto_all_in_pivot, id: 'test_fiend_fire' };
+        state.hand = [fiendFire, fillerA, fillerB];
+        state.playerStats.bandwidth = 2;
+
+        state = resolveCardEffect(state, fiendFire, 'enemy', state.enemies[0].id);
+
+        test('Fiend Fire exhausts all other cards', state.exhaustPile.length >= 2,
+            `Expected at least 2 exhausted, got ${state.exhaustPile.length}`);
+        test('Fiend Fire damage scales with exhausted count', state.enemies[0].hp === 40 - (7 * 2),
+            `Expected ${40 - 14}, got ${state.enemies[0].hp}`);
+    }
+
+    // Exhume: returns last exhausted card
+    {
+        let state = createTestState();
+        const exhaustedCard = { ...GAME_DATA.cards.cto_commit, id: 'exhausted_commit' };
+        state.exhaustPile = [exhaustedCard];
+        const exhume = { ...GAME_DATA.cards.cto_zombie_feature, id: 'test_exhume' };
+        state.hand = [exhume];
+        state.playerStats.bandwidth = 1;
+
+        state = resolveCardEffect(state, exhume, 'self');
+
+        test('Exhume returns card from exhaust to hand', state.hand.some(c => c.id === 'exhausted_commit'),
+            'Card not returned to hand');
+    }
 }
 
 // ========== RUN ALL TESTS ==========
@@ -1116,6 +1292,7 @@ testStatusInteractions();
 testExecutionOrder();
 testCardProperties();
 testCardMappings();
+testIroncladMechanics();
 
 // Summary
 console.log('\n' + '='.repeat(60));

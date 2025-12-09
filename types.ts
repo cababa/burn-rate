@@ -3,13 +3,19 @@
 export type CardType = 'attack' | 'skill' | 'power' | 'status';
 
 export interface CardEffect {
-  type: 'damage' | 'block' | 'draw' | 'heal' | 'apply_status' | 'add_card' | 'discard' | 'lose_bandwidth' | 'add_copy' | 'exhaust_random' | 'exhaust_targeted' | 'conditional_strength' | 'upgrade_hand' | 'damage_scale_mitigation' | 'damage_scale_matches' | 'retrieve_discard' | 'gain_bandwidth' | 'conditional_refund' | 'lose_hp_turn_end' | 'steal_capital' | 'escape' | 'split' | 'siphon';
+  type: 'damage' | 'block' | 'draw' | 'heal' | 'apply_status' | 'add_card' | 'discard' | 'lose_bandwidth' | 'add_copy' | 'exhaust_random' | 'exhaust_targeted' | 'conditional_strength' | 'upgrade_hand' | 'damage_scale_mitigation' | 'damage_scale_matches' | 'retrieve_discard' | 'gain_bandwidth' | 'conditional_refund' | 'lose_hp_turn_end' | 'steal_capital' | 'escape' | 'split' | 'siphon'
+  // New effect types for missing Ironclad cards
+  | 'lose_hp' | 'play_top_card' | 'put_on_deck' | 'exhaust_choice' | 'exhaust_non_attacks' | 'second_wind' | 'sentinel_effect' | 'double_block' | 'add_card_to_hand'
+  | 'dual_wield' | 'add_random_attack_zero_cost' | 'damage_rampage' | 'double_strength' | 'damage_feed' | 'damage_lifesteal' | 'fiend_fire' | 'exhume' | 'blood_cost';
   value: number;
   target?: 'enemy' | 'self' | 'all_enemies';
-  status?: 'vulnerable' | 'weak' | 'strength' | 'metallicize' | 'evolve' | 'feelNoPain' | 'noDraw' | 'thorns' | 'antifragile' | 'artifact' | 'frail' | 'growth' | 'corruption';
+  status?: 'vulnerable' | 'weak' | 'strength' | 'metallicize' | 'evolve' | 'feelNoPain' | 'noDraw' | 'thorns' | 'antifragile' | 'artifact' | 'frail' | 'growth' | 'corruption'
+  // New status effects for missing Ironclad cards
+  | 'combust' | 'darkEmbrace' | 'rage' | 'fireBreathing' | 'barricade' | 'doubleTap' | 'berserk' | 'brutality' | 'juggernaut';
   cardId?: string;
   matchString?: string; // For scaling damage based on card names (e.g. Commit)
   strengthMultiplier?: number; // For Heavy Blade mechanics
+  timing?: 'end_of_turn'; // For Flex effect (lose strength at end of turn)
 }
 
 export interface TooltipData {
@@ -49,17 +55,28 @@ export interface PlayerStatuses {
   weak: number;
   strength: number;
   dexterity: number;   // Block bonus
-  // New Powers
+  // Powers
   metallicize: number; // Block at end of turn
   evolve: number;      // Draw when status drawn
   feelNoPain: number;  // Block when exhaust
   noDraw: number;      // Cannot draw cards
   thorns: number;      // Damage attacker
-  antifragile: number; // Gain strength at start of turn
+  antifragile: number; // Gain strength when lose HP from card
   artifact: number;    // Negate next debuff
   frail: number;       // Block is less effective
   growth: number;      // Gain strength each turn (Network Effects)
   corruption: number;  // Skills cost 0 but exhaust (Tech Debt)
+  // New statuses for missing Ironclad cards
+  combust: number;     // At end of turn, lose HP and deal damage to ALL
+  darkEmbrace: number; // When exhaust, draw cards
+  rage: number;        // This turn: gain block when playing attacks
+  fireBreathing: number; // When draw status, deal damage to ALL
+  barricade: number;   // Block persists between turns
+  doubleTap: number;   // Next attack plays twice
+  berserk: number;     // At turn start, gain energy
+  brutality: number;   // At turn start, lose HP and draw
+  juggernaut: number;  // When gain block, deal damage to random
+  tempStrength: number; // Strength to lose at end of turn (Flex)
 }
 
 export interface CharacterStats {
@@ -402,4 +419,3 @@ export interface NeowBlessing {
   effects: NeowBlessingEffect[];
   downside?: NeowBlessingEffect; // For the "risky" blessings
 }
-

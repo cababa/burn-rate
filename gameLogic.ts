@@ -1841,6 +1841,16 @@ export const resolveEndTurn = (prev: GameState): GameState => {
     let nextPlayerStatuses = { ...prev.playerStats.statuses };
     let nextMitigation = prev.playerStats.mitigation;
     let endTurnMessage = 'Enemy is executing intent...';
+    const triggerJuggernaut = (blockGained: number, enemies: EnemyData[]) => {
+        if (blockGained <= 0 || nextPlayerStatuses.juggernaut <= 0) return;
+        const live = enemies.filter(e => e.hp > 0);
+        if (live.length === 0) return;
+        const target = live[Math.floor(Math.random() * live.length)];
+        let dmg = nextPlayerStatuses.juggernaut;
+        if (target.statuses.vulnerable > 0) dmg = Math.floor(dmg * getVulnerableMultiplier(prev.relics));
+        target.hp = Math.max(0, target.hp - dmg);
+        endTurnMessage += ` Juggernaut hit ${target.name} for ${dmg}.`;
+    };
 
     // Decrement player statuses
     if (nextPlayerStatuses.vulnerable > 0) {
@@ -1863,8 +1873,10 @@ export const resolveEndTurn = (prev: GameState): GameState => {
 
     // Apply Metallicize
     if (nextPlayerStatuses.metallicize > 0) {
-        nextMitigation += nextPlayerStatuses.metallicize;
-        endTurnMessage += ` Metallicize: +${nextPlayerStatuses.metallicize} Mitigation.`;
+        const blockGain = nextPlayerStatuses.metallicize;
+        nextMitigation += blockGain;
+        triggerJuggernaut(blockGain, prev.enemies);
+        endTurnMessage += ` Metallicize: +${blockGain} Mitigation.`;
         getGlobalLogger().log('BLOCK_GAINED', `Metallicize triggered`, { amount: nextPlayerStatuses.metallicize });
     }
 
@@ -1872,6 +1884,7 @@ export const resolveEndTurn = (prev: GameState): GameState => {
     const cardsToExhaust: CardData[] = [];
     const cardsToRetain: CardData[] = [];
     let currentHp = prev.playerStats.hp;
+    let newEnemies = prev.enemies.map(e => ({ ...e, statuses: { ...e.statuses } }));
 
     prev.hand.forEach(card => {
         // Burnout Logic
@@ -1907,10 +1920,44 @@ export const resolveEndTurn = (prev: GameState): GameState => {
         endTurnMessage += ` ${cardsToExhaust.length} card(s) faded away.`;
         if (nextPlayerStatuses.feelNoPain > 0) {
             nextMitigation += (nextPlayerStatuses.feelNoPain * cardsToExhaust.length);
+            triggerJuggernaut(nextPlayerStatuses.feelNoPain * cardsToExhaust.length, newEnemies);
             getGlobalLogger().log('STATUS_EFFECT', `Feel No Pain triggered, gained ${nextPlayerStatuses.feelNoPain * cardsToExhaust.length} block.`);
         }
     }
     if (cardsToRetain.length > 0) endTurnMessage += ` Retained ${cardsToRetain.length} card(s).`;
+
+    // Combust: end of turn HP loss and AoE damage
+    if (nextPlayerStatuses.combust > 0) {
+        const hpLoss = nextPlayerStatuses.combust;
+        const combustDamage = nextPlayerStatuses.combust * 5;
+        currentHp = Math.max(0, currentHp - hpLoss);
+        newEnemies.forEach(enemy => {
+            let dmg = combustDamage;
+            if (enemy.statuses.vulnerable > 0) dmg = Math.floor(dmg * getVulnerableMultiplier(prev.relics));
+            if (enemy.mitigation > 0) {
+                const blocked = Math.min(enemy.mitigation, dmg);
+                enemy.mitigation -= blocked;
+                dmg -= blocked;
+            }
+            enemy.hp = Math.max(0, enemy.hp - dmg);
+        });
+        endTurnMessage += ` Combust hit all enemies for ${combustDamage}, -${hpLoss} Runway.`;
+    }
+
+    // Temporary/turn-based buffs cleanup
+    if (nextPlayerStatuses.tempStrength > 0) {
+        nextPlayerStatuses.strength -= nextPlayerStatuses.tempStrength;
+        nextPlayerStatuses.tempStrength = 0;
+        endTurnMessage += ` Lost temporary Velocity.`;
+    }
+    nextPlayerStatuses.rage = 0;
+    nextPlayerStatuses.doubleTap = 0;
+
+    let nextStatus: GameState['status'] = currentHp <= 0 ? 'GAME_OVER' : 'ENEMY_TURN';
+    if (newEnemies.every(e => e.hp <= 0)) {
+        nextStatus = 'VICTORY';
+        endTurnMessage = "PROBLEM SOLVED. FEATURE DEPLOYED.";
+    }
 
     return {
         ...prev,
@@ -1918,7 +1965,8 @@ export const resolveEndTurn = (prev: GameState): GameState => {
         discardPile: [...prev.discardPile, ...cardsToDiscard],
         exhaustPile: [...prev.exhaustPile, ...cardsToExhaust],
         hand: cardsToRetain,
-        status: 'ENEMY_TURN',
+        enemies: newEnemies,
+        status: nextStatus,
         message: endTurnMessage
     };
 };
@@ -2223,7 +2271,22 @@ export const resolveEnemyTurn = (prev: GameState, rng?: SeededRandom): GameState
         }
     });
 
-    const nextBandwidth = getTurnStartBandwidth(prev.relics);
+    let nextBandwidth = getTurnStartBandwidth(prev.relics);
+    if (newPlayerStatuses.berserk > 0) {
+        nextBandwidth += newPlayerStatuses.berserk;
+        newMessage += ` Hypergrowth: +${newPlayerStatuses.berserk} Bandwidth.`;
+    }
+
+    let bonusDraw = 0;
+    if (newPlayerStatuses.brutality > 0) {
+        newPlayerHp = Math.max(0, newPlayerHp - newPlayerStatuses.brutality);
+        bonusDraw += newPlayerStatuses.brutality;
+        newMessage += ` Brutality: -${newPlayerStatuses.brutality} Runway, draw bonus ready.`;
+        if (newPlayerHp <= 0) {
+            newStatus = 'GAME_OVER';
+            newMessage = "RUNWAY DEPLETED. STARTUP FAILED.";
+        }
+    }
 
     // Apply Antifragile pending block (Self-Forming Clay) from previous turn damage
     let pendingBlock = 0;
@@ -2234,10 +2297,12 @@ export const resolveEnemyTurn = (prev: GameState, rng?: SeededRandom): GameState
         getGlobalLogger().log('RELIC_EFFECT', `Antifragile granted ${pendingBlock} Block at turn start.`);
     }
 
+    const carryMitigation = newPlayerStatuses.barricade > 0 ? newMitigation : 0;
+
     let nextPlayerStats = {
         ...prev.playerStats,
         hp: Math.max(0, newPlayerHp),
-        mitigation: pendingBlock, // Start with pending block instead of 0
+        mitigation: carryMitigation + pendingBlock,
         bandwidth: nextBandwidth,
         statuses: { ...newPlayerStatuses, thorns: 0 }
     };
@@ -2303,15 +2368,35 @@ export const resolveEnemyTurn = (prev: GameState, rng?: SeededRandom): GameState
     };
 
     if (newStatus === 'PLAYING') {
-        const { drawn, newDraw, newDiscard } = drawCards(nextDrawPile, prev.discardPile, 5);
+        const drawTotal = 5 + bonusDraw;
+        const { drawn, newDraw, newDiscard } = drawCards(nextDrawPile, prev.discardPile, drawTotal);
 
         const processed = processDrawnCards(drawn, prev.hand, newDiscard, newDraw, nextPlayerStats, newMessage);
+
+        // Fire Breathing trigger on drawn status cards
+        if (nextPlayerStats.statuses.fireBreathing > 0) {
+            const statusDrawn = processed.drawnCards.filter(c => c.type === 'status');
+            if (statusDrawn.length > 0) {
+                const baseDmg = nextPlayerStats.statuses.fireBreathing;
+                newEnemies.forEach(enemy => {
+                    let dmg = baseDmg * statusDrawn.length;
+                    if (enemy.statuses.vulnerable > 0) dmg = Math.floor(dmg * getVulnerableMultiplier(prev.relics));
+                    if (enemy.mitigation > 0) {
+                        const blocked = Math.min(enemy.mitigation, dmg);
+                        enemy.mitigation -= blocked;
+                        dmg -= blocked;
+                    }
+                    enemy.hp = Math.max(0, enemy.hp - dmg);
+                });
+            }
+        }
 
         nextState.hand = processed.hand;
         nextState.drawPile = processed.drawPile;
         nextState.discardPile = processed.discard;
         nextState.message = processed.message;
         nextState.playerStats = processed.stats;
+        nextState.enemies = newEnemies;
     }
 
     return nextState;
@@ -2348,6 +2433,8 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
     let newStatus = prev.status;
     let newMitigation = prev.playerStats.mitigation;
     let newPlayerStatuses = { ...prev.playerStats.statuses };
+    let newHp = prev.playerStats.hp;
+    let newMaxHp = prev.playerStats.maxHp;
     let newBandwidth = prev.playerStats.bandwidth - costPaid;
     let newPendingDiscard = 0;
     let newPendingSelection = prev.pendingSelection;
@@ -2359,6 +2446,96 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
     let newExhaustPile = [...prev.exhaustPile];
     // Fix: Remove specific card instance by reference to avoid removing duplicates with same ID
     let currentHand = prev.hand.filter(c => c !== card);
+
+    const applyJuggernaut = (blockGained: number) => {
+        if (blockGained <= 0 || newPlayerStatuses.juggernaut <= 0) return;
+        const liveTargets = newEnemies.filter(e => e.hp > 0);
+        if (liveTargets.length === 0) return;
+        const targetEnemyLocal = liveTargets[Math.floor(Math.random() * liveTargets.length)];
+        let jugDamage = newPlayerStatuses.juggernaut;
+        if (targetEnemyLocal.statuses.vulnerable > 0) {
+            jugDamage = Math.floor(jugDamage * getVulnerableMultiplier(newRelics));
+        }
+        targetEnemyLocal.hp = Math.max(0, targetEnemyLocal.hp - jugDamage);
+        newMessage += ` Juggernaut dealt ${jugDamage} to ${targetEnemyLocal.name}.`;
+    };
+
+    const applyBlockGain = (blockAmount: number) => {
+        if (blockAmount <= 0) return;
+        newMitigation += blockAmount;
+        applyJuggernaut(blockAmount);
+    };
+
+    const triggerFireBreathing = (drawnList: CardData[]) => {
+        if (newPlayerStatuses.fireBreathing <= 0 || drawnList.length === 0) return;
+        const statusDrawn = drawnList.filter(c => c.type === 'status');
+        if (statusDrawn.length === 0) return;
+        const baseDamage = newPlayerStatuses.fireBreathing;
+
+        newEnemies.forEach(enemy => {
+            let damage = baseDamage * statusDrawn.length;
+            if (enemy.statuses.vulnerable > 0) {
+                damage = Math.floor(damage * getVulnerableMultiplier(newRelics));
+            }
+            if (enemy.mitigation > 0) {
+                const blocked = Math.min(enemy.mitigation, damage);
+                enemy.mitigation -= blocked;
+                damage -= blocked;
+            }
+            enemy.hp = Math.max(0, enemy.hp - damage);
+        });
+        newMessage += ` Bug Bounty triggered on drawn status cards.`;
+    };
+
+    const handlePhoenixProtocol = () => {
+        const phoenixDamage = getPhoenixProtocolDamage(newRelics);
+        if (phoenixDamage > 0) {
+            newEnemies.forEach(e => {
+                e.hp = Math.max(0, e.hp - phoenixDamage);
+            });
+            newMessage += ` Phoenix Protocol: ${phoenixDamage} to all!`;
+            getGlobalLogger().log('RELIC_EFFECT', `Phoenix Protocol dealt ${phoenixDamage} damage to all enemies.`);
+
+            if (newEnemies.every(e => e.hp <= 0)) {
+                newStatus = 'VICTORY';
+                newMessage = "PROBLEM SOLVED. FEATURE DEPLOYED.";
+                getGlobalLogger().log('COMBAT_VICTORY', 'All enemies defeated by Phoenix Protocol.');
+            }
+        }
+    };
+
+    const handleDarkEmbraceDraw = () => {
+        if (newPlayerStatuses.darkEmbrace <= 0) return;
+        const drawRes = drawCards(newDrawPile, newDiscardPile, newPlayerStatuses.darkEmbrace);
+        const currentStats = { ...prev.playerStats, hp: newHp, maxHp: newMaxHp, bandwidth: newBandwidth, statuses: newPlayerStatuses, mitigation: newMitigation };
+        const processed = processDrawnCards(drawRes.drawn, currentHand, newDiscardPile, drawRes.newDraw, currentStats, newMessage);
+        currentHand = processed.hand;
+        newDiscardPile = processed.discard;
+        newDrawPile = processed.drawPile;
+        newMessage = processed.message;
+        newBandwidth = processed.stats.bandwidth;
+        newPlayerStatuses = processed.stats.statuses;
+        newMitigation = processed.stats.mitigation;
+        triggerFireBreathing(processed.drawnCards);
+        drawnCards.push(...processed.drawnCards);
+    };
+
+    const exhaustCard = (cardToExhaust: CardData) => {
+        newExhaustPile.push(cardToExhaust);
+        const feelBlock = newPlayerStatuses.feelNoPain > 0 ? newPlayerStatuses.feelNoPain : 0;
+        if (feelBlock > 0) {
+            applyBlockGain(feelBlock);
+        }
+
+        const sentinelEffect = cardToExhaust.effects?.find(e => e.type === 'sentinel_effect');
+        if (sentinelEffect?.value) {
+            newBandwidth += sentinelEffect.value;
+            newMessage += ` Fail-Safe triggered: +${sentinelEffect.value} Bandwidth.`;
+        }
+
+        handlePhoenixProtocol();
+        handleDarkEmbraceDraw();
+    };
 
     const executeEffect = (effect: CardEffect, loops: number = 1) => {
         for (let i = 0; i < loops; i++) {
@@ -2487,7 +2664,7 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
             } else if (effect.type === 'block') {
                 let blockAmount = effect.value;
                 if (newPlayerStatuses.frail > 0) blockAmount = Math.floor(blockAmount * 0.75);
-                newMitigation += blockAmount;
+                applyBlockGain(blockAmount);
                 newMessage += ` gained ${blockAmount} Mitigation.`;
                 getGlobalLogger().log('BLOCK_GAINED', `Gained ${blockAmount} Mitigation. Player total: ${newMitigation}`);
             } else if (effect.type === 'draw') {
@@ -2506,6 +2683,7 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                     newMessage = processed.message;
                     newBandwidth = processed.stats.bandwidth;
                     newPlayerStatuses = processed.stats.statuses;
+                    triggerFireBreathing(processed.drawnCards);
 
                     newMessage += ` Drew ${result.drawn.length} cards.`;
                 }
@@ -2513,6 +2691,10 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                 const amount = effect.value;
                 const statusType = effect.status || 'vulnerable';
                 if (effect.target === 'self') {
+                    if (statusType === 'strength' && effect.timing === 'end_of_turn') {
+                        newPlayerStatuses.tempStrength += Math.abs(amount);
+                        continue;
+                    }
                     if (statusType === 'strength') newPlayerStatuses.strength += amount;
                     if (statusType === 'metallicize') newPlayerStatuses.metallicize += amount;
                     if (statusType === 'evolve') newPlayerStatuses.evolve += amount;
@@ -2523,6 +2705,15 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                     if (statusType === 'artifact') newPlayerStatuses.artifact += amount;
                     if (statusType === 'growth') newPlayerStatuses.growth += amount;
                     if (statusType === 'corruption') newPlayerStatuses.corruption += amount;
+                    if (statusType === 'combust') newPlayerStatuses.combust += amount;
+                    if (statusType === 'darkEmbrace') newPlayerStatuses.darkEmbrace += amount;
+                    if (statusType === 'rage') newPlayerStatuses.rage += amount;
+                    if (statusType === 'fireBreathing') newPlayerStatuses.fireBreathing += amount;
+                    if (statusType === 'barricade') newPlayerStatuses.barricade += amount;
+                    if (statusType === 'doubleTap') newPlayerStatuses.doubleTap += amount;
+                    if (statusType === 'berserk') newPlayerStatuses.berserk += amount;
+                    if (statusType === 'brutality') newPlayerStatuses.brutality += amount;
+                    if (statusType === 'juggernaut') newPlayerStatuses.juggernaut += amount;
                 } else if (effect.target === 'all_enemies') {
                     // Apply to ALL enemies - must check before targetEnemy to work correctly!
                     newEnemies.forEach(e => {
@@ -2622,27 +2813,238 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                     newMessage = processed.message;
                     newBandwidth = processed.stats.bandwidth;
                     newPlayerStatuses = processed.stats.statuses;
+                    triggerFireBreathing(processed.drawnCards);
 
                     newMessage += ` Refunded Energy & Draw.`;
+                }
+            } else if (effect.type === 'blood_cost') {
+                const hpLost = prev.playerStats.maxHp - prev.playerStats.hp;
+                const reduction = Math.min(card.cost, Math.max(0, hpLost));
+                const refund = Math.min(costPaid, reduction);
+                if (refund > 0) {
+                    newBandwidth += refund;
+                    newMessage += ` Bootstrapped refund: +${refund} Bandwidth.`;
+                }
+            } else if (effect.type === 'lose_hp') {
+                newHp = Math.max(0, newHp - effect.value);
+                if (newPlayerStatuses.antifragile > 0) {
+                    newPlayerStatuses.strength += newPlayerStatuses.antifragile;
+                    newMessage += ` (Antifragile: +${newPlayerStatuses.antifragile} Execution Power)`;
+                }
+                if (newHp <= 0) {
+                    newStatus = 'GAME_OVER';
+                    newMessage = "RUNWAY DEPLETED. STARTUP FAILED.";
+                }
+            } else if (effect.type === 'play_top_card') {
+                if (newDrawPile.length === 0 && newDiscardPile.length > 0) {
+                    newDrawPile = shuffle(newDiscardPile);
+                    newDiscardPile = [];
+                }
+                const topCard = newDrawPile.pop();
+                if (topCard) {
+                    const playableCard = { ...topCard, cost: 0, exhaust: true };
+                    const interimState: GameState = {
+                        ...prev,
+                        playerStats: { ...prev.playerStats, hp: newHp, maxHp: newMaxHp, mitigation: newMitigation, bandwidth: newBandwidth, statuses: newPlayerStatuses },
+                        hand: [...currentHand, ...drawnCards, playableCard],
+                        drawPile: newDrawPile,
+                        discardPile: newDiscardPile,
+                        exhaustPile: newExhaustPile,
+                        enemies: newEnemies,
+                        status: newStatus,
+                        pendingDiscard: newPendingDiscard,
+                        pendingSelection: newPendingSelection,
+                        relics: newRelics,
+                        message: newMessage
+                    };
+                    const resultState = resolveCardEffect(interimState, playableCard, playableCard.type === 'attack' ? 'enemy' : 'self', targetEnemy?.id, rng);
+                    newEnemies = resultState.enemies;
+                    newMitigation = resultState.playerStats.mitigation;
+                    newBandwidth = resultState.playerStats.bandwidth;
+                    newPlayerStatuses = resultState.playerStats.statuses;
+                    newHp = resultState.playerStats.hp;
+                    newMaxHp = resultState.playerStats.maxHp;
+                    newDrawPile = resultState.drawPile;
+                    newDiscardPile = resultState.discardPile;
+                    newExhaustPile = resultState.exhaustPile;
+                    newStatus = resultState.status;
+                    newMessage = resultState.message;
+                    newPendingDiscard = resultState.pendingDiscard;
+                    newPendingSelection = resultState.pendingSelection;
+                }
+            } else if (effect.type === 'put_on_deck') {
+                if (currentHand.length > 0) {
+                    newStatus = 'CARD_SELECTION';
+                    newPendingSelection = { context: 'hand', action: 'move_to_draw_pile', count: effect.value };
+                    newMessage += ` Choose ${effect.value} card(s) to top-deck.`;
+                }
+            } else if (effect.type === 'exhaust_choice') {
+                if (currentHand.length > 0) {
+                    newStatus = 'CARD_SELECTION';
+                    newPendingSelection = { context: 'hand', action: 'exhaust', count: effect.value };
+                    newMessage += ` Select ${effect.value} card(s) to exhaust.`;
+                }
+            } else if (effect.type === 'exhaust_non_attacks') {
+                const remaining: CardData[] = [];
+                const toExhaust: CardData[] = [];
+                currentHand.forEach(c => {
+                    if (c.type === 'attack') remaining.push(c);
+                    else toExhaust.push(c);
+                });
+                currentHand = remaining;
+                toExhaust.forEach(c => exhaustCard(c));
+                newMessage += ` Exhausted ${toExhaust.length} non-attack card(s).`;
+            } else if (effect.type === 'second_wind') {
+                const remaining: CardData[] = [];
+                const toExhaust: CardData[] = [];
+                currentHand.forEach(c => {
+                    if (c.type === 'attack') remaining.push(c);
+                    else toExhaust.push(c);
+                });
+                currentHand = remaining;
+                toExhaust.forEach(c => exhaustCard(c));
+                let blockGain = effect.value * toExhaust.length;
+                if (newPlayerStatuses.frail > 0) blockGain = Math.floor(blockGain * 0.75);
+                applyBlockGain(blockGain);
+                newMessage += ` Gained ${blockGain} Buffer from restructuring.`;
+            } else if (effect.type === 'double_block') {
+                const gained = newMitigation;
+                applyBlockGain(gained);
+                newMessage += ` Doubled Buffer.`;
+            } else if (effect.type === 'add_card_to_hand') {
+                if (effect.cardId) {
+                    const template = Object.values(GAME_DATA.cards).find(c => c.id === effect.cardId);
+                    if (template) {
+                        for (let copy = 0; copy < effect.value; copy++) {
+                            const newCard = { ...template, id: `${effect.cardId}_${Date.now()}_${copy}` };
+                            if (currentHand.length < MAX_HAND_SIZE) {
+                                currentHand.push(newCard);
+                                newMessage += ` Added ${newCard.name} to hand.`;
+                            } else {
+                                newDiscardPile.push(newCard);
+                                newMessage += ` Hand full, ${newCard.name} to discard.`;
+                            }
+                        }
+                    }
+                }
+            } else if (effect.type === 'dual_wield') {
+                const candidate = currentHand.find(c => c.type === 'attack' || c.type === 'skill');
+                if (candidate) {
+                    const copy = { ...candidate, id: `${candidate.id}_dupe_${Date.now()}` };
+                    currentHand.push(copy);
+                    newMessage += ` Copied ${candidate.name}.`;
+                } else {
+                    newMessage += ` No Attack/Strategy to copy.`;
+                }
+            } else if (effect.type === 'add_random_attack_zero_cost') {
+                const attacks = Object.values(GAME_DATA.cards).filter(c => c.type === 'attack' && c.rarity !== 'starter' && c.rarity !== 'special');
+                if (attacks.length > 0) {
+                    const randomAttack = rng ? rng.pick(attacks) : attacks[Math.floor(Math.random() * attacks.length)];
+                    const newCard = { ...randomAttack, id: `random_zero_${Date.now()}`, cost: 0 };
+                    if (currentHand.length < MAX_HAND_SIZE) {
+                        currentHand.push(newCard);
+                    } else {
+                        newDiscardPile.push(newCard);
+                        newMessage += ` Hand full, ${newCard.name} to discard.`;
+                    }
+                }
+            } else if (effect.type === 'damage_rampage') {
+                let targets: EnemyData[] = [];
+                if (target === 'enemy' && targetEnemy) targets = [targetEnemy];
+                const bonus = (card as any).rampageBonus || 0;
+                const totalDamage = effect.value + bonus;
+                targets.forEach(t => {
+                    const crunchBonus = getCrunchModeStrength(newRelics, prev.playerStats.hp, prev.playerStats.maxHp);
+                    const effectiveStatuses = crunchBonus > 0
+                        ? { ...newPlayerStatuses, strength: newPlayerStatuses.strength + crunchBonus }
+                        : newPlayerStatuses;
+                    let finalDamage = calculateDamage(totalDamage, effectiveStatuses, t.statuses, 1, newRelics);
+                    if (t.mitigation > 0) {
+                        const blocked = Math.min(t.mitigation, finalDamage);
+                        t.mitigation -= blocked;
+                        finalDamage -= blocked;
+                    }
+                    t.hp = Math.max(0, t.hp - finalDamage);
+                    newMessage += ` Dealt ${finalDamage} Viral damage.`;
+                });
+                (card as any).rampageBonus = bonus + 5;
+            } else if (effect.type === 'double_strength') {
+                newPlayerStatuses.strength *= 2;
+                newMessage += ` Velocity doubled!`;
+            } else if (effect.type === 'damage_feed') {
+                if (targetEnemy) {
+                    const damage = calculateDamage(effect.value, newPlayerStatuses, targetEnemy.statuses, 1, newRelics);
+                    const blocked = Math.min(targetEnemy.mitigation, damage);
+                    targetEnemy.mitigation -= blocked;
+                    const finalDamage = damage - blocked;
+                    const prevHp = targetEnemy.hp;
+                    targetEnemy.hp = Math.max(0, targetEnemy.hp - finalDamage);
+                    newMessage += ` Dealt ${finalDamage} Burn.`;
+                    if (prevHp > 0 && targetEnemy.hp === 0) {
+                        const gain = 3;
+                        newMaxHp += gain;
+                        newHp = Math.min(newMaxHp, newHp + gain);
+                        newMessage += ` Acqui-Hire: +${gain} max Runway.`;
+                    }
+                }
+                if (newEnemies.every(e => e.hp <= 0)) {
+                    newStatus = 'VICTORY';
+                    newMessage = "PROBLEM SOLVED. FEATURE DEPLOYED.";
+                }
+            } else if (effect.type === 'damage_lifesteal') {
+                let totalHeal = 0;
+                newEnemies.forEach(t => {
+                    const damage = calculateDamage(effect.value, newPlayerStatuses, t.statuses, 1, newRelics);
+                    const blocked = Math.min(t.mitigation, damage);
+                    t.mitigation -= blocked;
+                    const finalDamage = damage - blocked;
+                    t.hp = Math.max(0, t.hp - finalDamage);
+                    totalHeal += finalDamage;
+                });
+                if (totalHeal > 0) {
+                    const heal = Math.min(totalHeal, newMaxHp - newHp);
+                    newHp += heal;
+                    newMessage += ` Recovered ${heal} Runway from takeover.`;
+                }
+                if (newEnemies.every(e => e.hp <= 0)) {
+                    newStatus = 'VICTORY';
+                    newMessage = "PROBLEM SOLVED. FEATURE DEPLOYED.";
+                }
+            } else if (effect.type === 'fiend_fire') {
+                const exhaustedCount = currentHand.length;
+                currentHand.slice().forEach(c => exhaustCard(c));
+                currentHand = [];
+                let totalDamage = effect.value * exhaustedCount;
+                if (targetEnemy) {
+                    const damage = calculateDamage(totalDamage, newPlayerStatuses, targetEnemy.statuses, 1, newRelics);
+                    const blocked = Math.min(targetEnemy.mitigation, damage);
+                    targetEnemy.mitigation -= blocked;
+                    const finalDamage = damage - blocked;
+                    targetEnemy.hp = Math.max(0, targetEnemy.hp - finalDamage);
+                    newMessage += ` All-In Pivot dealt ${finalDamage}.`;
+                }
+                if (newEnemies.every(e => e.hp <= 0)) {
+                    newStatus = 'VICTORY';
+                    newMessage = "PROBLEM SOLVED. FEATURE DEPLOYED.";
+                }
+            } else if (effect.type === 'exhume') {
+                if (newExhaustPile.length > 0) {
+                    const retrieved = newExhaustPile.pop()!;
+                    if (currentHand.length < MAX_HAND_SIZE) {
+                        currentHand.push(retrieved);
+                        newMessage += ` Returned ${retrieved.name} from Archive.`;
+                    } else {
+                        newDiscardPile.push(retrieved);
+                        newMessage += ` Hand full, ${retrieved.name} to discard.`;
+                    }
                 }
             } else if (effect.type === 'exhaust_random') {
                 // Refactor: Exhaust random card
                 if (currentHand.length > 0) {
                     const idx = Math.floor(Math.random() * currentHand.length);
                     const exhausted = currentHand.splice(idx, 1)[0];
-                    newExhaustPile.push(exhausted);
                     newMessage += ` Exhausted ${exhausted.name}.`;
-                    if (newPlayerStatuses.feelNoPain > 0) newMitigation += newPlayerStatuses.feelNoPain;
-
-                    // Phoenix Protocol (Charon's Ashes): Deal damage to ALL on exhaust
-                    const phoenixDamage = getPhoenixProtocolDamage(newRelics);
-                    if (phoenixDamage > 0) {
-                        newEnemies.forEach(e => {
-                            e.hp = Math.max(0, e.hp - phoenixDamage);
-                        });
-                        newMessage += ` Phoenix Protocol: ${phoenixDamage} to all!`;
-                        getGlobalLogger().log('RELIC_EFFECT', `Phoenix Protocol dealt ${phoenixDamage} damage to all enemies.`);
-                    }
+                    exhaustCard(exhausted);
                 }
             } else if (effect.type === 'exhaust_targeted') {
                 if (currentHand.length > 0) {
@@ -2667,34 +3069,30 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
         }
     };
 
-    card.effects.forEach(effect => {
-        let loops = 1;
-        if (card.cost === -1) loops = costPaid;
-        executeEffect(effect, loops);
-    });
+    const repeatCount = card.type === 'attack' && newPlayerStatuses.doubleTap > 0 ? 2 : 1;
+    if (repeatCount > 1) {
+        newPlayerStatuses.doubleTap = Math.max(0, newPlayerStatuses.doubleTap - 1);
+    }
+
+    for (let r = 0; r < repeatCount; r++) {
+        if (card.type === 'attack' && newPlayerStatuses.rage > 0) {
+            let rageBlock = newPlayerStatuses.rage;
+            if (newPlayerStatuses.frail > 0) rageBlock = Math.floor(rageBlock * 0.75);
+            applyBlockGain(rageBlock);
+            newMessage += ` Founder Mode: +${rageBlock} Buffer.`;
+        }
+
+        card.effects.forEach(effect => {
+            let loops = 1;
+            if (card.cost === -1) loops = costPaid;
+            executeEffect(effect, loops);
+        });
+    }
 
 
 
     if (card.exhaust) {
-        newExhaustPile.push(card);
-        if (newPlayerStatuses.feelNoPain > 0) newMitigation += newPlayerStatuses.feelNoPain;
-
-        // Phoenix Protocol (Charon's Ashes): Deal damage to ALL enemies on exhaust
-        const phoenixDamage = getPhoenixProtocolDamage(newRelics);
-        if (phoenixDamage > 0) {
-            newEnemies.forEach(e => {
-                e.hp = Math.max(0, e.hp - phoenixDamage);
-            });
-            newMessage += ` Phoenix Protocol: ${phoenixDamage} to all!`;
-            getGlobalLogger().log('RELIC_EFFECT', `Phoenix Protocol dealt ${phoenixDamage} damage to all enemies.`);
-
-            // Check for victory after Phoenix Protocol damage
-            if (newEnemies.every(e => e.hp <= 0)) {
-                newStatus = 'VICTORY';
-                newMessage = "PROBLEM SOLVED. FEATURE DEPLOYED.";
-                getGlobalLogger().log('COMBAT_VICTORY', 'All enemies defeated by Phoenix Protocol.');
-            }
-        }
+        exhaustCard(card);
     } else {
         newDiscardPile.push(card);
     }
@@ -2773,13 +3171,15 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
         ...prev,
         playerStats: {
             ...prev.playerStats,
+            hp: newHp,
+            maxHp: newMaxHp,
             mitigation: newMitigation,
             bandwidth: newBandwidth,
             statuses: newPlayerStatuses,
             // Don't auto-apply capital - player will claim from reward screen
             capital: prev.playerStats.capital
         },
-        hand: [...currentHand, ...drawnCards],
+        hand: currentHand,
         drawPile: newDrawPile,
         discardPile: newDiscardPile,
         exhaustPile: newExhaustPile,

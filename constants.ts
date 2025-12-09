@@ -70,7 +70,7 @@ export const GAME_DATA = {
             bandwidth: 3,
             capital: 99,
             mitigation: 0,
-            statuses: { vulnerable: 0, weak: 0, strength: 0, dexterity: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, frail: 0, growth: 0, corruption: 0 }
+            statuses: { vulnerable: 0, weak: 0, strength: 0, dexterity: 0, metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0, thorns: 0, antifragile: 0, artifact: 0, frail: 0, growth: 0, corruption: 0, combust: 0, darkEmbrace: 0, rage: 0, fireBreathing: 0, barricade: 0, doubleTap: 0, berserk: 0, brutality: 0, juggernaut: 0, tempStrength: 0 }
         } as CharacterStats
     },
     relics: {
@@ -1479,6 +1479,608 @@ export const GAME_DATA = {
             icon: "🌪️",
             keywords: [],
             tooltip: { term: "Blitzscaling", definition: "Prioritizing speed over efficiency in an environment of uncertainty." }
+        } as CardData,
+
+        // --- MISSING COMMON CARDS ---
+        cto_caffeine_boost: { // Flex
+            id: "cto_caffeine_boost",
+            character: "cto",
+            name: "Caffeine Boost",
+            type: "skill",
+            rarity: "common",
+            cost: 0,
+            description: "Gain 2 Velocity. At end of turn, lose 2 Velocity.",
+            effects: [
+                { type: "apply_status", value: 2, status: "strength", target: "self" },
+                { type: "apply_status", value: -2, status: "strength", target: "self", timing: "end_of_turn" }
+            ],
+            icon: "☕",
+            keywords: [],
+            tooltip: { term: "Caffeine", definition: "Quick energy boost that wears off. Good for a sprint, not a marathon." }
+        } as CardData,
+        cto_ship_and_pray: { // Havoc
+            id: "cto_ship_and_pray",
+            character: "cto",
+            name: "Ship & Pray",
+            type: "skill",
+            rarity: "common",
+            cost: 1,
+            exhaust: true,
+            description: "Play the top card of your Backlog and Archive it.",
+            effects: [
+                { type: "play_top_card", value: 1, target: "self" }
+            ],
+            icon: "🙏",
+            keywords: ["exhaust"],
+            tooltip: { term: "Ship & Pray", definition: "Deploy without testing and hope for the best. Sometimes you just gotta ship." }
+        } as CardData,
+        cto_pivot_ready: { // Shrug It Off
+            id: "cto_pivot_ready",
+            character: "cto",
+            name: "Pivot Ready",
+            type: "skill",
+            rarity: "common",
+            cost: 1,
+            description: "Gain 8 Buffer. Draw 1 card.",
+            effects: [
+                { type: "block", value: 8, target: "self" },
+                { type: "draw", value: 1, target: "self" }
+            ],
+            icon: "🔄",
+            keywords: [],
+            tooltip: { term: "Pivot Ready", definition: "Stay flexible. Defense and options in one move." }
+        } as CardData,
+        cto_all_hands: { // Thunderclap
+            id: "cto_all_hands",
+            character: "cto",
+            name: "All-Hands",
+            type: "attack",
+            rarity: "common",
+            cost: 1,
+            description: "Execute 4 to ALL enemies. Apply 1 Exposed to ALL enemies.",
+            effects: [
+                { type: "damage", value: 4, target: "all_enemies" },
+                { type: "apply_status", value: 1, status: "vulnerable", target: "all_enemies" }
+            ],
+            icon: "📣",
+            keywords: [],
+            tooltip: { term: "All-Hands Meeting", definition: "Get everyone's attention. Set the agenda for what comes next." }
+        } as CardData,
+        cto_standup_notes: { // Warcry
+            id: "cto_standup_notes",
+            character: "cto",
+            name: "Standup Notes",
+            type: "skill",
+            rarity: "common",
+            cost: 0,
+            exhaust: true,
+            description: "Draw 1 card. Put a card from your hand on top of your Backlog. Archive.",
+            effects: [
+                { type: "draw", value: 1, target: "self" },
+                { type: "put_on_deck", value: 1, target: "self" }
+            ],
+            icon: "📋",
+            keywords: ["exhaust"],
+            tooltip: { term: "Standup", definition: "Quick sync to prioritize what's next. Plan your next move." }
+        } as CardData,
+
+        // --- MISSING UNCOMMON CARDS ---
+        cto_salary_cut: { // Bloodletting
+            id: "cto_salary_cut",
+            character: "cto",
+            name: "Salary Cut",
+            type: "skill",
+            rarity: "uncommon",
+            cost: 0,
+            description: "Lose 3 Runway. Gain 2 Bandwidth.",
+            effects: [
+                { type: "lose_hp", value: 3, target: "self" },
+                { type: "gain_bandwidth", value: 2, target: "self" }
+            ],
+            icon: "💸",
+            keywords: [],
+            tooltip: { term: "Salary Cut", definition: "Founders often go without pay to extend runway. Sacrifice now for resources." }
+        } as CardData,
+        cto_equity_dilution: { // Hemokinesis
+            id: "cto_equity_dilution",
+            character: "cto",
+            name: "Equity Dilution",
+            type: "attack",
+            rarity: "uncommon",
+            cost: 1,
+            description: "Lose 2 Runway. Execute 15.",
+            effects: [
+                { type: "lose_hp", value: 2, target: "self" },
+                { type: "damage", value: 15, target: "enemy" }
+            ],
+            icon: "📉",
+            keywords: [],
+            tooltip: { term: "Dilution", definition: "Give up ownership for firepower. Sometimes worth it." }
+        } as CardData,
+        cto_startup_grind: { // Combust
+            id: "cto_startup_grind",
+            character: "cto",
+            name: "Startup Grind",
+            type: "power",
+            rarity: "uncommon",
+            cost: 1,
+            description: "At the end of your turn, lose 1 Runway and Execute 5 to ALL enemies.",
+            effects: [
+                { type: "apply_status", value: 1, status: "combust", target: "self" }
+            ],
+            icon: "🏃",
+            keywords: [],
+            tooltip: { term: "The Grind", definition: "Constant work takes its toll but damages everything in your path." }
+        } as CardData,
+        cto_technical_bankruptcy: { // Burning Pact
+            id: "cto_technical_bankruptcy",
+            character: "cto",
+            name: "Tech Bankruptcy",
+            type: "skill",
+            rarity: "uncommon",
+            cost: 1,
+            description: "Archive 1 card. Draw 2 cards.",
+            effects: [
+                { type: "exhaust_choice", value: 1, target: "self" },
+                { type: "draw", value: 2, target: "self" }
+            ],
+            icon: "🔥",
+            keywords: [],
+            tooltip: { term: "Technical Bankruptcy", definition: "Declare the old code dead. Start fresh with new options." }
+        } as CardData,
+        cto_dark_pattern: { // Dark Embrace
+            id: "cto_dark_pattern",
+            character: "cto",
+            name: "Dark Pattern",
+            type: "power",
+            rarity: "uncommon",
+            cost: 2,
+            description: "Whenever a card is Archived, draw 1 card.",
+            effects: [
+                { type: "apply_status", value: 1, status: "darkEmbrace", target: "self" }
+            ],
+            icon: "🕳️",
+            keywords: [],
+            tooltip: { term: "Dark Pattern", definition: "Ethically questionable, but efficient. Every deletion teaches something." }
+        } as CardData,
+        cto_clean_slate: { // Sever Soul
+            id: "cto_clean_slate",
+            character: "cto",
+            name: "Clean Slate",
+            type: "attack",
+            rarity: "uncommon",
+            cost: 2,
+            description: "Archive all non-Attack cards in your hand. Execute 16.",
+            effects: [
+                { type: "exhaust_non_attacks", value: 1, target: "self" },
+                { type: "damage", value: 16, target: "enemy" }
+            ],
+            icon: "🧹",
+            keywords: [],
+            tooltip: { term: "Clean Slate", definition: "Clear out the distractions. Focus everything on execution." }
+        } as CardData,
+        cto_restructuring: { // Second Wind (the card, not relic)
+            id: "cto_restructuring",
+            character: "cto",
+            name: "Restructuring",
+            type: "skill",
+            rarity: "uncommon",
+            cost: 1,
+            description: "Archive all non-Attack cards in your hand. Gain 5 Buffer for each card Archived.",
+            effects: [
+                { type: "second_wind", value: 5, target: "self" }
+            ],
+            icon: "🔧",
+            keywords: [],
+            tooltip: { term: "Restructuring", definition: "Reorganize for efficiency. Clear the cruft, gain protection." }
+        } as CardData,
+        cto_failsafe: { // Sentinel
+            id: "cto_failsafe",
+            character: "cto",
+            name: "Fail-Safe",
+            type: "skill",
+            rarity: "uncommon",
+            cost: 1,
+            description: "Gain 5 Buffer. If this card is Archived, gain 2 Bandwidth.",
+            effects: [
+                { type: "block", value: 5, target: "self" },
+                { type: "sentinel_effect", value: 2, target: "self" }
+            ],
+            icon: "🛟",
+            keywords: [],
+            tooltip: { term: "Fail-Safe", definition: "Protection now, and a backup plan if things go wrong." }
+        } as CardData,
+        cto_double_down: { // Entrench
+            id: "cto_double_down",
+            character: "cto",
+            name: "Double Down",
+            type: "skill",
+            rarity: "uncommon",
+            cost: 2,
+            description: "Double your current Buffer.",
+            effects: [
+                { type: "double_block", value: 1, target: "self" }
+            ],
+            icon: "⬆️",
+            keywords: [],
+            tooltip: { term: "Double Down", definition: "When you're confident in your position, commit harder." }
+        } as CardData,
+        cto_paper_valuation: { // Ghostly Armor
+            id: "cto_paper_valuation",
+            character: "cto",
+            name: "Paper Valuation",
+            type: "skill",
+            rarity: "uncommon",
+            cost: 1,
+            ethereal: true,
+            description: "Fleeting. Gain 10 Buffer.",
+            effects: [
+                { type: "block", value: 10, target: "self" }
+            ],
+            icon: "📜",
+            keywords: ["fleeting"],
+            tooltip: { term: "Paper Valuation", definition: "Looks great on paper. Use it or lose it." }
+        } as CardData,
+        cto_push_through: { // Power Through
+            id: "cto_push_through",
+            character: "cto",
+            name: "Push Through",
+            type: "skill",
+            rarity: "uncommon",
+            cost: 1,
+            description: "Gain 15 Buffer. Add 2 'Legacy Code' to your hand.",
+            effects: [
+                { type: "block", value: 15, target: "self" },
+                { type: "add_card_to_hand", value: 2, cardId: "status_legacy_code", target: "self" }
+            ],
+            icon: "💪",
+            keywords: [],
+            tooltip: { term: "Push Through", definition: "Get it done now, deal with the mess later." }
+        } as CardData,
+        cto_founder_mode: { // Rage
+            id: "cto_founder_mode",
+            character: "cto",
+            name: "Founder Mode",
+            type: "skill",
+            rarity: "uncommon",
+            cost: 0,
+            description: "Whenever you play an Attack this turn, gain 3 Buffer.",
+            effects: [
+                { type: "apply_status", value: 3, status: "rage", target: "self" }
+            ],
+            icon: "🔥",
+            keywords: [],
+            tooltip: { term: "Founder Mode", definition: "When the founder takes over, every action builds momentum." }
+        } as CardData,
+        cto_bootstrapped: { // Blood for Blood
+            id: "cto_bootstrapped",
+            character: "cto",
+            name: "Bootstrapped",
+            type: "attack",
+            rarity: "uncommon",
+            cost: 4,
+            description: "Costs 1 less for each Runway you've lost this combat. Execute 18.",
+            effects: [
+                { type: "damage", value: 18, target: "enemy" },
+                { type: "blood_cost", value: 1, target: "self" }
+            ],
+            icon: "🥾",
+            keywords: [],
+            tooltip: { term: "Bootstrapped", definition: "Self-funded through pain. The harder the struggle, the cheaper the solution." }
+        } as CardData,
+        cto_ab_test: { // Dual Wield
+            id: "cto_ab_test",
+            character: "cto",
+            name: "A/B Test",
+            type: "skill",
+            rarity: "uncommon",
+            cost: 1,
+            description: "Create a copy of an Attack or Strategy card in your hand.",
+            effects: [
+                { type: "dual_wield", value: 1, target: "self" }
+            ],
+            icon: "🔀",
+            keywords: [],
+            tooltip: { term: "A/B Testing", definition: "Run the same experiment twice. See what works." }
+        } as CardData,
+        cto_bug_bounty: { // Fire Breathing
+            id: "cto_bug_bounty",
+            character: "cto",
+            name: "Bug Bounty",
+            type: "power",
+            rarity: "uncommon",
+            cost: 1,
+            description: "Whenever you draw a Status card, Execute 6 to ALL enemies.",
+            effects: [
+                { type: "apply_status", value: 6, status: "fireBreathing", target: "self" }
+            ],
+            icon: "🐛",
+            keywords: [],
+            tooltip: { term: "Bug Bounty", definition: "Turn problems into opportunities. Every bug found is an attack." }
+        } as CardData,
+        cto_wild_pitch: { // Infernal Blade
+            id: "cto_wild_pitch",
+            character: "cto",
+            name: "Wild Pitch",
+            type: "skill",
+            rarity: "uncommon",
+            cost: 1,
+            exhaust: true,
+            description: "Add a random Attack card to your hand. It costs 0 this turn. Archive.",
+            effects: [
+                { type: "add_random_attack_zero_cost", value: 1, target: "self" }
+            ],
+            icon: "🎤",
+            keywords: ["exhaust"],
+            tooltip: { term: "Wild Pitch", definition: "Improvise on the spot. Could be genius, could be chaos." }
+        } as CardData,
+        cto_market_fud: { // Intimidate
+            id: "cto_market_fud",
+            character: "cto",
+            name: "Market FUD",
+            type: "skill",
+            rarity: "uncommon",
+            cost: 0,
+            exhaust: true,
+            description: "Apply 1 Drained to ALL enemies. Archive.",
+            effects: [
+                { type: "apply_status", value: 1, status: "weak", target: "all_enemies" }
+            ],
+            icon: "😰",
+            keywords: ["exhaust"],
+            tooltip: { term: "FUD", definition: "Fear, Uncertainty, Doubt. Weaken all competitors at once." }
+        } as CardData,
+        cto_viral_growth: { // Rampage
+            id: "cto_viral_growth",
+            character: "cto",
+            name: "Viral Growth",
+            type: "attack",
+            rarity: "uncommon",
+            cost: 1,
+            description: "Execute 8. Increases by 5 each time played this combat.",
+            effects: [
+                { type: "damage_rampage", value: 8, target: "enemy" }
+            ],
+            icon: "📊",
+            keywords: [],
+            tooltip: { term: "Viral Growth", definition: "Starts small, grows exponentially. Network effects compound." }
+        } as CardData,
+        cto_core_product: { // Searing Blow
+            id: "cto_core_product",
+            character: "cto",
+            name: "Core Product",
+            type: "attack",
+            rarity: "uncommon",
+            cost: 2,
+            description: "Execute 12. Can be upgraded infinitely.",
+            effects: [
+                { type: "damage", value: 12, target: "enemy" }
+            ],
+            icon: "💎",
+            keywords: [],
+            tooltip: { term: "Core Product", definition: "Your main offering. Keep improving it forever." }
+        } as CardData,
+
+        // --- MISSING RARE CARDS ---
+        cto_10x_engineer: { // Limit Break
+            id: "cto_10x_engineer",
+            character: "cto",
+            name: "10x Engineer",
+            type: "skill",
+            rarity: "rare",
+            cost: 1,
+            exhaust: true,
+            description: "Double your Velocity. Archive.",
+            effects: [
+                { type: "double_strength", value: 1, target: "self" }
+            ],
+            icon: "🦸",
+            keywords: ["exhaust"],
+            tooltip: { term: "10x Engineer", definition: "Mythical talent who multiplies your entire output." }
+        } as CardData,
+        cto_blood_equity: { // Offering
+            id: "cto_blood_equity",
+            character: "cto",
+            name: "Blood Equity",
+            type: "skill",
+            rarity: "rare",
+            cost: 0,
+            exhaust: true,
+            description: "Lose 6 Runway. Gain 2 Bandwidth. Draw 3 cards. Archive.",
+            effects: [
+                { type: "lose_hp", value: 6, target: "self" },
+                { type: "gain_bandwidth", value: 2, target: "self" },
+                { type: "draw", value: 3, target: "self" }
+            ],
+            icon: "🩸",
+            keywords: ["exhaust"],
+            tooltip: { term: "Blood Equity", definition: "Give up everything for this moment. Health for resources." }
+        } as CardData,
+        cto_acquihire: { // Feed
+            id: "cto_acquihire",
+            character: "cto",
+            name: "Acqui-Hire",
+            type: "attack",
+            rarity: "rare",
+            cost: 1,
+            exhaust: true,
+            description: "Execute 10. If this kills an enemy, gain 3 max Runway. Archive.",
+            effects: [
+                { type: "damage_feed", value: 10, target: "enemy" }
+            ],
+            icon: "🤝",
+            keywords: ["exhaust"],
+            tooltip: { term: "Acqui-Hire", definition: "Absorb the competition. If you win, you grow permanently." }
+        } as CardData,
+        cto_hostile_takeover: { // Reaper
+            id: "cto_hostile_takeover",
+            character: "cto",
+            name: "Hostile Takeover",
+            type: "attack",
+            rarity: "rare",
+            cost: 2,
+            description: "Execute 4 to ALL enemies. Heal for unblocked damage dealt.",
+            effects: [
+                { type: "damage_lifesteal", value: 4, target: "all_enemies" }
+            ],
+            icon: "👊",
+            keywords: [],
+            tooltip: { term: "Hostile Takeover", definition: "Aggressive acquisition. What you take heals your runway." }
+        } as CardData,
+        cto_war_chest: { // Barricade
+            id: "cto_war_chest",
+            character: "cto",
+            name: "War Chest",
+            type: "power",
+            rarity: "rare",
+            cost: 3,
+            description: "Buffer is not reset at the start of your turn.",
+            effects: [
+                { type: "apply_status", value: 1, status: "barricade", target: "self" }
+            ],
+            icon: "🏦",
+            keywords: [],
+            tooltip: { term: "War Chest", definition: "Massive cash reserves. Protection that persists through anything." }
+        } as CardData,
+        cto_runway_extension: { // Impervious
+            id: "cto_runway_extension",
+            character: "cto",
+            name: "Runway Extension",
+            type: "skill",
+            rarity: "rare",
+            cost: 2,
+            exhaust: true,
+            description: "Gain 30 Buffer. Archive.",
+            effects: [
+                { type: "block", value: 30, target: "self" }
+            ],
+            icon: "✈️",
+            keywords: ["exhaust"],
+            tooltip: { term: "Runway Extension", definition: "Emergency funding round. Massive protection, one-time use." }
+        } as CardData,
+        cto_crushing_it: { // Bludgeon
+            id: "cto_crushing_it",
+            character: "cto",
+            name: "Crushing It",
+            type: "attack",
+            rarity: "rare",
+            cost: 3,
+            description: "Execute 32.",
+            effects: [
+                { type: "damage", value: 32, target: "enemy" }
+            ],
+            icon: "💥",
+            keywords: [],
+            tooltip: { term: "Crushing It", definition: "Pure dominance. Expensive but devastating." }
+        } as CardData,
+        cto_burn_the_boats: { // Immolate
+            id: "cto_burn_the_boats",
+            character: "cto",
+            name: "Burn the Boats",
+            type: "attack",
+            rarity: "rare",
+            cost: 2,
+            description: "Execute 21 to ALL enemies. Add 1 'Burnout' to your discard.",
+            effects: [
+                { type: "damage", value: 21, target: "all_enemies" },
+                { type: "add_card", value: 1, cardId: "status_burnout", target: "self" }
+            ],
+            icon: "⛵🔥",
+            keywords: [],
+            tooltip: { term: "Burn the Boats", definition: "No retreat. Commit fully, but leave yourself exhausted." }
+        } as CardData,
+        cto_all_in_pivot: { // Fiend Fire
+            id: "cto_all_in_pivot",
+            character: "cto",
+            name: "All-In Pivot",
+            type: "attack",
+            rarity: "rare",
+            cost: 2,
+            exhaust: true,
+            description: "Archive your entire hand. Execute 7 for each card Archived.",
+            effects: [
+                { type: "fiend_fire", value: 7, target: "enemy" }
+            ],
+            icon: "🎰",
+            keywords: ["exhaust"],
+            tooltip: { term: "All-In Pivot", definition: "Abandon everything. Convert your whole hand into one massive attack." }
+        } as CardData,
+        cto_copy_paste: { // Double Tap
+            id: "cto_copy_paste",
+            character: "cto",
+            name: "Copy-Paste",
+            type: "skill",
+            rarity: "rare",
+            cost: 1,
+            description: "This turn, your next Attack is played twice.",
+            effects: [
+                { type: "apply_status", value: 1, status: "doubleTap", target: "self" }
+            ],
+            icon: "📋",
+            keywords: [],
+            tooltip: { term: "Copy-Paste", definition: "If it works, do it again. Duplicate your next attack." }
+        } as CardData,
+        cto_zombie_feature: { // Exhume
+            id: "cto_zombie_feature",
+            character: "cto",
+            name: "Zombie Feature",
+            type: "skill",
+            rarity: "rare",
+            cost: 1,
+            exhaust: true,
+            description: "Put a card from your Archive pile into your hand. Archive.",
+            effects: [
+                { type: "exhume", value: 1, target: "self" }
+            ],
+            icon: "🧟",
+            keywords: ["exhaust"],
+            tooltip: { term: "Zombie Feature", definition: "That feature you killed? It's back. Retrieve from the graveyard." }
+        } as CardData,
+        cto_hypergrowth: { // Berserk
+            id: "cto_hypergrowth",
+            character: "cto",
+            name: "Hypergrowth",
+            type: "power",
+            rarity: "rare",
+            cost: 0,
+            description: "Gain 2 Exposed. At the start of your turn, gain 1 Bandwidth.",
+            effects: [
+                { type: "apply_status", value: 2, status: "vulnerable", target: "self" },
+                { type: "apply_status", value: 1, status: "berserk", target: "self" }
+            ],
+            icon: "📈",
+            keywords: [],
+            tooltip: { term: "Hypergrowth", definition: "Grow at all costs. Take more damage but gain permanent resources." }
+        } as CardData,
+        cto_crunch_culture: { // Brutality
+            id: "cto_crunch_culture",
+            character: "cto",
+            name: "Crunch Culture",
+            type: "power",
+            rarity: "rare",
+            cost: 0,
+            description: "At the start of your turn, lose 1 Runway and draw 1 card.",
+            effects: [
+                { type: "apply_status", value: 1, status: "brutality", target: "self" }
+            ],
+            icon: "⚡",
+            keywords: [],
+            tooltip: { term: "Crunch Culture", definition: "Work until you break. Constant drain but constant cards." }
+        } as CardData,
+        cto_flywheel: { // Juggernaut
+            id: "cto_flywheel",
+            character: "cto",
+            name: "Flywheel",
+            type: "power",
+            rarity: "rare",
+            cost: 2,
+            description: "Whenever you gain Buffer, Execute 5 to a random enemy.",
+            effects: [
+                { type: "apply_status", value: 5, status: "juggernaut", target: "self" }
+            ],
+            icon: "🎡",
+            keywords: [],
+            tooltip: { term: "Flywheel Effect", definition: "Momentum builds momentum. Every defense triggers offense." }
         } as CardData,
 
         // --- STATUS ---
