@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Unit } from './components/Unit';
 import { Card } from './components/Card';
 import { MapScreen } from './components/MapScreen';
@@ -15,6 +15,29 @@ import {
     resolvePotionEffect, checkPotionDrop, generateRandomPotion, addPotionToSlot, removePotionFromSlot, canAcquirePotion, canUseExitStrategy
 } from './gameLogic';
 import { createGameRNG, GameRNG, generateRandomSeed } from './rng';
+
+// === NARRATIVE SYSTEM ===
+import { TweetOverlay } from './components/TweetOverlay';
+import { TimelineModal } from './components/TimelineModal';
+import { TweetSidebar } from './components/TweetSidebar';
+import { EnemyTweetBubble } from './components/EnemyTweetBubble';
+import {
+    NarrativeTweet,
+    ActNarrative,
+    StartupContext,
+    STARTUP_PRESETS
+} from './narrativeTypes';
+import {
+    generateActNarrative,
+    getEnemyAttackTweet,
+    getEnemyTweetByIntent,
+    getEnemyDefeatTweet,
+    getStoryBeatTweet,
+    createFallbackNarrative,
+    hasGeminiApiKey,
+    setGeminiApiKey,
+    getGeminiApiKey
+} from './narrativeService';
 
 const App: React.FC = () => {
     // --- Game State Initialization ---
@@ -61,6 +84,114 @@ const App: React.FC = () => {
     // Potion targeting state: which potion is being targeted
     const [pendingPotionUse, setPendingPotionUse] = useState<{ potion: PotionData; slotIndex: number } | null>(null);
 
+    // === NARRATIVE SYSTEM STATE ===
+    const [actNarrative, setActNarrative] = useState<ActNarrative | null>(null);
+    const [currentTweet, setCurrentTweet] = useState<NarrativeTweet | null>(null);
+    const [tweetHistory, setTweetHistory] = useState<NarrativeTweet[]>([]);
+    const [showTimeline, setShowTimeline] = useState(false);
+    const [narrativeLoading, setNarrativeLoading] = useState(false);
+    const [narrativeError, setNarrativeError] = useState<string | null>(null);
+    // Per-enemy tweet bubbles (enemyId -> tweet)
+    const [enemyTweets, setEnemyTweets] = useState<Record<string, NarrativeTweet>>({});
+
+    // Startup input form state
+    const [startupNameInput, setStartupNameInput] = useState('');
+    const [startupOneLinerInput, setStartupOneLinerInput] = useState('');
+    const [apiKeyInput, setApiKeyInput] = useState(getGeminiApiKey() || '');
+
+    // Track previous status and enemies for detecting changes
+    const prevStatusRef = useRef(gameState.status);
+    const prevEnemiesRef = useRef<string[]>([]);
+
+    // === NARRATIVE: Generate tweets when PLAYER TURN starts ===
+    // This shows enemy trash-talk when you need to decide what to attack
+    useEffect(() => {
+        const prevStatus = prevStatusRef.current;
+        prevStatusRef.current = gameState.status;
+
+        // Detect transition to PLAYING (player's turn starts)
+        // This includes: combat start (turn 1 from MAP) AND subsequent turns (from ENEMY_TURN)
+        const isCombatStart = gameState.status === 'PLAYING' && gameState.turn === 1 && prevStatus !== 'PLAYING';
+        const isNewPlayerTurn = gameState.status === 'PLAYING' && prevStatus === 'ENEMY_TURN';
+
+        if (isCombatStart || isNewPlayerTurn) {
+            if (actNarrative && gameState.enemies.length > 0) {
+                const aliveEnemies = gameState.enemies.filter(e => e.hp > 0);
+
+                // Generate tweet for each alive enemy
+                const newEnemyTweets: Record<string, NarrativeTweet> = {};
+                const newHistoryTweets: NarrativeTweet[] = [];
+
+                for (const enemy of aliveEnemies) {
+                    // Extract base enemy ID
+                    const parts = enemy.id.split('_');
+                    const baseIdParts: string[] = [];
+                    for (const part of parts) {
+                        if (/^\d{10,}$/.test(part)) break;
+                        baseIdParts.push(part);
+                    }
+                    const baseEnemyId = baseIdParts.join('_') || enemy.id;
+
+                    // Get contextual tweet based on enemy's intent
+                    const intentType = enemy.currentIntent.type as 'attack' | 'buff' | 'debuff' | 'defend' | 'unknown';
+                    const tweet = getEnemyTweetByIntent(actNarrative, baseEnemyId, intentType);
+
+                    if (tweet) {
+                        newEnemyTweets[enemy.id] = tweet;
+                        const isDuplicate = tweetHistory.some(t => t.content === tweet.content);
+                        if (!isDuplicate) {
+                            newHistoryTweets.push(tweet);
+                        }
+                    }
+                }
+
+                console.log('[Narrative] Player turn start - generated tweets for', Object.keys(newEnemyTweets).length, 'enemies');
+                setEnemyTweets(newEnemyTweets);
+                if (newHistoryTweets.length > 0) {
+                    setTweetHistory(hist => [...hist, ...newHistoryTweets]);
+                }
+            }
+        }
+    }, [gameState.status, gameState.turn, actNarrative]);
+
+    // === NARRATIVE: Detect enemy deaths and show victory tweets ===
+    useEffect(() => {
+        const currentEnemyIds = gameState.enemies.filter(e => e.hp > 0).map(e => e.id);
+        const prevIds = prevEnemiesRef.current;
+        prevEnemiesRef.current = currentEnemyIds;
+
+        // Find enemies that died (were in prev but not in current)
+        const deadIds = prevIds.filter(id => !currentEnemyIds.includes(id));
+
+        if (deadIds.length > 0 && actNarrative) {
+            // Show defeat tweets for killed enemies
+            for (const deadId of deadIds) {
+                // Extract base enemy ID
+                const parts = deadId.split('_');
+                const baseIdParts: string[] = [];
+                for (const part of parts) {
+                    if (/^\d{10,}$/.test(part)) break;
+                    baseIdParts.push(part);
+                }
+                const baseEnemyId = baseIdParts.join('_') || deadId;
+
+                const tweet = getEnemyDefeatTweet(actNarrative, baseEnemyId);
+                if (tweet) {
+                    console.log('[Narrative] Enemy defeated! Showing victory tweet for:', baseEnemyId);
+                    // Remove the dead enemy's tweet bubble
+                    setEnemyTweets(prev => {
+                        const next = { ...prev };
+                        delete next[deadId];
+                        return next;
+                    });
+                    // Show victory tweet and add to history
+                    setCurrentTweet(tweet);
+                    setTweetHistory(hist => [...hist, tweet]);
+                }
+            }
+        }
+    }, [gameState.enemies, actNarrative]);
+
 
     // --- START GAME LOGIC ---
 
@@ -88,7 +219,7 @@ const App: React.FC = () => {
             relics: initialRelics,
             turn: 0,
             floor: 1,
-            status: 'NEOW_BLESSING', // Show Friends & Family blessing first
+            status: 'STARTUP_INPUT', // Go to startup input first, then Neow's blessing
             rewardOptions: [],
             message: 'Friends & Family Round...',
             map: generateMap(rng.map),
@@ -542,7 +673,11 @@ const App: React.FC = () => {
     };
 
     const processEnemyTurn = () => {
-        setGameState(prev => resolveEnemyTurn(prev, rngRef.current?.cards));
+        setGameState(prev => {
+            const newState = resolveEnemyTurn(prev, rngRef.current?.cards);
+            return newState;
+        });
+        // Tweet generation moved to useEffect that triggers when status becomes PLAYING
     };
 
 
@@ -1589,6 +1724,212 @@ const App: React.FC = () => {
         });
     };
 
+    // === STARTUP INPUT SCREEN ===
+    // Collect startup name and one-liner before starting the run
+
+    const handleStartupSubmit = async () => {
+        if (!startupNameInput.trim() || !startupOneLinerInput.trim()) {
+            setNarrativeError('Please enter both a startup name and one-liner');
+            return;
+        }
+
+        // Save API key if provided
+        if (apiKeyInput.trim()) {
+            setGeminiApiKey(apiKeyInput.trim());
+        }
+
+        // Update game state with startup info
+        setGameState(prev => ({
+            ...prev,
+            startupName: startupNameInput.trim(),
+            startupOneLiner: startupOneLinerInput.trim(),
+            message: 'Generating your startup story...'
+        }));
+
+        // Generate narrative if API key available
+        const hasKey = apiKeyInput.trim() || hasGeminiApiKey();
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('[STARTUP] Startup submitted:', startupNameInput.trim());
+        console.log('[STARTUP] One-liner:', startupOneLinerInput.trim());
+        console.log('[STARTUP] API key from input:', apiKeyInput.trim() ? 'YES (length: ' + apiKeyInput.trim().length + ')' : 'NO');
+        console.log('[STARTUP] API key from storage:', hasGeminiApiKey() ? 'YES' : 'NO');
+        console.log('[STARTUP] Will use LLM:', hasKey ? 'YES' : 'NO (using fallback)');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+        if (hasKey) {
+            console.log('[STARTUP] 🚀 Starting LLM narrative generation...');
+            setNarrativeLoading(true);
+            setNarrativeError(null);
+
+            try {
+                const context: StartupContext = {
+                    name: startupNameInput.trim(),
+                    oneLiner: startupOneLinerInput.trim()
+                };
+                console.log('[STARTUP] Calling generateActNarrative with context:', context);
+                const narrative = await generateActNarrative(context);
+                console.log('[STARTUP] ✅ Narrative generated successfully!');
+                console.log('[STARTUP] Theme:', narrative.theme);
+                console.log('[STARTUP] Enemy pools:', narrative.enemyTweetPools?.length || 0);
+                setActNarrative(narrative);
+
+                // Show intro tweet
+                if (narrative.introTweet) {
+                    console.log('[STARTUP] Showing intro tweet:', narrative.introTweet.content?.substring(0, 50));
+                    setCurrentTweet(narrative.introTweet);
+                    setTweetHistory([narrative.introTweet]);
+                }
+            } catch (err) {
+                console.error('[STARTUP] ❌ Generation failed:', err);
+                console.log('[STARTUP] Using fallback narrative instead');
+                // Use fallback narrative
+                const fallback = createFallbackNarrative({
+                    name: startupNameInput.trim(),
+                    oneLiner: startupOneLinerInput.trim()
+                });
+                setActNarrative(fallback);
+            } finally {
+                setNarrativeLoading(false);
+            }
+        } else {
+            console.log('[STARTUP] ⚠️ No API key - using fallback narrative');
+            // No API key - use fallback narrative
+            const fallback = createFallbackNarrative({
+                name: startupNameInput.trim(),
+                oneLiner: startupOneLinerInput.trim()
+            });
+            setActNarrative(fallback);
+        }
+
+        // Proceed to Neow's blessing
+        setGameState(prev => ({
+            ...prev,
+            status: 'NEOW_BLESSING',
+            narrativeGenerated: true
+        }));
+    };
+
+    const handlePresetSelect = (preset: StartupContext) => {
+        setStartupNameInput(preset.name);
+        setStartupOneLinerInput(preset.oneLiner);
+    };
+
+    if (gameState.status === 'STARTUP_INPUT') {
+        return (
+            <div className="min-h-screen bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1a1a1a] via-[#0a0a0a] to-[#000000] flex flex-col items-center justify-center p-8 text-white">
+                <div className="max-w-2xl w-full">
+                    {/* Header */}
+                    <div className="text-center mb-10">
+                        <div className="text-6xl mb-4">🚀</div>
+                        <h1 className="text-4xl md:text-5xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary via-white to-warning">
+                            Name Your Startup
+                        </h1>
+                        <p className="text-gray-400 mt-4 max-w-lg mx-auto font-sans">
+                            Every founder's journey starts with a vision. What will you build?
+                        </p>
+                    </div>
+
+                    {/* Form */}
+                    <div className="bg-surface border border-gray-700 rounded-xl p-6 mb-6">
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                                Startup Name
+                            </label>
+                            <input
+                                type="text"
+                                value={startupNameInput}
+                                onChange={(e) => setStartupNameInput(e.target.value)}
+                                placeholder="e.g., Serial Flicks"
+                                className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                                maxLength={30}
+                            />
+                        </div>
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                                One-Liner (the elevator pitch)
+                            </label>
+                            <input
+                                type="text"
+                                value={startupOneLinerInput}
+                                onChange={(e) => setStartupOneLinerInput(e.target.value)}
+                                placeholder="e.g., Netflix for book serials"
+                                className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                                maxLength={60}
+                            />
+                        </div>
+
+                        {/* Preset Quick Picks */}
+                        <div className="mt-6">
+                            <p className="text-xs text-gray-500 mb-3 font-mono">OR PICK A PRESET:</p>
+                            <div className="flex flex-wrap gap-2">
+                                {STARTUP_PRESETS.slice(0, 6).map((preset) => (
+                                    <button
+                                        key={preset.name}
+                                        onClick={() => handlePresetSelect(preset)}
+                                        className={`px-3 py-1.5 text-sm border rounded-full transition-all ${startupNameInput === preset.name
+                                            ? 'bg-primary/20 border-primary text-primary'
+                                            : 'bg-gray-800 border-gray-600 text-gray-300 hover:border-primary/50'
+                                            }`}
+                                    >
+                                        {preset.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* API Key (collapsible) */}
+                    <details className="bg-surface border border-gray-700 rounded-xl p-4 mb-6">
+                        <summary className="cursor-pointer text-sm text-gray-400 font-mono">
+                            🔑 Gemini API Key (Optional - for AI narrative)
+                        </summary>
+                        <div className="mt-4">
+                            <input
+                                type="password"
+                                value={apiKeyInput}
+                                onChange={(e) => setApiKeyInput(e.target.value)}
+                                placeholder="Paste your Gemini API key here..."
+                                className="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-primary"
+                            />
+                            <p className="text-xs text-gray-500 mt-2">
+                                Get a free key at <span className="text-primary">aistudio.google.com</span>. Without it, you'll get basic narrative.
+                            </p>
+                        </div>
+                    </details>
+
+                    {/* Error Message */}
+                    {narrativeError && (
+                        <div className="text-danger text-sm text-center mb-4 font-mono">
+                            ⚠️ {narrativeError}
+                        </div>
+                    )}
+
+                    {/* Submit Button */}
+                    <button
+                        onClick={handleStartupSubmit}
+                        disabled={narrativeLoading || !startupNameInput.trim() || !startupOneLinerInput.trim()}
+                        className={`w-full py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-3 ${narrativeLoading || !startupNameInput.trim() || !startupOneLinerInput.trim()
+                            ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-primary to-warning text-black hover:opacity-90'
+                            }`}
+                    >
+                        {narrativeLoading ? (
+                            <>
+                                <div className="animate-spin h-5 w-5 border-2 border-current border-t-transparent rounded-full"></div>
+                                Generating Your Story...
+                            </>
+                        ) : (
+                            <>
+                                <Rocket size={20} />
+                                Launch This Startup
+                            </>
+                        )}
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     if (gameState.status === 'NEOW_BLESSING') {
         return (
             <div className="min-h-screen bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1a1a1a] via-[#0a0a0a] to-[#000000] flex flex-col items-center justify-center p-8 text-white">
@@ -2084,9 +2425,9 @@ const App: React.FC = () => {
                 </div>
             </header>
 
-            <main className="flex-1 relative flex flex-col items-center justify-center p-8 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1a1a1a] via-[#0a0a0a] to-[#000000]">
+            <main className="flex-1 relative flex flex-col items-center justify-end pt-32 pb-8 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1a1a1a] via-[#0a0a0a] to-[#000000]">
 
-                <div className="w-full max-w-7xl flex justify-between items-center mb-24 px-4">
+                <div className="w-full max-w-7xl flex justify-between items-center px-4 mt-auto">
 
                     {/* Player Column */}
                     <div className="flex flex-col gap-4">
@@ -2127,28 +2468,39 @@ const App: React.FC = () => {
                         ${gameState.enemies.length > 4 ? 'scale-75' : ''}
                     `}>
                         {gameState.enemies.map((enemy, index) => (
-                            <Unit
-                                key={enemy.id}
-                                name={enemy.name}
-                                currentHp={enemy.hp}
-                                maxHp={enemy.maxHp}
-                                emoji={enemy.emoji}
-                                isEnemy
-                                intent={enemy.currentIntent}
-                                statuses={enemy.statuses}
-                                description={enemy.description}
-                                onDrop={(card) => handleEnemyDrop(card, enemy.id)}
-                                isTargetable={gameState.status === 'PLAYING' || !!pendingPotionUse}
-                                isSelected={gameState.selectedEnemyId === enemy.id || (pendingPotionUse !== null)}
-                                onClick={() => {
-                                    if (pendingPotionUse) {
-                                        // Using potion targeting mode
-                                        handlePotionTargetEnemy(enemy.id);
-                                    } else {
-                                        setGameState(prev => ({ ...prev, selectedEnemyId: enemy.id }));
-                                    }
-                                }}
-                            />
+                            <div key={enemy.id} className="relative">
+                                {/* Tweet Bubble above enemy */}
+                                <EnemyTweetBubble
+                                    tweet={enemyTweets[enemy.id] || null}
+                                    onDismiss={() => setEnemyTweets(prev => {
+                                        const next = { ...prev };
+                                        delete next[enemy.id];
+                                        return next;
+                                    })}
+                                    position="above"
+                                />
+                                <Unit
+                                    name={enemy.name}
+                                    currentHp={enemy.hp}
+                                    maxHp={enemy.maxHp}
+                                    emoji={enemy.emoji}
+                                    isEnemy
+                                    intent={enemy.currentIntent}
+                                    statuses={enemy.statuses}
+                                    description={enemy.description}
+                                    onDrop={(card) => handleEnemyDrop(card, enemy.id)}
+                                    isTargetable={gameState.status === 'PLAYING' || !!pendingPotionUse}
+                                    isSelected={gameState.selectedEnemyId === enemy.id || (pendingPotionUse !== null)}
+                                    onClick={() => {
+                                        if (pendingPotionUse) {
+                                            // Using potion targeting mode
+                                            handlePotionTargetEnemy(enemy.id);
+                                        } else {
+                                            setGameState(prev => ({ ...prev, selectedEnemyId: enemy.id }));
+                                        }
+                                    }}
+                                />
+                            </div>
                         ))}
                     </div>
                 </div>
@@ -2679,6 +3031,15 @@ const App: React.FC = () => {
                     onSelect={handleSecretWeaponCardSelect}
                 />
             )}
+
+            {/* === NARRATIVE SYSTEM UI === */}
+            {/* Tweet Sidebar - collapsible timeline on the right */}
+            <TweetSidebar
+                tweets={tweetHistory}
+                currentTweet={currentTweet}
+                onDismissCurrent={() => setCurrentTweet(null)}
+                startupName={gameState.startupName}
+            />
 
             <DevConsole />
         </div>

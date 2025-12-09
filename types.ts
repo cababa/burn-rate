@@ -343,7 +343,7 @@ export interface GameState {
   relics: RelicData[];
   turn: number;
   floor: number;
-  status: 'MENU' | 'CHARACTER_SELECT' | 'NEOW_BLESSING' | 'PLAYING' | 'VICTORY' | 'GAME_OVER' | 'ENEMY_TURN' | 'REWARD_SELECTION' | 'MAP' | 'RETROSPECTIVE' | 'VENDOR' | 'DISCARD_SELECTION' | 'CARD_SELECTION' | 'EVENT' | 'VICTORY_ALL';
+  status: 'MENU' | 'CHARACTER_SELECT' | 'STARTUP_INPUT' | 'NEOW_BLESSING' | 'PLAYING' | 'VICTORY' | 'GAME_OVER' | 'ENEMY_TURN' | 'REWARD_SELECTION' | 'MAP' | 'RETROSPECTIVE' | 'VENDOR' | 'DISCARD_SELECTION' | 'CARD_SELECTION' | 'EVENT' | 'VICTORY_ALL';
   rewardOptions: CardData[];
   message: string;
   map: MapLayer[];
@@ -386,6 +386,11 @@ export interface GameState {
 
   // === SEED SYSTEM ===
   seed: string; // Run seed (displayed to player, enables deterministic reruns)
+
+  // === NARRATIVE SYSTEM ===
+  startupName?: string;      // Player's startup name
+  startupOneLiner?: string;  // Startup one-liner description
+  narrativeGenerated?: boolean;  // Whether narrative has been generated for this run
 }
 
 // === FRIENDS & FAMILY ROUND (Neow's Blessing) ===
