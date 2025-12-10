@@ -343,7 +343,7 @@ export interface GameState {
   relics: RelicData[];
   turn: number;
   floor: number;
-  status: 'MENU' | 'CHARACTER_SELECT' | 'STARTUP_INPUT' | 'NEOW_BLESSING' | 'PLAYING' | 'VICTORY' | 'GAME_OVER' | 'ENEMY_TURN' | 'REWARD_SELECTION' | 'MAP' | 'RETROSPECTIVE' | 'VENDOR' | 'DISCARD_SELECTION' | 'CARD_SELECTION' | 'EVENT' | 'VICTORY_ALL';
+  status: 'MENU' | 'CHARACTER_SELECT' | 'STARTUP_INPUT' | 'INTRO_TWEET' | 'NEOW_BLESSING' | 'PLAYING' | 'VICTORY' | 'GAME_OVER' | 'ENEMY_TURN' | 'REWARD_SELECTION' | 'MAP' | 'RETROSPECTIVE' | 'VENDOR' | 'DISCARD_SELECTION' | 'CARD_SELECTION' | 'EVENT' | 'VICTORY_ALL';
   rewardOptions: CardData[];
   message: string;
   map: MapLayer[];

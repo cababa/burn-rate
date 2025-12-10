@@ -12,7 +12,9 @@ import {
     applyOnAttackRelics, applyOnEnemyDeathRelics, applyTurnEndRelics, hasRetainHand, getCardLimit, canRestAtSite,
     getRelicWoundsToAdd, applyOnCardReward, getSecretWeaponCard, getEncounterForFloor, getEliteEncounter, getBossEncounter,
     // Potion functions
-    resolvePotionEffect, checkPotionDrop, generateRandomPotion, addPotionToSlot, removePotionFromSlot, canAcquirePotion, canUseExitStrategy
+    resolvePotionEffect, checkPotionDrop, generateRandomPotion, addPotionToSlot, removePotionFromSlot, canAcquirePotion, canUseExitStrategy,
+    // Progressive narrative helper
+    getConnectedNodes
 } from './gameLogic';
 import { createGameRNG, GameRNG, generateRandomSeed } from './rng';
 
@@ -38,6 +40,27 @@ import {
     setGeminiApiKey,
     getGeminiApiKey
 } from './narrativeService';
+// === PROGRESSIVE NARRATIVE SYSTEM ===
+import {
+    MacroNarrative,
+    MesoNarrative
+} from './progressiveNarrativeTypes';
+import {
+    generateInitialNarrative,
+    generateMesoNarrative,
+    generateMacroNarrative,
+    generateNextPathNarratives,
+    getEnemyIntentTweet,
+    getEnemyDefeatTweetProgressive,
+    getCardPlayTweet,
+    getCachedMeso,
+    setCachedMeso,
+    createFallbackMacro,
+    createFallbackMeso,
+    clearNarrativeCache,
+    hasGeminiApiKey as hasProgressiveApiKey,
+    setGeminiApiKey as setProgressiveApiKey
+} from './progressiveNarrativeService';
 
 const App: React.FC = () => {
     // --- Game State Initialization ---
@@ -94,6 +117,11 @@ const App: React.FC = () => {
     // Per-enemy tweet bubbles (enemyId -> tweet)
     const [enemyTweets, setEnemyTweets] = useState<Record<string, NarrativeTweet>>({});
 
+    // === PROGRESSIVE NARRATIVE STATE ===
+    const [macroNarrative, setMacroNarrative] = useState<MacroNarrative | null>(null);
+    const [currentMeso, setCurrentMeso] = useState<MesoNarrative | null>(null);
+    const [useProgressiveNarrative, setUseProgressiveNarrative] = useState(true); // Feature flag
+
     // Startup input form state
     const [startupNameInput, setStartupNameInput] = useState('');
     const [startupOneLinerInput, setStartupOneLinerInput] = useState('');
@@ -103,58 +131,149 @@ const App: React.FC = () => {
     const prevStatusRef = useRef(gameState.status);
     const prevEnemiesRef = useRef<string[]>([]);
 
-    // === NARRATIVE: Generate tweets when PLAYER TURN starts ===
-    // This shows enemy trash-talk when you need to decide what to attack
+    // === PROGRESSIVE NARRATIVE: Generate MESO on combat start, use progressive tweets ===
     useEffect(() => {
         const prevStatus = prevStatusRef.current;
         prevStatusRef.current = gameState.status;
 
-        // Detect transition to PLAYING (player's turn starts)
-        // This includes: combat start (turn 1 from MAP) AND subsequent turns (from ENEMY_TURN)
+        // Detect combat start (turn 1 from MAP or other non-PLAYING state)
         const isCombatStart = gameState.status === 'PLAYING' && gameState.turn === 1 && prevStatus !== 'PLAYING';
         const isNewPlayerTurn = gameState.status === 'PLAYING' && prevStatus === 'ENEMY_TURN';
 
-        if (isCombatStart || isNewPlayerTurn) {
-            if (actNarrative && gameState.enemies.length > 0) {
-                const aliveEnemies = gameState.enemies.filter(e => e.hp > 0);
+        if (isCombatStart && macroNarrative && gameState.enemies.length > 0) {
+            // MESO GENERATION: Generate narrative for this combat node
+            const context: StartupContext = {
+                name: gameState.startupName || 'Startup',
+                oneLiner: gameState.startupOneLiner || 'Building something great'
+            };
 
-                // Generate tweet for each alive enemy
-                const newEnemyTweets: Record<string, NarrativeTweet> = {};
-                const newHistoryTweets: NarrativeTweet[] = [];
+            const nodeId = gameState.currentMapPosition?.nodeId || `floor_${gameState.floor}`;
+            const floor = gameState.floor;
+            const nodeType = 'problem'; // Could be enhanced to pass actual node type
 
-                for (const enemy of aliveEnemies) {
-                    // Extract base enemy ID
-                    const parts = enemy.id.split('_');
-                    const baseIdParts: string[] = [];
-                    for (const part of parts) {
-                        if (/^\d{10,}$/.test(part)) break;
-                        baseIdParts.push(part);
+            // Get enemy info for MESO generation - extract base ID by removing timestamp suffix
+            const enemies = gameState.enemies.map(e => {
+                // Same algorithm as getEnemyIntentTweet: remove trailing timestamp (10+ digit number)
+                const parts = e.id.split('_');
+                const baseIdParts: string[] = [];
+                for (const part of parts) {
+                    if (/^\d{10,}$/.test(part)) break; // Stop at timestamp
+                    baseIdParts.push(part);
+                }
+                return {
+                    id: baseIdParts.join('_') || e.id,
+                    name: e.name,
+                    type: e.type || 'enemy'
+                };
+            });
+
+            // Get next nodes for path previews (simplified)
+            const nextNodes = getConnectedNodes(gameState.map, gameState.currentMapPosition)
+                .map(n => ({ id: n.id, type: n.type }));
+
+            console.log('[Progressive] 🎬 Generating MESO for combat at floor', floor);
+
+            // Prepare deck cards for contextual tweet generation
+            const deckCards = (gameState.deck || []).map(c => ({
+                name: c.name,
+                type: c.type,
+                description: c.description
+            }));
+
+            // Generate MESO for this combat (async)
+            generateMesoNarrative(context, macroNarrative, nodeId, floor, nodeType, enemies, nextNodes, deckCards)
+                .then(meso => {
+                    console.log('[Progressive] ✅ MESO generated for floor', floor);
+                    setCurrentMeso(meso);
+
+                    // Show approach tweet
+                    if (meso.approachTweet) {
+                        setCurrentTweet(meso.approachTweet);
+                        setTweetHistory(hist => {
+                            const isDup = hist.some(t => t.content === meso.approachTweet.content);
+                            return isDup ? hist : [...hist, meso.approachTweet];
+                        });
                     }
-                    const baseEnemyId = baseIdParts.join('_') || enemy.id;
 
-                    // Get contextual tweet based on enemy's intent
-                    const intentType = enemy.currentIntent.type as 'attack' | 'buff' | 'debuff' | 'defend' | 'unknown';
-                    const tweet = getEnemyTweetByIntent(actNarrative, baseEnemyId, intentType);
+                    // Generate enemy tweets from MESO
+                    const aliveEnemies = gameState.enemies.filter(e => e.hp > 0);
+                    const newEnemyTweets: Record<string, NarrativeTweet> = {};
+                    const newHistoryTweets: NarrativeTweet[] = [];
 
-                    if (tweet) {
-                        newEnemyTweets[enemy.id] = tweet;
-                        const isDuplicate = tweetHistory.some(t => t.content === tweet.content);
-                        if (!isDuplicate) {
-                            newHistoryTweets.push(tweet);
+                    for (const enemy of aliveEnemies) {
+                        const intentType = enemy.currentIntent.type as 'attack' | 'buff' | 'debuff';
+                        const tweet = getEnemyIntentTweet(meso, enemy.id, intentType);
+
+                        if (tweet) {
+                            newEnemyTweets[enemy.id] = tweet;
+                            const isDuplicate = tweetHistory.some(t => t.content === tweet.content);
+                            if (!isDuplicate) {
+                                newHistoryTweets.push(tweet);
+                            }
                         }
                     }
-                }
 
-                console.log('[Narrative] Player turn start - generated tweets for', Object.keys(newEnemyTweets).length, 'enemies');
-                setEnemyTweets(newEnemyTweets);
-                if (newHistoryTweets.length > 0) {
-                    setTweetHistory(hist => [...hist, ...newHistoryTweets]);
+                    console.log('[Progressive] Generated tweets for', Object.keys(newEnemyTweets).length, 'enemies');
+                    setEnemyTweets(newEnemyTweets);
+                    if (newHistoryTweets.length > 0) {
+                        setTweetHistory(hist => [...hist, ...newHistoryTweets]);
+                    }
+                })
+                .catch(err => {
+                    console.error('[Progressive] MESO generation failed:', err);
+                    // Fallback to old system
+                    if (actNarrative) {
+                        const aliveEnemies = gameState.enemies.filter(e => e.hp > 0);
+                        const newEnemyTweets: Record<string, NarrativeTweet> = {};
+                        for (const enemy of aliveEnemies) {
+                            const baseEnemyId = enemy.id.split('_').slice(0, -1).join('_') || enemy.id;
+                            const intentType = enemy.currentIntent.type as 'attack' | 'buff' | 'debuff' | 'defend' | 'unknown';
+                            const tweet = getEnemyTweetByIntent(actNarrative, baseEnemyId, intentType);
+                            if (tweet) newEnemyTweets[enemy.id] = tweet;
+                        }
+                        setEnemyTweets(newEnemyTweets);
+                    }
+                });
+        } else if (isNewPlayerTurn && currentMeso && gameState.enemies.length > 0) {
+            // Subsequent turns: Use cached MESO for tweets
+            const aliveEnemies = gameState.enemies.filter(e => e.hp > 0);
+            const newEnemyTweets: Record<string, NarrativeTweet> = {};
+            const newHistoryTweets: NarrativeTweet[] = [];
+
+            for (const enemy of aliveEnemies) {
+                const intentType = enemy.currentIntent.type as 'attack' | 'buff' | 'debuff';
+                const tweet = getEnemyIntentTweet(currentMeso, enemy.id, intentType);
+
+                if (tweet) {
+                    newEnemyTweets[enemy.id] = tweet;
+                    const isDuplicate = tweetHistory.some(t => t.content === tweet.content);
+                    if (!isDuplicate) {
+                        newHistoryTweets.push(tweet);
+                    }
                 }
             }
-        }
-    }, [gameState.status, gameState.turn, actNarrative]);
 
-    // === NARRATIVE: Detect enemy deaths and show victory tweets ===
+            console.log('[Progressive] Turn', gameState.turn, '- generated tweets for', Object.keys(newEnemyTweets).length, 'enemies');
+            setEnemyTweets(newEnemyTweets);
+            if (newHistoryTweets.length > 0) {
+                setTweetHistory(hist => [...hist, ...newHistoryTweets]);
+            }
+        } else if ((isCombatStart || isNewPlayerTurn) && !macroNarrative && actNarrative) {
+            // Fallback to old system if no MACRO
+            const aliveEnemies = gameState.enemies.filter(e => e.hp > 0);
+            const newEnemyTweets: Record<string, NarrativeTweet> = {};
+            for (const enemy of aliveEnemies) {
+                const baseEnemyId = enemy.id.split('_').slice(0, -1).join('_') || enemy.id;
+                const intentType = enemy.currentIntent.type as 'attack' | 'buff' | 'debuff' | 'defend' | 'unknown';
+                const tweet = getEnemyTweetByIntent(actNarrative, baseEnemyId, intentType);
+                if (tweet) newEnemyTweets[enemy.id] = tweet;
+            }
+            console.log('[Narrative] Fallback - generated tweets for', Object.keys(newEnemyTweets).length, 'enemies');
+            setEnemyTweets(newEnemyTweets);
+        }
+    }, [gameState.status, gameState.turn, macroNarrative, currentMeso, actNarrative]);
+
+    // === PROGRESSIVE NARRATIVE: Detect enemy deaths and show victory tweets ===
     useEffect(() => {
         const currentEnemyIds = gameState.enemies.filter(e => e.hp > 0).map(e => e.id);
         const prevIds = prevEnemiesRef.current;
@@ -163,21 +282,33 @@ const App: React.FC = () => {
         // Find enemies that died (were in prev but not in current)
         const deadIds = prevIds.filter(id => !currentEnemyIds.includes(id));
 
-        if (deadIds.length > 0 && actNarrative) {
-            // Show defeat tweets for killed enemies
+        if (deadIds.length > 0) {
             for (const deadId of deadIds) {
-                // Extract base enemy ID
-                const parts = deadId.split('_');
-                const baseIdParts: string[] = [];
-                for (const part of parts) {
-                    if (/^\d{10,}$/.test(part)) break;
-                    baseIdParts.push(part);
+                // Try progressive MESO first
+                let tweet: NarrativeTweet | null = null;
+                if (currentMeso) {
+                    tweet = getEnemyDefeatTweetProgressive(currentMeso, deadId);
+                    if (tweet) {
+                        console.log('[Progressive] Enemy defeated! Showing MESO victory tweet for:', deadId);
+                    }
                 }
-                const baseEnemyId = baseIdParts.join('_') || deadId;
 
-                const tweet = getEnemyDefeatTweet(actNarrative, baseEnemyId);
+                // Fallback to old system
+                if (!tweet && actNarrative) {
+                    const parts = deadId.split('_');
+                    const baseIdParts: string[] = [];
+                    for (const part of parts) {
+                        if (/^\d{10,}$/.test(part)) break;
+                        baseIdParts.push(part);
+                    }
+                    const baseEnemyId = baseIdParts.join('_') || deadId;
+                    tweet = getEnemyDefeatTweet(actNarrative, baseEnemyId);
+                    if (tweet) {
+                        console.log('[Narrative] Fallback defeat tweet for:', baseEnemyId);
+                    }
+                }
+
                 if (tweet) {
-                    console.log('[Narrative] Enemy defeated! Showing victory tweet for:', baseEnemyId);
                     // Remove the dead enemy's tweet bubble
                     setEnemyTweets(prev => {
                         const next = { ...prev };
@@ -186,12 +317,85 @@ const App: React.FC = () => {
                     });
                     // Show victory tweet and add to history
                     setCurrentTweet(tweet);
-                    setTweetHistory(hist => [...hist, tweet]);
+                    setTweetHistory(hist => {
+                        const isDup = hist.some(t => t.content === tweet!.content);
+                        return isDup ? hist : [...hist, tweet!];
+                    });
                 }
             }
         }
-    }, [gameState.enemies, actNarrative]);
+    }, [gameState.enemies, currentMeso, actNarrative]);
 
+    // === PRE-GENERATE MESO FOR NEXT NODES ===
+    // Triggered during player "idle" states: VICTORY, EVENT, VENDOR
+    // This ensures narratives are cached and ready before the player enters the next node
+    useEffect(() => {
+        const idleStates = ['VICTORY', 'EVENT', 'VENDOR'];
+
+        const shouldPregenerate =
+            idleStates.includes(gameState.status) &&
+            macroNarrative &&
+            gameState.currentMapPosition;
+
+        if (!shouldPregenerate) return;
+
+        const connectedNodes = getConnectedNodes(gameState.map, gameState.currentMapPosition);
+        if (connectedNodes.length === 0) return;
+
+        // Prepare nodes with floor info (next floor = current + 1)
+        const nextFloor = (gameState.currentMapPosition?.floor || 0) + 1;
+        const nodesWithFloor = connectedNodes.map(n => ({
+            id: n.id,
+            floor: nextFloor,
+            type: n.type
+        }));
+
+        // Helper to get enemies for a node based on its type
+        const getEnemiesForNode = (node: { id: string; floor: number; type: string }) => {
+            if (node.type === 'problem' || node.type === 'enemy') {
+                const enemies = getEncounterForFloor(node.floor, rngRef.current?.encounters);
+                return enemies.map(e => ({
+                    id: e.id.split('_')[0],
+                    name: e.name,
+                    type: 'enemy'
+                }));
+            } else if (node.type === 'elite') {
+                const enemies = getEliteEncounter(rngRef.current?.encounters);
+                return enemies.map(e => ({
+                    id: e.id.split('_')[0],
+                    name: e.name,
+                    type: 'elite'
+                }));
+            } else if (node.type === 'boss') {
+                const enemies = getBossEncounter(rngRef.current?.encounters);
+                return enemies.map(e => ({
+                    id: e.id.split('_')[0],
+                    name: e.name,
+                    type: 'boss'
+                }));
+            }
+            return [];
+        };
+
+        const context = {
+            name: gameState.startupName || 'Startup',
+            oneLiner: gameState.startupOneLiner || 'Building something great'
+        };
+
+        console.log('[Progressive] 🔮 Pre-generating MESO for', nodesWithFloor.length, 'next nodes during', gameState.status);
+
+        // Prepare deck cards for contextual tweet generation
+        const deckCards = (gameState.deck || []).map(c => ({
+            name: c.name,
+            type: c.type,
+            description: c.description
+        }));
+
+        generateNextPathNarratives(context, macroNarrative, nodesWithFloor, gameState.map, getEnemiesForNode, deckCards)
+            .then(mesos => console.log('[Progressive] ✅ Pre-generated', mesos.length, 'MESO narratives'))
+            .catch(err => console.error('[Progressive] Pre-generation failed:', err));
+
+    }, [gameState.status, gameState.currentMapPosition, macroNarrative]);
 
     // --- START GAME LOGIC ---
 
@@ -1736,75 +1940,77 @@ const App: React.FC = () => {
         // Save API key if provided
         if (apiKeyInput.trim()) {
             setGeminiApiKey(apiKeyInput.trim());
+            setProgressiveApiKey(apiKeyInput.trim());
         }
+
+        // Clear previous narrative cache for new run
+        clearNarrativeCache();
+
+        const context: StartupContext = {
+            name: startupNameInput.trim(),
+            oneLiner: startupOneLinerInput.trim()
+        };
 
         // Update game state with startup info
         setGameState(prev => ({
             ...prev,
-            startupName: startupNameInput.trim(),
-            startupOneLiner: startupOneLinerInput.trim(),
+            startupName: context.name,
+            startupOneLiner: context.oneLiner,
             message: 'Generating your startup story...'
         }));
 
-        // Generate narrative if API key available
-        const hasKey = apiKeyInput.trim() || hasGeminiApiKey();
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('[STARTUP] Startup submitted:', startupNameInput.trim());
-        console.log('[STARTUP] One-liner:', startupOneLinerInput.trim());
-        console.log('[STARTUP] API key from input:', apiKeyInput.trim() ? 'YES (length: ' + apiKeyInput.trim().length + ')' : 'NO');
-        console.log('[STARTUP] API key from storage:', hasGeminiApiKey() ? 'YES' : 'NO');
-        console.log('[STARTUP] Will use LLM:', hasKey ? 'YES' : 'NO (using fallback)');
+        console.log('[PROGRESSIVE] Starting narrative generation');
+        console.log('[PROGRESSIVE] Startup:', context.name);
+        console.log('[PROGRESSIVE] Using Progressive System:', useProgressiveNarrative);
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-        if (hasKey) {
-            console.log('[STARTUP] 🚀 Starting LLM narrative generation...');
-            setNarrativeLoading(true);
-            setNarrativeError(null);
+        setNarrativeLoading(true);
+        setNarrativeError(null);
 
-            try {
-                const context: StartupContext = {
-                    name: startupNameInput.trim(),
-                    oneLiner: startupOneLinerInput.trim()
-                };
-                console.log('[STARTUP] Calling generateActNarrative with context:', context);
-                const narrative = await generateActNarrative(context);
-                console.log('[STARTUP] ✅ Narrative generated successfully!');
-                console.log('[STARTUP] Theme:', narrative.theme);
-                console.log('[STARTUP] Enemy pools:', narrative.enemyTweetPools?.length || 0);
-                setActNarrative(narrative);
+        try {
+            // Generate MACRO narrative (fast - just theme, voice, key tweets, floor beats)
+            console.log('[PROGRESSIVE] 🎬 Generating MACRO layer...');
+            const macro = await generateMacroNarrative(context);
+            setMacroNarrative(macro);
 
-                // Show intro tweet
-                if (narrative.introTweet) {
-                    console.log('[STARTUP] Showing intro tweet:', narrative.introTweet.content?.substring(0, 50));
-                    setCurrentTweet(narrative.introTweet);
-                    setTweetHistory([narrative.introTweet]);
-                }
-            } catch (err) {
-                console.error('[STARTUP] ❌ Generation failed:', err);
-                console.log('[STARTUP] Using fallback narrative instead');
-                // Use fallback narrative
-                const fallback = createFallbackNarrative({
-                    name: startupNameInput.trim(),
-                    oneLiner: startupOneLinerInput.trim()
-                });
-                setActNarrative(fallback);
-            } finally {
-                setNarrativeLoading(false);
+            console.log('[PROGRESSIVE] ✅ MACRO generated!');
+            console.log('[PROGRESSIVE] Theme:', macro.theme);
+            console.log('[PROGRESSIVE] Tone:', macro.startupTone);
+            console.log('[PROGRESSIVE] Floor beats:', macro.floorBeats.length);
+
+            // Show intro tweet immediately
+            if (macro.introTweet) {
+                console.log('[PROGRESSIVE] Showing intro tweet');
+                setCurrentTweet(macro.introTweet);
+                setTweetHistory([macro.introTweet]);
             }
-        } else {
-            console.log('[STARTUP] ⚠️ No API key - using fallback narrative');
-            // No API key - use fallback narrative
-            const fallback = createFallbackNarrative({
-                name: startupNameInput.trim(),
-                oneLiner: startupOneLinerInput.trim()
-            });
+
+            // Also set fallback actNarrative for backward compatibility
+            const fallback = createFallbackNarrative(context);
             setActNarrative(fallback);
+
+        } catch (err) {
+            console.error('[PROGRESSIVE] ❌ MACRO generation failed:', err);
+            // Use fallback
+            const fallbackMacro = createFallbackMacro(context);
+            setMacroNarrative(fallbackMacro);
+
+            const fallback = createFallbackNarrative(context);
+            setActNarrative(fallback);
+
+            if (fallbackMacro.introTweet) {
+                setCurrentTweet(fallbackMacro.introTweet);
+                setTweetHistory([fallbackMacro.introTweet]);
+            }
+        } finally {
+            setNarrativeLoading(false);
         }
 
-        // Proceed to Neow's blessing
+        // Proceed to intro tweet screen (then to Neow's blessing)
         setGameState(prev => ({
             ...prev,
-            status: 'NEOW_BLESSING',
+            status: 'INTRO_TWEET',
             narrativeGenerated: true
         }));
     };
@@ -1930,6 +2136,87 @@ const App: React.FC = () => {
         );
     }
 
+    // === INTRO TWEET SCREEN ===
+    // Show the founder's first tweet to set the narrative tone before blessing
+    if (gameState.status === 'INTRO_TWEET') {
+        const introTweet = currentTweet || tweetHistory[0];
+
+        return (
+            <div className="min-h-screen bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1a1a1a] via-[#0a0a0a] to-[#000000] flex flex-col items-center justify-center p-8 text-white relative overflow-hidden">
+                {/* Animated background particles */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-primary/5 rounded-full blur-3xl animate-pulse" />
+                    <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-warning/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+                </div>
+
+                <div className="z-10 max-w-xl w-full flex flex-col items-center gap-8 animate-in fade-in zoom-in duration-700">
+                    {/* Header */}
+                    <div className="text-center">
+                        <div className="text-6xl mb-4">📱</div>
+                        <h1 className="text-3xl md:text-4xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary via-white to-info">
+                            The Beginning
+                        </h1>
+                        <p className="text-gray-400 mt-3 font-sans">
+                            You have an idea. You share it with the world...
+                        </p>
+                    </div>
+
+                    {/* The Tweet - styled like a real tweet */}
+                    {introTweet && (
+                        <div className="w-full bg-surface border border-gray-700 rounded-2xl p-6 shadow-2xl animate-in slide-in-from-bottom-5 duration-500" style={{ animationDelay: '0.3s' }}>
+                            {/* Tweet Header */}
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-2xl border-2 border-primary/30">
+                                    🚀
+                                </div>
+                                <div>
+                                    <div className="font-bold text-white">
+                                        {gameState.startupName || 'Founder'}
+                                    </div>
+                                    <div className="text-gray-500 text-sm font-mono">
+                                        @{(gameState.startupName || 'founder').toLowerCase().replace(/\s+/g, '')}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Tweet Content */}
+                            <p className="text-lg text-white leading-relaxed mb-4">
+                                {introTweet.content}
+                            </p>
+
+                            {/* Tweet Meta */}
+                            <div className="flex items-center gap-6 text-gray-500 text-sm border-t border-gray-800 pt-4">
+                                <span className="flex items-center gap-1">
+                                    💬 0
+                                </span>
+                                <span className="flex items-center gap-1">
+                                    🔄 0
+                                </span>
+                                <span className="flex items-center gap-1">
+                                    ❤️ 1
+                                </span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Continue button */}
+                    <button
+                        onClick={() => setGameState(prev => ({ ...prev, status: 'NEOW_BLESSING' }))}
+                        className="group px-8 py-4 bg-primary text-black font-bold font-mono text-lg uppercase tracking-wider rounded-lg hover:bg-white hover:scale-105 transition-all duration-200 shadow-[0_0_20px_rgba(0,255,136,0.4)] flex items-center gap-3 animate-in fade-in duration-500"
+                        style={{ animationDelay: '0.6s' }}
+                    >
+                        <span>Your Family Notices</span>
+                        <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                    </button>
+
+                    <p className="text-gray-600 text-sm font-mono text-center">
+                        People who believe in you are about to step forward...
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     if (gameState.status === 'NEOW_BLESSING') {
         return (
             <div className="min-h-screen bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1a1a1a] via-[#0a0a0a] to-[#000000] flex flex-col items-center justify-center p-8 text-white">
@@ -1976,6 +2263,14 @@ const App: React.FC = () => {
                         ))}
                     </div>
                 </div>
+
+                {/* Show intro tweet to set the tone */}
+                <TweetSidebar
+                    tweets={tweetHistory}
+                    currentTweet={currentTweet}
+                    onDismissCurrent={() => setCurrentTweet(null)}
+                    startupName={gameState.startupName}
+                />
             </div>
         );
     }

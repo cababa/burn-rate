@@ -1589,6 +1589,35 @@ export const generateMap = (rng?: SeededRandom): MapLayer[] => {
     return layers;
 };
 
+/**
+ * Get connected nodes from current map position for progressive narrative
+ * Used to pre-generate MESO narratives for next possible paths
+ */
+export const getConnectedNodes = (
+    map: MapLayer[],
+    currentPosition: { floor: number; nodeId: string } | null
+): MapNode[] => {
+    if (!currentPosition) {
+        // At start of map (floor 0), all floor 1 nodes are accessible
+        return map[0] || [];
+    }
+
+    // Find current node
+    const currentFloorIndex = currentPosition.floor - 1;
+    const currentLayer = map[currentFloorIndex];
+    const currentNode = currentLayer?.find(n => n.id === currentPosition.nodeId);
+
+    if (!currentNode) return [];
+
+    // Get connected nodes on next floor
+    const nextFloorIndex = currentPosition.floor;
+    const nextLayer = map[nextFloorIndex];
+
+    if (!nextLayer) return [];
+
+    return nextLayer.filter(n => currentNode.connections.includes(n.id));
+};
+
 // Encounter Spawning with Variance
 export const getEncounterForFloor = (floor: number, rng?: SeededRandom): EnemyData[] => {
     // Floor 1 uses easy pool, floors 2+ use hard pool
