@@ -2450,14 +2450,14 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
     // === NEW ENGINE PATH ===
     if (shouldUseNewEngine) {
         getGlobalLogger().log('CARD_PLAY', `[NEW ENGINE] Playing ${card.name}`, { cardId: card.id, cost: costPaid });
-        
+
         // Handle doubleTap - attacks play twice
         const playerStatuses = { ...prev.playerStats.statuses };
         const repeatCount = card.type === 'attack' && playerStatuses.doubleTap > 0 ? 2 : 1;
         if (repeatCount > 1) {
             playerStatuses.doubleTap = Math.max(0, playerStatuses.doubleTap - 1);
         }
-        
+
         // Handle rage - gain block when playing attacks
         let rageMitigation = prev.playerStats.mitigation;
         if (card.type === 'attack' && playerStatuses.rage > 0) {
@@ -2467,7 +2467,7 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
             }
             rageMitigation += rageBlock * repeatCount;
         }
-        
+
         // Build initial state with status updates
         let workingState: GameState = {
             ...prev,
@@ -2477,29 +2477,29 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                 mitigation: rageMitigation,
             },
         };
-        
+
         // Process card effects (potentially multiple times for doubleTap)
         for (let r = 0; r < repeatCount; r++) {
             const actions = cardToActions(card, target, targetEnemyId, r === 0 ? costPaid : 0);
             const queue = new ActionQueue();
             queue.enqueueMany(actions);
-            
+
             const eventLog = new EventLog();
             const reducer = new ActionReducer(workingState, queue, eventLog, undefined);
-            
+
             const { state, events } = reducer.processAll();
             workingState = {
                 ...state,
                 pendingEvents: [...(workingState.pendingEvents || []), ...events],
             };
         }
-        
+
         // Attach final message
-        const finalState: GameState = {
+        let finalState: GameState = {
             ...workingState,
             message: `Deployed ${card.name}.`,
         };
-        
+
         // Handle card destination (exhaust or discard)
         // Remove card from hand first
         finalState.hand = finalState.hand.filter(c => c !== card);
@@ -2508,7 +2508,80 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
         } else {
             finalState.discardPile = [...finalState.discardPile, card];
         }
-        
+
+        // === NEW ENGINE: Calculate victory rewards (matching legacy behavior) ===
+        if (finalState.status === 'VICTORY') {
+            let earnedCapital = 0;
+            let earnedRelic: RelicData | undefined;
+
+            // Calculate Capital rewards from enemies
+            prev.enemies.forEach(e => {
+                if (e.rewards && e.rewards.capital) {
+                    const min = e.rewards.capital.min;
+                    const max = e.rewards.capital.max;
+                    earnedCapital += Math.floor(Math.random() * (max - min + 1)) + min;
+                }
+            });
+
+            // Elite/Boss Relic Logic
+            const isEliteOrBoss = prev.enemies.some(e => e.type === 'elite' || e.type === 'boss');
+            const isBoss = prev.enemies.some(e => e.type === 'boss');
+            if (isEliteOrBoss) {
+                const ownedRelicIds = finalState.relics.map(r => r.id);
+                const availableRelics = Object.values(GAME_DATA.relics).filter(r =>
+                    !ownedRelicIds.includes(r.id) &&
+                    r.rarity !== 'starter' &&
+                    (isBoss ? true : r.rarity !== 'boss')
+                );
+
+                if (availableRelics.length > 0) {
+                    earnedRelic = availableRelics[Math.floor(Math.random() * availableRelics.length)];
+                }
+            }
+
+            // Generate card rewards
+            const cardRewards = getRandomRewardCards(3, rng);
+            const shouldGetCardReward = prev.enemies.some(e => e.rewards?.card_reward !== false);
+
+            // Check for potion drop
+            let pendingPotionReward: typeof prev.pendingPotionReward = undefined;
+            let newPotionDropChance = prev.potionDropChance;
+
+            const potionDropResult = checkPotionDrop(newPotionDropChance);
+            newPotionDropChance = potionDropResult.newChance;
+
+            if (potionDropResult.dropped && canAcquirePotion(prev.potions)) {
+                pendingPotionReward = generateRandomPotion('cto');
+                getGlobalLogger().log('POTION_DROP', `Combat dropped "${pendingPotionReward.name}"!`);
+            } else if (potionDropResult.dropped) {
+                getGlobalLogger().log('POTION_DROP', 'Potion dropped but slots full - skipped.');
+            } else {
+                getGlobalLogger().log('POTION_DROP', `No potion drop (chance now ${newPotionDropChance}%)`);
+            }
+
+            // Apply combat end relics
+            const { stats: afterRelicStats, message: relicMsg } = applyCombatEndRelics(finalState.playerStats, finalState.relics);
+
+            finalState = {
+                ...finalState,
+                playerStats: afterRelicStats,
+                potionDropChance: newPotionDropChance,
+                pendingPotionReward: pendingPotionReward,
+                lastVictoryReward: {
+                    capital: earnedCapital,
+                    cardRewards: shouldGetCardReward ? cardRewards : [],
+                    relic: earnedRelic,
+                    goldCollected: false,
+                    cardCollected: false,
+                    relicCollected: false
+                },
+                message: finalState.message + (earnedCapital > 0 ? ` Earned $${earnedCapital}k Capital.` : '') + (relicMsg ? ` ${relicMsg}` : '')
+            };
+
+            getGlobalLogger().log('COMBAT_VICTORY', 'All enemies defeated by card effect (new engine). Rewards calculated.');
+        }
+        // === END NEW ENGINE VICTORY REWARDS ===
+
         return finalState;
     }
     // === END NEW ENGINE PATH ===

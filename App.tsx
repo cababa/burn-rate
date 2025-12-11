@@ -173,40 +173,6 @@ const App: React.FC = () => {
 
             console.log('[Progressive] 🎬 Generating MESO for combat at floor', floor);
 
-            // === IMMEDIATE FALLBACK TWEETS ===
-            // Show fallback tweets RIGHT NOW while MESO generates in background
-            const fallbackMeso = createFallbackMeso(
-                context,
-                macroNarrative,
-                nodeId,
-                floor,
-                nodeType,
-                enemies
-            );
-
-            // Show fallback approach tweet immediately
-            if (fallbackMeso.approachTweet) {
-                setCurrentTweet(fallbackMeso.approachTweet);
-                setTweetHistory(hist => {
-                    const isDup = hist.some(t => t.content === fallbackMeso.approachTweet.content);
-                    return isDup ? hist : [...hist, fallbackMeso.approachTweet];
-                });
-            }
-
-            // Show fallback enemy tweets immediately
-            const aliveEnemies = gameState.enemies.filter(e => e.hp > 0);
-            const fallbackEnemyTweets: Record<string, NarrativeTweet> = {};
-            for (const enemy of aliveEnemies) {
-                const intentType = enemy.currentIntent.type as 'attack' | 'buff' | 'debuff';
-                const tweet = getEnemyIntentTweet(fallbackMeso, enemy.id, intentType);
-                if (tweet) {
-                    fallbackEnemyTweets[enemy.id] = tweet;
-                }
-            }
-            setEnemyTweets(fallbackEnemyTweets);
-            setCurrentMeso(fallbackMeso); // Use fallback until MESO arrives
-            console.log('[Progressive] 📝 Showing fallback tweets for', Object.keys(fallbackEnemyTweets).length, 'enemies');
-
             // Prepare deck cards for contextual tweet generation
             const deckCards = (gameState.deck || []).map(c => ({
                 name: c.name,
@@ -214,10 +180,10 @@ const App: React.FC = () => {
                 description: c.description
             }));
 
-            // Generate MESO for this combat (async) - will upgrade tweets when ready
+            // Generate MESO for this combat (async) - wait for LLM first, fallback only on failure
             generateMesoNarrative(context, macroNarrative, nodeId, floor, nodeType, enemies, nextNodes, deckCards)
                 .then(meso => {
-                    console.log('[Progressive] ✅ MESO ready! Upgrading from fallback to AI-generated tweets');
+                    console.log('[Progressive] ✅ MESO ready! Showing AI-generated tweets');
                     setCurrentMeso(meso);
 
                     // Show approach tweet
@@ -233,6 +199,7 @@ const App: React.FC = () => {
                     const aliveEnemies = gameState.enemies.filter(e => e.hp > 0);
                     const newEnemyTweets: Record<string, NarrativeTweet> = {};
                     const newHistoryTweets: NarrativeTweet[] = [];
+                    const seenContent = new Set<string>(); // Track content we've already queued
 
                     for (const enemy of aliveEnemies) {
                         const intentType = enemy.currentIntent.type as 'attack' | 'buff' | 'debuff';
@@ -240,9 +207,12 @@ const App: React.FC = () => {
 
                         if (tweet) {
                             newEnemyTweets[enemy.id] = tweet;
-                            const isDuplicate = tweetHistory.some(t => t.content === tweet.content);
+                            // Check both history AND tweets we're about to add
+                            const isDuplicate = tweetHistory.some(t => t.content === tweet.content) ||
+                                seenContent.has(tweet.content);
                             if (!isDuplicate) {
                                 newHistoryTweets.push(tweet);
+                                seenContent.add(tweet.content);
                             }
                         }
                     }
@@ -250,29 +220,57 @@ const App: React.FC = () => {
                     console.log('[Progressive] Generated tweets for', Object.keys(newEnemyTweets).length, 'enemies');
                     setEnemyTweets(newEnemyTweets);
                     if (newHistoryTweets.length > 0) {
-                        setTweetHistory(hist => [...hist, ...newHistoryTweets]);
+                        setTweetHistory(hist => {
+                            // Filter out any duplicates against actual current history
+                            const newTweets = newHistoryTweets.filter(t =>
+                                !hist.some(h => h.content === t.content)
+                            );
+                            return [...hist, ...newTweets];
+                        });
                     }
                 })
                 .catch(err => {
-                    console.error('[Progressive] MESO generation failed:', err);
-                    // Fallback to old system
-                    if (actNarrative) {
-                        const aliveEnemies = gameState.enemies.filter(e => e.hp > 0);
-                        const newEnemyTweets: Record<string, NarrativeTweet> = {};
-                        for (const enemy of aliveEnemies) {
-                            const baseEnemyId = enemy.id.split('_').slice(0, -1).join('_') || enemy.id;
-                            const intentType = enemy.currentIntent.type as 'attack' | 'buff' | 'debuff' | 'defend' | 'unknown';
-                            const tweet = getEnemyTweetByIntent(actNarrative, baseEnemyId, intentType);
-                            if (tweet) newEnemyTweets[enemy.id] = tweet;
-                        }
-                        setEnemyTweets(newEnemyTweets);
+                    console.error('[Progressive] ⚠️ MESO generation failed, using fallback tweets:', err);
+
+                    // Create and show fallback tweets only on LLM failure
+                    const fallbackMeso = createFallbackMeso(
+                        context,
+                        macroNarrative,
+                        nodeId,
+                        floor,
+                        nodeType,
+                        enemies
+                    );
+                    setCurrentMeso(fallbackMeso);
+
+                    // Show fallback approach tweet
+                    if (fallbackMeso.approachTweet) {
+                        setCurrentTweet(fallbackMeso.approachTweet);
+                        setTweetHistory(hist => {
+                            const isDup = hist.some(t => t.content === fallbackMeso.approachTweet.content);
+                            return isDup ? hist : [...hist, fallbackMeso.approachTweet];
+                        });
                     }
+
+                    // Show fallback enemy tweets
+                    const aliveEnemies = gameState.enemies.filter(e => e.hp > 0);
+                    const fallbackEnemyTweets: Record<string, NarrativeTweet> = {};
+                    for (const enemy of aliveEnemies) {
+                        const intentType = enemy.currentIntent.type as 'attack' | 'buff' | 'debuff';
+                        const tweet = getEnemyIntentTweet(fallbackMeso, enemy.id, intentType);
+                        if (tweet) {
+                            fallbackEnemyTweets[enemy.id] = tweet;
+                        }
+                    }
+                    setEnemyTweets(fallbackEnemyTweets);
+                    console.log('[Progressive] 📝 Using fallback tweets for', Object.keys(fallbackEnemyTweets).length, 'enemies');
                 });
         } else if (isNewPlayerTurn && currentMeso && gameState.enemies.length > 0) {
             // Subsequent turns: Use cached MESO for tweets
             const aliveEnemies = gameState.enemies.filter(e => e.hp > 0);
             const newEnemyTweets: Record<string, NarrativeTweet> = {};
             const newHistoryTweets: NarrativeTweet[] = [];
+            const seenContent = new Set<string>(); // Track content we've already queued
 
             for (const enemy of aliveEnemies) {
                 const intentType = enemy.currentIntent.type as 'attack' | 'buff' | 'debuff';
@@ -280,9 +278,12 @@ const App: React.FC = () => {
 
                 if (tweet) {
                     newEnemyTweets[enemy.id] = tweet;
-                    const isDuplicate = tweetHistory.some(t => t.content === tweet.content);
+                    // Check both history AND tweets we're about to add
+                    const isDuplicate = tweetHistory.some(t => t.content === tweet.content) ||
+                        seenContent.has(tweet.content);
                     if (!isDuplicate) {
                         newHistoryTweets.push(tweet);
+                        seenContent.add(tweet.content);
                     }
                 }
             }
@@ -290,7 +291,13 @@ const App: React.FC = () => {
             console.log('[Progressive] Turn', gameState.turn, '- generated tweets for', Object.keys(newEnemyTweets).length, 'enemies');
             setEnemyTweets(newEnemyTweets);
             if (newHistoryTweets.length > 0) {
-                setTweetHistory(hist => [...hist, ...newHistoryTweets]);
+                setTweetHistory(hist => {
+                    // Filter out any duplicates against actual current history
+                    const newTweets = newHistoryTweets.filter(t =>
+                        !hist.some(h => h.content === t.content)
+                    );
+                    return [...hist, ...newTweets];
+                });
             }
         } else if ((isCombatStart || isNewPlayerTurn) && !macroNarrative && actNarrative) {
             // Fallback to old system if no MACRO
@@ -1828,7 +1835,7 @@ const App: React.FC = () => {
                             <Rocket size={48} className="text-primary" />
                         </div>
                         <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-white via-gray-200 to-gray-500 text-center">
-                            BURN RATE: THE UNICORN RUN
+                            THE NEXT BIG THING
                         </h1>
                         <p className="font-mono text-gray-400 mt-2 tracking-widest uppercase text-sm">Pre-Alpha Build v0.14</p>
                     </div>
@@ -2443,7 +2450,7 @@ const App: React.FC = () => {
             <div className="min-h-screen bg-background text-white font-sans flex flex-col">
                 <header className="h-14 border-b border-border bg-surface/50 backdrop-blur-md flex items-center justify-between px-6">
                     <div className="flex items-center gap-6">
-                        <h1 className="font-display font-bold text-lg">BURN RATE: THE UNICORN RUN</h1>
+                        <h1 className="font-display font-bold text-lg">THE NEXT BIG THING</h1>
                         <div className="h-6 w-px bg-white/10" />
                         <span className="text-sm font-mono text-gray-400">Roadmap View</span>
                     </div>
@@ -2789,7 +2796,7 @@ const App: React.FC = () => {
         <div className="min-h-screen bg-background text-white font-sans selection:bg-primary/30 overflow-hidden flex flex-col">
             <header className="h-14 border-b border-border bg-surface/50 backdrop-blur-md flex items-center justify-between px-6 z-10">
                 <div className="flex items-center gap-6">
-                    <h1 className="font-display font-bold text-lg tracking-tight">BURN RATE: THE UNICORN RUN</h1>
+                    <h1 className="font-display font-bold text-lg tracking-tight">THE NEXT BIG THING</h1>
                     <div className="h-6 w-px bg-white/10" />
                     <div className="flex items-center gap-2 text-sm font-mono text-gray-300">
                         <span className="text-gray-500">ACT 1</span>

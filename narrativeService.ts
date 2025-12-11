@@ -55,7 +55,7 @@ export function hasGeminiApiKey(): boolean {
  * Build the system prompt for narrative generation
  */
 function buildSystemPrompt(): string {
-    return `You are a startup narrative generator for a roguelike game called "Burn Rate: The Unicorn Run".
+    return `You are a startup narrative generator for a roguelike game called "THE NEXT BIG THING".
 
 The game follows a startup founder through Act 1: Finding Product-Market Fit & MVP launch.
 
@@ -73,7 +73,7 @@ CRITICAL LANGUAGE RULES:
 
 STYLE GUIDELINES:
 1. Tweets should feel like REAL social media - relatable, sometimes funny, sometimes tense
-2. Each tweet must be under 280 characters
+2. Each tweet must be under 140 characters
 3. Enemies are startup problems personified - make their trash-talk feel like a bully, not a business textbook
 4. Victory tweets should feel EARNED - like beating a tough boss in a video game
 5. Mix tones: some tweets are dramatic, some are jokes, some hit you in the feels
