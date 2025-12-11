@@ -22,6 +22,7 @@ import { createGameRNG, GameRNG, generateRandomSeed } from './rng';
 import { TweetOverlay } from './components/TweetOverlay';
 import { TimelineModal } from './components/TimelineModal';
 import { TweetSidebar } from './components/TweetSidebar';
+import { ApproachTweetOverlay } from './components/ApproachTweetOverlay';
 import { EnemyTweetBubble } from './components/EnemyTweetBubble';
 import {
     NarrativeTweet,
@@ -61,6 +62,7 @@ import {
     hasGeminiApiKey as hasProgressiveApiKey,
     setGeminiApiKey as setProgressiveApiKey
 } from './progressiveNarrativeService';
+import { useEnemyGifs } from './useEnemyGifs';
 
 const App: React.FC = () => {
     // --- Game State Initialization ---
@@ -121,6 +123,14 @@ const App: React.FC = () => {
     const [macroNarrative, setMacroNarrative] = useState<MacroNarrative | null>(null);
     const [currentMeso, setCurrentMeso] = useState<MesoNarrative | null>(null);
     const [useProgressiveNarrative, setUseProgressiveNarrative] = useState(true); // Feature flag
+    const [showApproachOverlay, setShowApproachOverlay] = useState(false); // Combat start overlay
+    const [victoryPhase, setVictoryPhase] = useState<'tweet' | 'rewards'>('tweet'); // Victory screen phase
+
+    // === GIPHY GIF SYSTEM ===
+    const { gifUrls: enemyGifUrls, isLoading: gifsLoading } = useEnemyGifs({
+        enemies: gameState.enemies.map(e => ({ id: e.id, emoji: e.emoji })),
+        enabled: gameState.status === 'PLAYING' || gameState.status === 'ENEMY_TURN' || gameState.status === 'VICTORY'
+    });
 
     // Startup input form state
     const [startupNameInput, setStartupNameInput] = useState('');
@@ -173,6 +183,9 @@ const App: React.FC = () => {
 
             console.log('[Progressive] 🎬 Generating MESO for combat at floor', floor);
 
+            // IMMEDIATELY show the approach overlay to hide battle UI while MESO generates
+            setShowApproachOverlay(true);
+
             // Prepare deck cards for contextual tweet generation
             const deckCards = (gameState.deck || []).map(c => ({
                 name: c.name,
@@ -186,7 +199,7 @@ const App: React.FC = () => {
                     console.log('[Progressive] ✅ MESO ready! Showing AI-generated tweets');
                     setCurrentMeso(meso);
 
-                    // Show approach tweet
+                    // Update currentTweet with approach tweet (overlay is already visible)
                     if (meso.approachTweet) {
                         setCurrentTweet(meso.approachTweet);
                         setTweetHistory(hist => {
@@ -243,7 +256,7 @@ const App: React.FC = () => {
                     );
                     setCurrentMeso(fallbackMeso);
 
-                    // Show fallback approach tweet
+                    // Show fallback approach tweet (overlay is already visible)
                     if (fallbackMeso.approachTweet) {
                         setCurrentTweet(fallbackMeso.approachTweet);
                         setTweetHistory(hist => {
@@ -366,6 +379,13 @@ const App: React.FC = () => {
             }
         }
     }, [gameState.enemies, currentMeso, actNarrative]);
+
+    // === RESET VICTORY PHASE WHEN ENTERING VICTORY ===
+    useEffect(() => {
+        if (gameState.status === 'VICTORY') {
+            setVictoryPhase('tweet'); // Start with tweet phase
+        }
+    }, [gameState.status]);
 
     // === PRE-GENERATE MESO FOR NEXT NODES ===
     // Triggered during player "idle" states: VICTORY, EVENT, VENDOR
@@ -2949,6 +2969,7 @@ const App: React.FC = () => {
                                     currentHp={enemy.hp}
                                     maxHp={enemy.maxHp}
                                     emoji={enemy.emoji}
+                                    gifUrl={enemyGifUrls[enemy.id]}
                                     isEnemy
                                     intent={enemy.currentIntent}
                                     statuses={enemy.statuses}
@@ -3081,176 +3102,219 @@ const App: React.FC = () => {
                 )}
 
 
-                {/* === VICTORY SCREEN - "SHIPPED!" === */}
-                {/* The main victory experience - shows tweet + rewards + next challenge button */}
-                {gameState.status === 'VICTORY' && (
-                    <div className="fixed inset-0 z-[100] bg-gradient-to-b from-primary/5 via-black/95 to-black flex items-center justify-center animate-in fade-in duration-500">
-                        <div className="max-w-2xl w-full p-8 flex flex-col items-center">
-                            {/* Victory celebration */}
-                            <div className="text-6xl mb-4 animate-bounce">🚀</div>
-                            <h2 className="text-3xl font-display font-bold text-primary mb-2">Shipped!</h2>
-                            <p className="text-gray-400 mb-6 text-center">Another challenge crushed. Your startup lives to fight another day.</p>
+                {/* === APPROACH OVERLAY - Combat Start === */}
+                {/* Full-screen display at the beginning of each battle - shows immediately, populates when MESO ready */}
+                {showApproachOverlay && gameState.status === 'PLAYING' && (
+                    <ApproachTweetOverlay
+                        tweet={currentMeso?.approachTweet || null}
+                        startupName={gameState.startupName || 'Startup'}
+                        startupEmoji={macroNarrative?.startupEmoji}
+                        startupHandle={macroNarrative?.startupHandle}
+                        storyPhase={macroNarrative?.floorBeats?.[gameState.floor - 1]?.storyPhase}
+                        floorNumber={gameState.floor}
+                        onContinue={() => setShowApproachOverlay(false)}
+                    />
+                )}
 
-                            {/* Tweet Display */}
-                            {currentMeso?.victoryTweet && (
-                                <div className="w-full bg-surface border border-primary/30 rounded-2xl p-6 mb-6 shadow-[0_0_30px_rgba(0,255,136,0.1)]">
-                                    <div className="flex items-start gap-4">
-                                        <div className="text-3xl bg-primary/20 rounded-full p-2">
-                                            {macroNarrative?.startupEmoji || '🚀'}
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className="font-bold text-white">{gameState.startupName || 'Startup'}</span>
-                                                <span className="text-gray-500 text-sm">{macroNarrative?.startupHandle || '@startup'}</span>
+                {/* === VICTORY SCREEN - Split into 2 phases === */}
+                {/* Phase 1: "SHIPPED!" with victory tweet + Collect Rewards button */}
+                {/* Phase 2: Rewards screen + Next Challenge button */}
+                {gameState.status === 'VICTORY' && (
+                    <div className="fixed inset-0 z-[100] bg-gradient-to-b from-primary/5 via-black to-black flex items-center justify-center animate-in fade-in duration-500">
+                        <div className="max-w-2xl w-full p-8 flex flex-col items-center">
+
+                            {/* ========== PHASE 1: SHIPPED + TWEET ========== */}
+                            {victoryPhase === 'tweet' && (
+                                <>
+                                    {/* Victory celebration */}
+                                    <div className="text-6xl mb-4 animate-bounce">🚀</div>
+                                    <h2 className="text-3xl font-display font-bold text-primary mb-2">Shipped!</h2>
+                                    <p className="text-gray-400 mb-6 text-center">Another challenge crushed. Your startup lives to fight another day.</p>
+
+                                    {/* Tweet Display */}
+                                    {currentMeso?.victoryTweet && (
+                                        <div className="w-full bg-surface border border-primary/30 rounded-2xl p-6 mb-8 shadow-[0_0_30px_rgba(0,255,136,0.1)]">
+                                            <div className="flex items-start gap-4">
+                                                <div className="text-3xl bg-primary/20 rounded-full p-2">
+                                                    {macroNarrative?.startupEmoji || '🚀'}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="font-bold text-white">{gameState.startupName || 'Startup'}</span>
+                                                        <span className="text-gray-500 text-sm">{macroNarrative?.startupHandle || '@startup'}</span>
+                                                    </div>
+                                                    <p className="text-white text-lg leading-relaxed">{currentMeso.victoryTweet.content}</p>
+                                                    <div className="flex items-center gap-6 mt-4 text-gray-500 text-sm">
+                                                        <span>❤️ {currentMeso.victoryTweet.likes || 42}</span>
+                                                        <span>🔁 {currentMeso.victoryTweet.retweets || 8}</span>
+                                                        <span>💬 {currentMeso.victoryTweet.replies || 3}</span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <p className="text-white text-lg leading-relaxed">{currentMeso.victoryTweet.content}</p>
-                                            <div className="flex items-center gap-6 mt-4 text-gray-500 text-sm">
-                                                <span>❤️ {currentMeso.victoryTweet.likes || 42}</span>
-                                                <span>🔁 {currentMeso.victoryTweet.retweets || 8}</span>
-                                                <span>💬 {currentMeso.victoryTweet.replies || 3}</span>
-                                            </div>
                                         </div>
-                                    </div>
-                                </div>
+                                    )}
+
+                                    {/* Collect Rewards Button */}
+                                    <button
+                                        onClick={() => setVictoryPhase('rewards')}
+                                        className="group bg-primary text-black font-bold py-4 px-10 rounded-lg hover:bg-white transition-all duration-200 font-mono text-sm uppercase tracking-wider flex items-center gap-3 shadow-[0_0_20px_rgba(0,255,136,0.3)]"
+                                    >
+                                        <Gift size={18} />
+                                        <span>Collect Rewards</span>
+                                        <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                    </button>
+
+                                    <p className="text-gray-600 text-xs mt-4 font-mono">Keep building. Keep shipping. 🚀</p>
+                                </>
                             )}
 
-                            {/* Rewards Section */}
-                            {gameState.lastVictoryReward && (
-                                <div className="w-full space-y-3 mb-6">
-                                    {/* Gold Reward */}
-                                    <div className={`bg-black/40 p-4 rounded-lg flex items-center justify-between ${gameState.lastVictoryReward.goldCollected ? 'opacity-50' : ''}`}>
-                                        <div className="flex items-center gap-3">
-                                            <DollarSign size={24} className="text-warning" />
-                                            <div className="text-left">
-                                                <div className="text-warning font-mono font-bold text-lg">${gameState.lastVictoryReward.capital}k Capital</div>
-                                                <div className="text-xs text-gray-500">Revenue from shipping</div>
-                                            </div>
-                                        </div>
-                                        {!gameState.lastVictoryReward.goldCollected ? (
-                                            <button
-                                                onClick={handleTakeGold}
-                                                className="bg-warning/20 border border-warning text-warning px-4 py-2 rounded font-mono text-sm hover:bg-warning hover:text-black transition-colors"
-                                            >
-                                                Collect
-                                            </button>
-                                        ) : (
-                                            <span className="text-primary font-mono text-sm">✓ Collected</span>
-                                        )}
-                                    </div>
+                            {/* ========== PHASE 2: REWARDS ========== */}
+                            {victoryPhase === 'rewards' && (
+                                <>
+                                    {/* Rewards Header */}
+                                    <div className="text-4xl mb-4">🎁</div>
+                                    <h2 className="text-2xl font-display font-bold text-white mb-2">Rewards</h2>
+                                    <p className="text-gray-500 mb-6 text-center text-sm">Choose what to take with you</p>
 
-                                    {/* Card Reward */}
-                                    {gameState.lastVictoryReward.cardRewards.length > 0 && (
-                                        <div className={`bg-black/40 p-4 rounded-lg ${gameState.lastVictoryReward.cardCollected ? 'opacity-50' : ''}`}>
-                                            <div className="flex items-center gap-2 mb-4">
-                                                <Gift size={20} className="text-primary" />
-                                                <span className="text-white font-mono">New Feature Unlocked</span>
-                                                {gameState.lastVictoryReward.cardCollected && (
-                                                    <span className="text-primary font-mono text-sm ml-auto">✓ Added</span>
+                                    {/* Rewards Section */}
+                                    {gameState.lastVictoryReward && (
+                                        <div className="w-full space-y-3 mb-6">
+                                            {/* Gold Reward */}
+                                            <div className={`bg-black/40 p-4 rounded-lg flex items-center justify-between ${gameState.lastVictoryReward.goldCollected ? 'opacity-50' : ''}`}>
+                                                <div className="flex items-center gap-3">
+                                                    <DollarSign size={24} className="text-warning" />
+                                                    <div className="text-left">
+                                                        <div className="text-warning font-mono font-bold text-lg">${gameState.lastVictoryReward.capital}k Capital</div>
+                                                        <div className="text-xs text-gray-500">Revenue from shipping</div>
+                                                    </div>
+                                                </div>
+                                                {!gameState.lastVictoryReward.goldCollected ? (
+                                                    <button
+                                                        onClick={handleTakeGold}
+                                                        className="bg-warning/20 border border-warning text-warning px-4 py-2 rounded font-mono text-sm hover:bg-warning hover:text-black transition-colors"
+                                                    >
+                                                        Collect
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-primary font-mono text-sm">✓ Collected</span>
                                                 )}
                                             </div>
-                                            {!gameState.lastVictoryReward.cardCollected ? (
-                                                <>
-                                                    <div className="flex gap-4 justify-center mb-3">
-                                                        {gameState.lastVictoryReward.cardRewards.map((card) => (
-                                                            <div
-                                                                key={card.id}
-                                                                onClick={() => handleTakeCard(card)}
-                                                                className="cursor-pointer hover:scale-105 transition-transform duration-150"
-                                                            >
-                                                                <Card card={card} onDragStart={() => { }} disabled={false} />
-                                                            </div>
-                                                        ))}
+
+                                            {/* Card Reward */}
+                                            {gameState.lastVictoryReward.cardRewards.length > 0 && (
+                                                <div className={`bg-black/40 p-4 rounded-lg ${gameState.lastVictoryReward.cardCollected ? 'opacity-50' : ''}`}>
+                                                    <div className="flex items-center gap-2 mb-4">
+                                                        <Gift size={20} className="text-primary" />
+                                                        <span className="text-white font-mono">New Feature Unlocked</span>
+                                                        {gameState.lastVictoryReward.cardCollected && (
+                                                            <span className="text-primary font-mono text-sm ml-auto">✓ Added</span>
+                                                        )}
                                                     </div>
-                                                    <button
-                                                        onClick={handleSkipCard}
-                                                        className="text-gray-500 hover:text-white font-mono text-xs flex items-center gap-1 mx-auto"
-                                                    >
-                                                        Skip <ArrowRight size={12} />
-                                                    </button>
-                                                </>
-                                            ) : (
-                                                <div className="text-gray-500 text-sm italic">Feature added to deck</div>
+                                                    {!gameState.lastVictoryReward.cardCollected ? (
+                                                        <>
+                                                            <div className="flex gap-4 justify-center mb-3">
+                                                                {gameState.lastVictoryReward.cardRewards.map((card) => (
+                                                                    <div
+                                                                        key={card.id}
+                                                                        onClick={() => handleTakeCard(card)}
+                                                                        className="cursor-pointer hover:scale-105 transition-transform duration-150"
+                                                                    >
+                                                                        <Card card={card} onDragStart={() => { }} disabled={false} />
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                            <button
+                                                                onClick={handleSkipCard}
+                                                                className="text-gray-500 hover:text-white font-mono text-xs flex items-center gap-1 mx-auto"
+                                                            >
+                                                                Skip <ArrowRight size={12} />
+                                                            </button>
+                                                        </>
+                                                    ) : (
+                                                        <div className="text-gray-500 text-sm italic">Feature added to deck</div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Relic Reward */}
+                                            {gameState.lastVictoryReward.relic && (
+                                                <div
+                                                    onClick={!gameState.lastVictoryReward.relicCollected ? handleTakeRelic : undefined}
+                                                    className={`
+                                                        bg-gradient-to-r from-purple-900/40 to-purple-800/20 border border-purple-500/50 p-4 rounded-lg 
+                                                        ${gameState.lastVictoryReward.relicCollected ? 'opacity-50' : 'cursor-pointer hover:border-purple-400 hover:from-purple-900/60 hover:to-purple-800/40 transition-all'}
+                                                    `}
+                                                >
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="text-3xl bg-purple-900/50 p-2.5 rounded-lg border border-purple-500/30">
+                                                            {gameState.lastVictoryReward.relic.icon}
+                                                        </div>
+                                                        <div className="flex-1 text-left">
+                                                            <div className="text-purple-200 font-bold">{gameState.lastVictoryReward.relic.name}</div>
+                                                            <div className="text-sm text-gray-400">{gameState.lastVictoryReward.relic.description}</div>
+                                                        </div>
+                                                        {gameState.lastVictoryReward.relicCollected ? (
+                                                            <span className="text-primary font-mono text-sm">✓ Acquired</span>
+                                                        ) : (
+                                                            <span className="text-purple-400 text-sm font-mono">Click to take</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Stash Reward */}
+                                            {gameState.pendingPotionReward && (
+                                                <div className="bg-gradient-to-r from-info/20 to-info/5 border border-info/50 p-4 rounded-lg">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="text-3xl bg-info/20 p-2.5 rounded-lg border border-info/30">
+                                                            {gameState.pendingPotionReward.icon}
+                                                        </div>
+                                                        <div className="flex-1 text-left">
+                                                            <div className="text-info font-bold flex items-center gap-2">
+                                                                {gameState.pendingPotionReward.name}
+                                                                <span className={`text-[10px] uppercase px-1.5 py-0.5 rounded ${gameState.pendingPotionReward.rarity === 'rare' ? 'bg-warning/20 text-warning' :
+                                                                    gameState.pendingPotionReward.rarity === 'uncommon' ? 'bg-info/20 text-info' :
+                                                                        'bg-white/10 text-gray-400'
+                                                                    }`}>{gameState.pendingPotionReward.rarity}</span>
+                                                            </div>
+                                                            <div className="text-sm text-gray-400">{gameState.pendingPotionReward.description}</div>
+                                                        </div>
+                                                        <div className="flex flex-col gap-2">
+                                                            <button
+                                                                onClick={handleTakePotion}
+                                                                disabled={!canAcquirePotion(gameState.potions)}
+                                                                className={`px-4 py-2 rounded font-mono text-sm transition-colors ${canAcquirePotion(gameState.potions)
+                                                                    ? 'bg-info/20 border border-info text-info hover:bg-info hover:text-black'
+                                                                    : 'bg-gray-800 border border-gray-600 text-gray-500 cursor-not-allowed'
+                                                                    }`}
+                                                            >
+                                                                {canAcquirePotion(gameState.potions) ? 'Take' : 'Full'}
+                                                            </button>
+                                                            <button
+                                                                onClick={handleSkipPotion}
+                                                                className="text-gray-500 hover:text-white font-mono text-xs"
+                                                            >
+                                                                Skip
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
                                     )}
 
-                                    {/* Relic Reward */}
-                                    {gameState.lastVictoryReward.relic && (
-                                        <div
-                                            onClick={!gameState.lastVictoryReward.relicCollected ? handleTakeRelic : undefined}
-                                            className={`
-                                                bg-gradient-to-r from-purple-900/40 to-purple-800/20 border border-purple-500/50 p-4 rounded-lg 
-                                                ${gameState.lastVictoryReward.relicCollected ? 'opacity-50' : 'cursor-pointer hover:border-purple-400 hover:from-purple-900/60 hover:to-purple-800/40 transition-all'}
-                                            `}
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <div className="text-3xl bg-purple-900/50 p-2.5 rounded-lg border border-purple-500/30">
-                                                    {gameState.lastVictoryReward.relic.icon}
-                                                </div>
-                                                <div className="flex-1 text-left">
-                                                    <div className="text-purple-200 font-bold">{gameState.lastVictoryReward.relic.name}</div>
-                                                    <div className="text-sm text-gray-400">{gameState.lastVictoryReward.relic.description}</div>
-                                                </div>
-                                                {gameState.lastVictoryReward.relicCollected ? (
-                                                    <span className="text-primary font-mono text-sm">✓ Acquired</span>
-                                                ) : (
-                                                    <span className="text-purple-400 text-sm font-mono">Click to take</span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
+                                    {/* Next Challenge Button */}
+                                    <button
+                                        onClick={handleVictoryProceed}
+                                        className="group bg-primary text-black font-bold py-4 px-10 rounded-lg hover:bg-white transition-all duration-200 font-mono text-sm uppercase tracking-wider flex items-center gap-3 shadow-[0_0_20px_rgba(0,255,136,0.3)]"
+                                    >
+                                        <span>Next Challenge</span>
+                                        <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                    </button>
 
-                                    {/* Stash Reward */}
-                                    {gameState.pendingPotionReward && (
-                                        <div className="bg-gradient-to-r from-info/20 to-info/5 border border-info/50 p-4 rounded-lg">
-                                            <div className="flex items-center gap-4">
-                                                <div className="text-3xl bg-info/20 p-2.5 rounded-lg border border-info/30">
-                                                    {gameState.pendingPotionReward.icon}
-                                                </div>
-                                                <div className="flex-1 text-left">
-                                                    <div className="text-info font-bold flex items-center gap-2">
-                                                        {gameState.pendingPotionReward.name}
-                                                        <span className={`text-[10px] uppercase px-1.5 py-0.5 rounded ${gameState.pendingPotionReward.rarity === 'rare' ? 'bg-warning/20 text-warning' :
-                                                            gameState.pendingPotionReward.rarity === 'uncommon' ? 'bg-info/20 text-info' :
-                                                                'bg-white/10 text-gray-400'
-                                                            }`}>{gameState.pendingPotionReward.rarity}</span>
-                                                    </div>
-                                                    <div className="text-sm text-gray-400">{gameState.pendingPotionReward.description}</div>
-                                                </div>
-                                                <div className="flex flex-col gap-2">
-                                                    <button
-                                                        onClick={handleTakePotion}
-                                                        disabled={!canAcquirePotion(gameState.potions)}
-                                                        className={`px-4 py-2 rounded font-mono text-sm transition-colors ${canAcquirePotion(gameState.potions)
-                                                            ? 'bg-info/20 border border-info text-info hover:bg-info hover:text-black'
-                                                            : 'bg-gray-800 border border-gray-600 text-gray-500 cursor-not-allowed'
-                                                            }`}
-                                                    >
-                                                        {canAcquirePotion(gameState.potions) ? 'Take' : 'Full'}
-                                                    </button>
-                                                    <button
-                                                        onClick={handleSkipPotion}
-                                                        className="text-gray-500 hover:text-white font-mono text-xs"
-                                                    >
-                                                        Skip
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
+                                    <p className="text-gray-600 text-xs mt-4 font-mono">Keep building. Keep shipping. 🚀</p>
+                                </>
                             )}
-
-                            {/* Next Challenge Button */}
-                            <button
-                                onClick={handleVictoryProceed}
-                                className="group bg-primary text-black font-bold py-4 px-10 rounded-lg hover:bg-white transition-all duration-200 font-mono text-sm uppercase tracking-wider flex items-center gap-3 shadow-[0_0_20px_rgba(0,255,136,0.3)]"
-                            >
-                                <span>Next Challenge</span>
-                                <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                            </button>
-
-                            <p className="text-gray-600 text-xs mt-4 font-mono">Keep building. Keep shipping. 🚀</p>
                         </div>
                     </div>
                 )}

@@ -673,11 +673,20 @@ GENERATE THESE TWEETS:
    - Reflects: "${floorBeat.setup}"
    - Mood: ${floorBeat.emotionalArc.split('_')[0]}
    - Authentic ${role.toUpperCase()} voice
+   
+   ⚠️ MUST mention something CONCRETE they just shipped or are working on:
+   ✅ "Just got the signup flow working. Now for the hard part."
+   ✅ "Payment integration is live. Time to see if anyone actually pays."
+   ✅ "The recommendation engine is finally not terrible. Let's ship it."
+   ❌ NOT vague like "Time to face the challenge" or "Here we go"
 
 2. VICTORY TWEET (founder celebrating the win):
    - Reflects: "${floorBeat.resolution}"
-   - CELEBRATE shipping/progress/milestone - NOT "defeating" anything
+   - CELEBRATE a specific feature or milestone shipped
    - Pure positive energy, no mention of obstacles overcome
+   ✅ "The thing works! First user just completed the whole flow."
+   ✅ "Shipped. It's ugly but it's live."
+   ❌ NOT "Defeated the challenge" or abstract victory language
 
 3. OBSTACLE TWEETS (for each obstacle above):
    Use the internal ref in your response for matching, but write tweets as GENERAL SKEPTICISM:

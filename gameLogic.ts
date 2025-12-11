@@ -1920,6 +1920,11 @@ export const resolveEndTurn = (prev: GameState): GameState => {
     let newEnemies = prev.enemies.map(e => ({ ...e, statuses: { ...e.statuses } }));
 
     prev.hand.forEach(card => {
+        // Debug logging for Burnout
+        if (card.name === 'Burnout' || card.id?.includes('burnout')) {
+            console.log('[DEBUG Burnout] Card in hand:', card.name, 'id:', card.id, 'effects:', card.effects);
+        }
+
         // Burnout Logic
         if (card.effects?.some(e => e.type === 'lose_hp_turn_end')) {
             const burnDamage = card.effects.find(e => e.type === 'lose_hp_turn_end')?.value || 0;

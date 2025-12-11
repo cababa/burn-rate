@@ -9,6 +9,7 @@ interface UnitProps {
   currentHp: number;
   maxHp: number;
   emoji: string;
+  gifUrl?: string | null; // Optional GIF URL from Giphy
   isEnemy?: boolean;
   intent?: EnemyIntent;
   statuses?: EntityStatus | EnemyStatuses;
@@ -75,6 +76,7 @@ export const Unit: React.FC<UnitProps> = ({
   currentHp,
   maxHp,
   emoji,
+  gifUrl,
   isEnemy,
   intent,
   statuses,
@@ -177,20 +179,38 @@ export const Unit: React.FC<UnitProps> = ({
         </div>
       )}
 
-      {/* Entity Header */}
-      <div className={`flex flex-col ${isEnemy ? 'items-end' : 'items-start'} pointer-events-none`}>
-        <h2 className="text-xl font-display font-bold text-white tracking-wide">{name}</h2>
-        <span className="text-xs text-gray-500 font-mono">{description}</span>
+      {/* Entity Header - Description now shows on hover for enemies */}
+      <div className={`flex flex-col ${isEnemy ? 'items-end' : 'items-start'} pointer-events-auto group/title relative`}>
+        <h2 className="text-xl font-display font-bold text-white tracking-wide cursor-help">{name}</h2>
+        {/* For enemies: show description on hover. For player: always show */}
+        {isEnemy ? (
+          <div className="absolute top-full right-0 mt-1 w-64 p-3 bg-gray-900 border border-gray-700 rounded text-xs text-left shadow-xl hidden group-hover/title:block z-[100] whitespace-normal break-words">
+            <div className="text-gray-300">{description}</div>
+          </div>
+        ) : (
+          <span className="text-xs text-gray-500 font-mono">{description}</span>
+        )}
       </div>
 
-      {/* Avatar / Visual */}
+      {/* Avatar / Visual - Larger for enemies with GIFs */}
       <div className={`
-        w-24 h-24 flex items-center justify-center text-5xl rounded-lg border border-white/10 bg-black/40 shadow-xl pointer-events-none
+        ${isEnemy ? 'w-36 h-36' : 'w-24 h-24'} flex items-center justify-center rounded-lg border border-white/10 bg-black/40 shadow-xl pointer-events-none overflow-hidden
         ${isTargetable ? 'group-hover:ring-2 group-hover:ring-primary/50' : ''}
         ${isEnemy && statuses?.vulnerable ? 'ring-2 ring-danger animate-pulse-fast' : ''}
         transition-all duration-150
       `}>
-        {isDead ? '💀' : emoji}
+        {isDead ? (
+          <span className={isEnemy ? 'text-7xl' : 'text-5xl'}>💀</span>
+        ) : gifUrl ? (
+          <img
+            src={gifUrl}
+            alt={name}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <span className={isEnemy ? 'text-7xl' : 'text-5xl'}>{emoji}</span>
+        )}
       </div>
 
       {/* Stats Bar (Runway/Health) */}

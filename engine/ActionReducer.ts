@@ -498,18 +498,35 @@ export class ActionReducer {
           action.source
         );
       } else {
-        const prev = (playerStatuses as any)[status] ?? 0;
-        (playerStatuses as any)[status] = prev + amount;
-        this.emitEvent(
-          'STATUS_CHANGED',
-          {
-            target: 'player',
-            status,
-            delta: amount,
-            newValue: (playerStatuses as any)[status],
-          },
-          action.source
-        );
+        // Handle "Flex" style effects: strength with timing: 'end_of_turn'
+        // should add to tempStrength instead of strength
+        if (status === 'strength' && payload.timing === 'end_of_turn') {
+          // For Caffeine Boost: value is -2 at end of turn, so we store +2 in tempStrength
+          playerStatuses.tempStrength = (playerStatuses.tempStrength || 0) + Math.abs(amount);
+          this.emitEvent(
+            'STATUS_CHANGED',
+            {
+              target: 'player',
+              status: 'tempStrength',
+              delta: Math.abs(amount),
+              newValue: playerStatuses.tempStrength,
+            },
+            action.source
+          );
+        } else {
+          const prev = (playerStatuses as any)[status] ?? 0;
+          (playerStatuses as any)[status] = prev + amount;
+          this.emitEvent(
+            'STATUS_CHANGED',
+            {
+              target: 'player',
+              status,
+              delta: amount,
+              newValue: (playerStatuses as any)[status],
+            },
+            action.source
+          );
+        }
       }
 
       this.state = {
