@@ -173,6 +173,40 @@ const App: React.FC = () => {
 
             console.log('[Progressive] 🎬 Generating MESO for combat at floor', floor);
 
+            // === IMMEDIATE FALLBACK TWEETS ===
+            // Show fallback tweets RIGHT NOW while MESO generates in background
+            const fallbackMeso = createFallbackMeso(
+                context,
+                macroNarrative,
+                nodeId,
+                floor,
+                nodeType,
+                enemies
+            );
+
+            // Show fallback approach tweet immediately
+            if (fallbackMeso.approachTweet) {
+                setCurrentTweet(fallbackMeso.approachTweet);
+                setTweetHistory(hist => {
+                    const isDup = hist.some(t => t.content === fallbackMeso.approachTweet.content);
+                    return isDup ? hist : [...hist, fallbackMeso.approachTweet];
+                });
+            }
+
+            // Show fallback enemy tweets immediately
+            const aliveEnemies = gameState.enemies.filter(e => e.hp > 0);
+            const fallbackEnemyTweets: Record<string, NarrativeTweet> = {};
+            for (const enemy of aliveEnemies) {
+                const intentType = enemy.currentIntent.type as 'attack' | 'buff' | 'debuff';
+                const tweet = getEnemyIntentTweet(fallbackMeso, enemy.id, intentType);
+                if (tweet) {
+                    fallbackEnemyTweets[enemy.id] = tweet;
+                }
+            }
+            setEnemyTweets(fallbackEnemyTweets);
+            setCurrentMeso(fallbackMeso); // Use fallback until MESO arrives
+            console.log('[Progressive] 📝 Showing fallback tweets for', Object.keys(fallbackEnemyTweets).length, 'enemies');
+
             // Prepare deck cards for contextual tweet generation
             const deckCards = (gameState.deck || []).map(c => ({
                 name: c.name,
@@ -180,10 +214,10 @@ const App: React.FC = () => {
                 description: c.description
             }));
 
-            // Generate MESO for this combat (async)
+            // Generate MESO for this combat (async) - will upgrade tweets when ready
             generateMesoNarrative(context, macroNarrative, nodeId, floor, nodeType, enemies, nextNodes, deckCards)
                 .then(meso => {
-                    console.log('[Progressive] ✅ MESO generated for floor', floor);
+                    console.log('[Progressive] ✅ MESO ready! Upgrading from fallback to AI-generated tweets');
                     setCurrentMeso(meso);
 
                     // Show approach tweet
@@ -351,25 +385,37 @@ const App: React.FC = () => {
         }));
 
         // Helper to get enemies for a node based on its type
+        // Extract base ID: minor_bug_1234567890 -> minor_bug
+        const extractBaseId = (id: string) => {
+            const parts = id.split('_');
+            const baseParts: string[] = [];
+            for (const part of parts) {
+                if (/^\d{10,}$/.test(part)) break; // Stop at timestamp
+                if (/^\d{1,2}$/.test(part) && baseParts.length > 0) break; // Stop at index
+                baseParts.push(part);
+            }
+            return baseParts.join('_') || id;
+        };
+
         const getEnemiesForNode = (node: { id: string; floor: number; type: string }) => {
             if (node.type === 'problem' || node.type === 'enemy') {
                 const enemies = getEncounterForFloor(node.floor, rngRef.current?.encounters);
                 return enemies.map(e => ({
-                    id: e.id.split('_')[0],
+                    id: extractBaseId(e.id),
                     name: e.name,
                     type: 'enemy'
                 }));
             } else if (node.type === 'elite') {
                 const enemies = getEliteEncounter(rngRef.current?.encounters);
                 return enemies.map(e => ({
-                    id: e.id.split('_')[0],
+                    id: extractBaseId(e.id),
                     name: e.name,
                     type: 'elite'
                 }));
             } else if (node.type === 'boss') {
                 const enemies = getBossEncounter(rngRef.current?.encounters);
                 return enemies.map(e => ({
-                    id: e.id.split('_')[0],
+                    id: extractBaseId(e.id),
                     name: e.name,
                     type: 'boss'
                 }));
@@ -1178,8 +1224,24 @@ const App: React.FC = () => {
 
     // Helper function to start combat
     const startCombat = (newState: any, prev: GameState, nextEnemies: EnemyData[], encounterMessage: string) => {
+        // RESET STATUSES AT COMBAT START (StS behavior - statuses don't persist between combats)
+        const resetStatuses = {
+            vulnerable: 0, weak: 0, strength: 0, dexterity: 0,
+            metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0,
+            thorns: 0, antifragile: 0, artifact: 0, frail: 0,
+            growth: 0, corruption: 0, combust: 0, darkEmbrace: 0,
+            rage: 0, fireBreathing: 0, barricade: 0, doubleTap: 0,
+            berserk: 0, brutality: 0, juggernaut: 0, tempStrength: 0
+        };
+
+        const statsWithResetStatuses = {
+            ...newState.playerStats,
+            statuses: resetStatuses,
+            mitigation: 0 // Also reset block
+        };
+
         // Apply Combat Start Relics
-        const { stats: startStats, enemies: modifiedEnemies, message: relicMsg } = applyCombatStartRelics(newState.playerStats, newState.relics, nextEnemies);
+        const { stats: startStats, enemies: modifiedEnemies, message: relicMsg } = applyCombatStartRelics(statsWithResetStatuses, newState.relics, nextEnemies);
 
         // Get wound cards to add from relics like Cutting Corners
         const woundCards = getRelicWoundsToAdd(newState.relics);
@@ -2764,16 +2826,18 @@ const App: React.FC = () => {
                     `}>
                         {gameState.enemies.map((enemy, index) => (
                             <div key={enemy.id} className="relative">
-                                {/* Tweet Bubble above enemy */}
-                                <EnemyTweetBubble
-                                    tweet={enemyTweets[enemy.id] || null}
-                                    onDismiss={() => setEnemyTweets(prev => {
-                                        const next = { ...prev };
-                                        delete next[enemy.id];
-                                        return next;
-                                    })}
-                                    position="above"
-                                />
+                                {/* Tweet Bubble above enemy - only for alive enemies */}
+                                {enemy.hp > 0 && (
+                                    <EnemyTweetBubble
+                                        tweet={enemyTweets[enemy.id] || null}
+                                        onDismiss={() => setEnemyTweets(prev => {
+                                            const next = { ...prev };
+                                            delete next[enemy.id];
+                                            return next;
+                                        })}
+                                        position="above"
+                                    />
+                                )}
                                 <Unit
                                     name={enemy.name}
                                     currentHp={enemy.hp}

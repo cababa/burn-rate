@@ -1,4 +1,4 @@
-
+import type { GameEvent } from './engine/events.ts';
 
 export type CardType = 'attack' | 'skill' | 'power' | 'status';
 
@@ -391,6 +391,10 @@ export interface GameState {
   startupName?: string;      // Player's startup name
   startupOneLiner?: string;  // Startup one-liner description
   narrativeGenerated?: boolean;  // Whether narrative has been generated for this run
+
+  // === ENGINE EVENT STREAM ===
+  /** Transient events produced by the engine for UI/animations */
+  pendingEvents?: GameEvent[];
 }
 
 // === FRIENDS & FAMILY ROUND (Neow's Blessing) ===

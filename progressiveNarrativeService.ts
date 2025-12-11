@@ -369,7 +369,14 @@ function transformMesoResponse(
     const enemyIntentTweets: Record<string, EnemyIntentTweets> = {};
 
     for (const enemyPool of (raw.enemyIntentTweets || [])) {
-        enemyIntentTweets[enemyPool.enemyId] = {
+        // Normalize the enemy ID returned by Gemini to ensure consistent lookup
+        const rawEnemyId = enemyPool.enemyId || '';
+        // Extract base ID (in case Gemini added extra suffixes)
+        const normalizedId = rawEnemyId.split('_').filter((p: string) => !/^\d{10,}$/.test(p) && !/^\d{1,2}$/.test(p)).join('_') || rawEnemyId;
+
+        console.log('[Progressive] MESO storing tweets for enemy:', normalizedId, '(raw:', rawEnemyId, ')');
+
+        enemyIntentTweets[normalizedId] = {
             attack: (enemyPool.attackTweets || []).map((t: any) => addTweetId({ ...t, timestamp: 'just now' })),
             buff: (enemyPool.buffTweets || []).map((t: any) => addTweetId({ ...t, timestamp: 'just now' })),
             debuff: (enemyPool.debuffTweets || []).map((t: any) => addTweetId({ ...t, timestamp: 'just now' })),
@@ -379,6 +386,8 @@ function transformMesoResponse(
             debuffIndex: 0
         };
     }
+
+    console.log('[Progressive] MESO enemy IDs stored:', Object.keys(enemyIntentTweets));
 
     // Transform card play tweets
     const cardPlayTweets: CardPlayTweets = {
@@ -660,11 +669,17 @@ export function getEnemyIntentTweet(
     enemyId: string,
     intentType: 'attack' | 'buff' | 'debuff'
 ): NarrativeTweet | null {
-    // Extract base enemy ID (remove timestamp suffix)
+    // Extract base enemy ID (remove timestamp suffix AND trailing index)
+    // Examples: 
+    //   minor_bug_1765461419900_0 -> minor_bug
+    //   critical_bug_1765461419900 -> critical_bug
+    //   legacy_monolith -> legacy_monolith
     const parts = enemyId.split('_');
     const baseIdParts: string[] = [];
     for (const part of parts) {
+        // Stop at timestamp (10+ digits) OR single/double digit index after timestamp
         if (/^\d{10,}$/.test(part)) break;
+        if (/^\d{1,2}$/.test(part) && baseIdParts.length > 0) break; // Index like _0, _1, _2
         baseIdParts.push(part);
     }
     const baseEnemyId = baseIdParts.join('_') || enemyId;

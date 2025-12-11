@@ -2,8 +2,8 @@
  * SimulationRunner - Runs automated game simulations with logging
  */
 
-import { GameState, CardData, EnemyData, MapNode, RelicData, PotionData } from './types.ts';
-import { GAME_DATA } from './constants.ts';
+import { GameState, CardData, EnemyData, MapNode, RelicData, PotionData, NeowBlessing } from './types.ts';
+import { GAME_DATA, ACT1_EVENTS, generateBlessingOptions } from './constants.ts';
 import {
     generateStarterDeck,
     generateMap,
@@ -30,7 +30,8 @@ import {
     generateRandomPotion,
     addPotionToSlot,
     canAcquirePotion,
-    resolvePotionEffect
+    resolvePotionEffect,
+    upgradeCard
 } from './gameLogic.ts';
 import { GameLogger, LogCategory } from './logger.ts';
 import { AIPlayer, createAI, getAllStrategies } from './aiPlayer.ts';
@@ -66,6 +67,119 @@ export interface SummaryStats {
     avgFinalHp: number;
     avgDeckSize: number;
     deathReasons: Record<string, number>;
+}
+
+/**
+ * Apply Neow blessing effects to game state
+ */
+function applyBlessingEffect(state: GameState, blessing: NeowBlessing, logger: GameLogger): GameState {
+    let gameState = { ...state, playerStats: { ...state.playerStats } };
+
+    for (const effect of blessing.effects) {
+        switch (effect.type) {
+            case 'gold':
+                gameState.playerStats.capital = (gameState.playerStats.capital || 0) + (effect.value || 0);
+                logger.log('REWARD_CAPITAL', `Blessing: Gained $${effect.value}k`, { capital: effect.value });
+                break;
+            case 'max_hp':
+                gameState.playerStats.maxHp += effect.value || 0;
+                gameState.playerStats.hp += effect.value || 0;
+                logger.log('HEAL', `Blessing: Gained ${effect.value} max HP`, { maxHp: gameState.playerStats.maxHp });
+                break;
+            case 'upgrade_card':
+                // Upgrade a random card
+                const upgradable = gameState.deck.filter(c => !c.upgraded && c.type !== 'status');
+                if (upgradable.length > 0) {
+                    const cardToUpgrade = upgradable[Math.floor(Math.random() * upgradable.length)];
+                    const upgraded = upgradeCard(cardToUpgrade);
+                    gameState.deck = gameState.deck.map(c => c.id === cardToUpgrade.id ? upgraded : c);
+                    logger.log('CARD_PLAY', `Blessing: Upgraded ${cardToUpgrade.name}`, { cardName: cardToUpgrade.name });
+                }
+                break;
+            case 'random_relic':
+                const newRelic = getRandomRelic('uncommon', gameState.relics.map(r => r.id));
+                if (newRelic) {
+                    gameState.relics = [...gameState.relics, newRelic];
+                    logger.log('RELIC_ACQUIRED', `Blessing: Gained ${newRelic.name}`, { relicName: newRelic.name });
+                }
+                break;
+        }
+    }
+
+    // Apply downside if present
+    if (blessing.downside) {
+        if (blessing.downside.type === 'max_hp' && blessing.downside.percent) {
+            const hpLoss = Math.floor(gameState.playerStats.maxHp * Math.abs(blessing.downside.percent) / 100);
+            gameState.playerStats.maxHp -= hpLoss;
+            gameState.playerStats.hp = Math.min(gameState.playerStats.hp, gameState.playerStats.maxHp);
+            logger.log('DAMAGE_TAKEN', `Blessing downside: Lost ${hpLoss} max HP`, { damage: hpLoss });
+        }
+    }
+
+    logger.log('RELIC', `Neow Blessing: ${blessing.description}`, { blessingId: blessing.id });
+    return gameState;
+}
+
+/**
+ * Apply event choice effects to game state
+ */
+function applyEventEffects(state: GameState, effects: any[], logger: GameLogger): GameState {
+    let gameState = { ...state, playerStats: { ...state.playerStats } };
+
+    for (const effect of effects) {
+        switch (effect.type) {
+            case 'gain_gold':
+                gameState.playerStats.capital = (gameState.playerStats.capital || 0) + (effect.value || 0);
+                logger.log('REWARD_CAPITAL', `Event: Gained $${effect.value}k`, { capital: effect.value });
+                break;
+            case 'lose_gold':
+                gameState.playerStats.capital = Math.max(0, (gameState.playerStats.capital || 0) - (effect.value || 0));
+                logger.log('MAP_NODE', `Event: Lost $${effect.value}k`, { capital: effect.value });
+                break;
+            case 'gain_hp':
+                const healAmount = effect.value || 0;
+                gameState.playerStats.hp = Math.min(gameState.playerStats.maxHp, gameState.playerStats.hp + healAmount);
+                logger.log('HEAL', `Event: Healed ${healAmount} HP`, { amount: healAmount });
+                break;
+            case 'lose_hp':
+                const damageAmount = effect.value || 0;
+                gameState.playerStats.hp = Math.max(1, gameState.playerStats.hp - damageAmount);
+                logger.log('DAMAGE_TAKEN', `Event: Lost ${damageAmount} HP`, { damage: damageAmount });
+                break;
+            case 'gain_max_hp':
+                gameState.playerStats.maxHp += effect.value || 0;
+                gameState.playerStats.hp += effect.value || 0;
+                logger.log('HEAL', `Event: Gained ${effect.value} max HP`, { maxHp: gameState.playerStats.maxHp });
+                break;
+            case 'lose_max_hp':
+                const maxHpLoss = effect.value || 0;
+                gameState.playerStats.maxHp = Math.max(1, gameState.playerStats.maxHp - maxHpLoss);
+                gameState.playerStats.hp = Math.min(gameState.playerStats.hp, gameState.playerStats.maxHp);
+                logger.log('DAMAGE_TAKEN', `Event: Lost ${maxHpLoss} max HP`, { damage: maxHpLoss });
+                break;
+            case 'gain_relic':
+                const relic = getRandomRelic('uncommon', gameState.relics.map(r => r.id));
+                if (relic) {
+                    gameState.relics = [...gameState.relics, relic];
+                    logger.log('RELIC_ACQUIRED', `Event: Gained ${relic.name}`, { relicName: relic.name });
+                }
+                break;
+            case 'upgrade_card':
+                const upgradable = gameState.deck.filter(c => !c.upgraded && c.type !== 'status');
+                for (let i = 0; i < (effect.value || 1) && i < upgradable.length; i++) {
+                    const card = upgradable[i];
+                    const upgraded = upgradeCard(card);
+                    gameState.deck = gameState.deck.map(c => c.id === card.id ? upgraded : c);
+                    logger.log('CARD_PLAY', `Event: Upgraded ${card.name}`, { cardName: card.name });
+                }
+                break;
+            case 'nothing':
+                // Do nothing
+                break;
+        }
+    }
+
+    return gameState;
 }
 
 /**
@@ -108,6 +222,13 @@ export function runSimulation(
 
     let totalTurns = 0;
     let totalCapital = 0;
+
+    // Neow Blessing selection at game start
+    if (ai.selectBlessing) {
+        const blessingOptions = generateBlessingOptions();
+        const selectedBlessing = ai.selectBlessing(blessingOptions);
+        gameState = applyBlessingEffect(gameState, selectedBlessing, logger);
+    }
 
     logger.log('COMBAT_START', `Simulation ${simId} started with ${ai.name} AI`, {
         deckSize: gameState.deck.length,
@@ -389,9 +510,27 @@ export function runSimulation(
             const reward = gameState.lastVictoryReward;
             if (reward) {
                 totalCapital += reward.capital || 0;
+                gameState.playerStats.capital = (gameState.playerStats.capital || 0) + (reward.capital || 0);
                 logger.log('REWARD', 'Combat rewards', {
                     capital: reward.capital,
                     relicName: reward.relic?.name
+                });
+            } else {
+                // Generate gold reward based on enemy type (StS-style ranges)
+                const enemyType = gameState.enemies[0]?.type || 'normal';
+                let goldReward = 0;
+                if (enemyType === 'boss') {
+                    goldReward = 95 + Math.floor(Math.random() * 10); // 95-105 gold
+                } else if (enemyType === 'elite') {
+                    goldReward = 25 + Math.floor(Math.random() * 30); // 25-55 gold
+                } else {
+                    goldReward = 10 + Math.floor(Math.random() * 15); // 10-25 gold
+                }
+                totalCapital += goldReward;
+                gameState.playerStats.capital = (gameState.playerStats.capital || 0) + goldReward;
+                logger.log('REWARD', `Earned $${goldReward}k capital`, {
+                    capital: goldReward,
+                    totalCapital: gameState.playerStats.capital
                 });
             }
 
@@ -521,8 +660,18 @@ function handleMapNode(
             });
         }
 
-        // Apply combat start relics
-        const { stats, enemies: modifiedEnemies, message } = applyCombatStartRelics(gameState.playerStats, gameState.relics, enemies);
+        // Apply combat start relics (with reset statuses - StS behavior)
+        const resetStatuses = {
+            vulnerable: 0, weak: 0, strength: 0, dexterity: 0,
+            metallicize: 0, evolve: 0, feelNoPain: 0, noDraw: 0,
+            thorns: 0, antifragile: 0, artifact: 0, frail: 0,
+            growth: 0, corruption: 0, combust: 0, darkEmbrace: 0,
+            rage: 0, fireBreathing: 0, barricade: 0, doubleTap: 0,
+            berserk: 0, brutality: 0, juggernaut: 0, tempStrength: 0
+        };
+        const resetStats = { ...gameState.playerStats, statuses: resetStatuses, mitigation: 0 };
+
+        const { stats, enemies: modifiedEnemies, message } = applyCombatStartRelics(resetStats, gameState.relics, enemies);
         if (message) {
             logger.log('RELIC', message, {});
         }
@@ -571,22 +720,80 @@ function handleMapNode(
         }
 
     } else if (node.type === 'retrospective') {
-        // Rest site - heal
-        const healAmount = Math.floor(gameState.playerStats.maxHp * 0.3);
-        gameState.playerStats.hp = Math.min(
-            gameState.playerStats.maxHp,
-            gameState.playerStats.hp + healAmount
-        );
-        logger.log('HEAL', `Rested and healed ${healAmount} HP`, {
-            amount: healAmount,
-            playerHp: gameState.playerStats.hp
-        });
+        // Rest site - AI chooses heal or upgrade
+        const action = ai.selectRestAction ? ai.selectRestAction(gameState) : 'heal';
+
+        if (action === 'upgrade' && ai.selectCardToUpgrade) {
+            const cardToUpgrade = ai.selectCardToUpgrade(gameState.deck);
+            if (cardToUpgrade) {
+                const upgradedCard = upgradeCard(cardToUpgrade);
+                gameState.deck = gameState.deck.map(c =>
+                    c.id === cardToUpgrade.id ? upgradedCard : c
+                );
+                logger.log('CARD_PLAY', `Upgraded ${cardToUpgrade.name} at rest site`, {
+                    cardName: cardToUpgrade.name
+                });
+            } else {
+                // Fall back to heal if no card to upgrade
+                const healAmount = Math.floor(gameState.playerStats.maxHp * 0.3);
+                gameState.playerStats.hp = Math.min(
+                    gameState.playerStats.maxHp,
+                    gameState.playerStats.hp + healAmount
+                );
+                logger.log('HEAL', `Rested and healed ${healAmount} HP`, {
+                    amount: healAmount,
+                    playerHp: gameState.playerStats.hp
+                });
+            }
+        } else {
+            // Heal
+            const healAmount = Math.floor(gameState.playerStats.maxHp * 0.3);
+            gameState.playerStats.hp = Math.min(
+                gameState.playerStats.maxHp,
+                gameState.playerStats.hp + healAmount
+            );
+            logger.log('HEAL', `Rested and healed ${healAmount} HP`, {
+                amount: healAmount,
+                playerHp: gameState.playerStats.hp
+            });
+        }
         gameState.floor++;
         gameState.status = 'MAP';
 
     } else if (node.type === 'vendor') {
-        // Skip vendor for now
-        logger.log('MAP_NODE', 'Visited vendor (skipped)', {});
+        // Vendor shop with AI decision-making
+        const CARD_REMOVE_COST = 75;
+
+        if (ai.selectVendorAction) {
+            let action = ai.selectVendorAction(gameState);
+
+            while (action && action.type !== 'skip') {
+                if (action.type === 'remove_card' && gameState.playerStats.capital >= CARD_REMOVE_COST) {
+                    // Remove the card from deck
+                    const cardToRemove = action.card;
+                    gameState.deck = gameState.deck.filter(c => c.id !== cardToRemove.id);
+                    gameState.playerStats.capital -= CARD_REMOVE_COST;
+                    logger.log('MAP_NODE', `Vendor: Removed "${cardToRemove.name}" for $${CARD_REMOVE_COST}k`, {
+                        cardName: cardToRemove.name,
+                        goldSpent: CARD_REMOVE_COST,
+                        remainingGold: gameState.playerStats.capital,
+                        deckSize: gameState.deck.length
+                    });
+                } else {
+                    break;
+                }
+
+                // Check if AI wants to do more
+                action = ai.selectVendorAction(gameState);
+            }
+
+            logger.log('MAP_NODE', `Left vendor with $${gameState.playerStats.capital}k, deck size: ${gameState.deck.length}`, {
+                capital: gameState.playerStats.capital,
+                deckSize: gameState.deck.length
+            });
+        } else {
+            logger.log('MAP_NODE', 'Visited vendor (skipped)', {});
+        }
         gameState.floor++;
         gameState.status = 'MAP';
 
@@ -608,8 +815,21 @@ function handleMapNode(
         gameState.status = 'MAP';
 
     } else if (node.type === 'opportunity') {
-        // Event - skip for now
-        logger.log('MAP_NODE', 'Event occurred (skipped)', {});
+        // Event handling with AI decision
+        if (ACT1_EVENTS.length > 0 && ai.selectEventChoice) {
+            const eventIndex = Math.floor(Math.random() * ACT1_EVENTS.length);
+            const event = ACT1_EVENTS[eventIndex];
+            const choice = ai.selectEventChoice(gameState, event);
+
+            logger.log('MAP_NODE', `Event: ${event.name} - chose "${choice.label}"`, {
+                eventId: event.id,
+                choiceId: choice.id
+            });
+
+            gameState = applyEventEffects(gameState, choice.effects, logger);
+        } else {
+            logger.log('MAP_NODE', 'Event occurred (skipped)', {});
+        }
         gameState.floor++;
         gameState.status = 'MAP';
     }

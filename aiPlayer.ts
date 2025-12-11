@@ -2,7 +2,7 @@
  * AI Player System - Multiple strategies for automated game testing
  */
 
-import { GameState, CardData, MapNode, RelicData, PotionData } from './types.ts';
+import { GameState, CardData, MapNode, RelicData, PotionData, NeowBlessing, EventData, EventChoice } from './types.ts';
 
 /**
  * Interface for AI players that can make game decisions
@@ -46,6 +46,31 @@ export interface AIPlayer {
      * Decide whether to keep a potion drop or discard it when slots are full
      */
     selectPotionDrop?(state: GameState, potion: PotionData): boolean;
+
+    /**
+     * Select a Neow blessing at game start
+     */
+    selectBlessing?(options: NeowBlessing[]): NeowBlessing;
+
+    /**
+     * Select a choice for an event
+     */
+    selectEventChoice?(state: GameState, event: EventData): EventChoice;
+
+    /**
+     * Select rest site action: heal or upgrade
+     */
+    selectRestAction?(state: GameState): 'heal' | 'upgrade';
+
+    /**
+     * Select which card to upgrade from deck
+     */
+    selectCardToUpgrade?(cards: CardData[]): CardData | null;
+
+    /**
+     * Select vendor action: what to buy/sell at the shop
+     */
+    selectVendorAction?(state: GameState): { type: 'remove_card', card: CardData } | { type: 'buy_potion' } | { type: 'skip' } | null;
 }
 
 /**
@@ -290,6 +315,148 @@ abstract class BaseAI implements AIPlayer {
      */
     selectPotionDrop(state: GameState, potion: PotionData): boolean {
         return true; // By default, take the potion
+    }
+
+    /**
+     * Select a Neow blessing at game start
+     * Default: prefer gift blessings with highest value
+     */
+    selectBlessing(options: NeowBlessing[]): NeowBlessing {
+        // Prefer gifts (pure benefit) over trades/sacrifices
+        const gifts = options.filter(b => b.category === 'gift');
+        if (gifts.length > 0) {
+            // Pick highest gold value, or max HP
+            const sorted = gifts.sort((a, b) => {
+                const aGold = a.effects.find(e => e.type === 'gold')?.value || 0;
+                const bGold = b.effects.find(e => e.type === 'gold')?.value || 0;
+                if (aGold !== bGold) return bGold - aGold;
+                const aHp = a.effects.find(e => e.type === 'max_hp')?.value || 0;
+                const bHp = b.effects.find(e => e.type === 'max_hp')?.value || 0;
+                return bHp - aHp;
+            });
+            return sorted[0];
+        }
+        // Otherwise pick first option
+        return options[0];
+    }
+
+    /**
+     * Select an event choice
+     * Default: prefer gold gain, card gain, avoid HP loss if low
+     */
+    selectEventChoice(state: GameState, event: EventData): EventChoice {
+        const hpPercent = state.playerStats.hp / state.playerStats.maxHp;
+        const choices = event.choices.filter(c => {
+            // Skip choices with conditions we don't meet
+            if (c.condition) {
+                if (c.condition.type === 'gold') {
+                    if (c.condition.operator === '>=' && state.playerStats.capital < c.condition.value) return false;
+                }
+                if (c.condition.type === 'upgraded_cards') {
+                    const upgradedCount = state.deck.filter(card => card.upgraded).length;
+                    if (c.condition.operator === '>=' && upgradedCount < c.condition.value) return false;
+                }
+            }
+            return true;
+        });
+
+        if (choices.length === 0) return event.choices[event.choices.length - 1]; // Last is usually "leave"
+
+        // Score each choice
+        const scored = choices.map(choice => {
+            let score = 0;
+            for (const effect of choice.effects) {
+                if (effect.type === 'gain_gold') score += (effect.value || 0) * 2;
+                if (effect.type === 'gain_card') score += 20;
+                if (effect.type === 'gain_relic') score += 30;
+                if (effect.type === 'gain_hp') score += (effect.value || 0);
+                if (effect.type === 'gain_max_hp') score += (effect.value || 0) * 2;
+                if (effect.type === 'upgrade_card' || effect.type === 'upgrade_card_choice') score += 15;
+                if (effect.type === 'lose_gold') score -= (effect.value || 0);
+                if (effect.type === 'lose_hp') {
+                    if (hpPercent < 0.5) score -= (effect.value || 0) * 3;
+                    else score -= (effect.value || 0);
+                }
+                if (effect.type === 'lose_max_hp') score -= (effect.value || 0) * 2;
+                if (effect.type === 'add_status_card') score -= 15;
+                if (effect.type === 'remove_card' || effect.type === 'remove_card_choice') score += 10;
+                if (effect.type === 'nothing') score += 1; // Slight preference over nothing
+            }
+            return { choice, score };
+        });
+
+        scored.sort((a, b) => b.score - a.score);
+        return scored[0].choice;
+    }
+
+    /**
+     * Select rest site action
+     * Default: heal if HP < 70%, otherwise upgrade if possible
+     */
+    selectRestAction(state: GameState): 'heal' | 'upgrade' {
+        const hpPercent = state.playerStats.hp / state.playerStats.maxHp;
+        const hasUpgradableCards = state.deck.some(c => !c.upgraded && c.type !== 'status' && c.rarity !== 'special');
+
+        if (hpPercent < 0.7 || !hasUpgradableCards) {
+            return 'heal';
+        }
+        return 'upgrade';
+    }
+
+    /**
+     * Select card to upgrade
+     * Default: prioritize attacks, then skills, by rarity
+     */
+    selectCardToUpgrade(cards: CardData[]): CardData | null {
+        const upgradable = cards.filter(c => !c.upgraded && c.type !== 'status' && c.rarity !== 'special');
+        if (upgradable.length === 0) return null;
+
+        // Sort by: rarity (rare > uncommon > common), then type (attack > skill > power)
+        const rarityOrder = ['rare', 'uncommon', 'common', 'starter'];
+        const typeOrder = ['attack', 'skill', 'power'];
+
+        const sorted = upgradable.sort((a, b) => {
+            const rarityDiff = rarityOrder.indexOf(a.rarity) - rarityOrder.indexOf(b.rarity);
+            if (rarityDiff !== 0) return rarityDiff;
+            return typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type);
+        });
+
+        return sorted[0];
+    }
+
+    /**
+     * Select vendor action
+     * Default: Remove status cards first, then Strikes/Defends if we have gold
+     */
+    selectVendorAction(state: GameState): { type: 'remove_card', card: CardData } | { type: 'buy_potion' } | { type: 'skip' } | null {
+        const capital = state.playerStats.capital || 0;
+        const CARD_REMOVE_COST = 75; // StS standard
+
+        if (capital >= CARD_REMOVE_COST) {
+            // Priority 1: Remove status/curse cards
+            const statusCards = state.deck.filter(c => c.type === 'status');
+            if (statusCards.length > 0) {
+                return { type: 'remove_card', card: statusCards[0] };
+            }
+
+            // Priority 2: Remove basic Strikes (they become weak late game)
+            const strikes = state.deck.filter(c =>
+                c.id.includes('cto_commit') && !c.upgraded
+            );
+            if (strikes.length > 2) { // Keep at least 2
+                return { type: 'remove_card', card: strikes[0] };
+            }
+
+            // Priority 3: Remove basic Defends
+            const defends = state.deck.filter(c =>
+                c.id.includes('cto_rollback') && !c.upgraded
+            );
+            if (defends.length > 2) { // Keep at least 2
+                return { type: 'remove_card', card: defends[0] };
+            }
+        }
+
+        return { type: 'skip' };
     }
 }
 

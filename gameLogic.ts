@@ -4,6 +4,10 @@ import { getGlobalLogger } from './logger.ts';
 import { SeededRandom } from './rng.ts';
 // Effect handler system for modular card effect processing
 import { EFFECT_HANDLERS, EffectContext, EffectResult, createInitialResult, executeEffectHandler } from './effectHandlers.ts';
+import { ActionQueue, EventLog, ActionReducer, cardToActions, RNGService, isEffectTypeSupported } from './engine/index.ts';
+import type { GameRNG } from './rng.ts';
+
+const USE_NEW_CARD_RESOLVER = true;
 
 // --- Math Helpers ---
 
@@ -2431,12 +2435,89 @@ export const resolveEnemyTurn = (prev: GameState, rng?: SeededRandom): GameState
     return nextState;
 };
 
+// Feature flag branch: new ActionQueue-based resolver vs legacy inline implementation
 export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enemy' | 'self', targetEnemyId?: string, rng?: SeededRandom): GameState => {
     const costPaid = card.cost === -1 ? prev.playerStats.bandwidth : card.cost;
 
     if (prev.playerStats.bandwidth < costPaid) {
         getGlobalLogger().warn('CARD_PLAY_FAILED', `Not enough Bandwidth to play ${card.name}. Required: ${costPaid}, Available: ${prev.playerStats.bandwidth}`);
         return { ...prev, message: "Not enough Bandwidth to deploy component." };
+    }
+
+    const unsupportedEffects = (card.effects || []).filter(effect => !isEffectTypeSupported(effect));
+    const shouldUseNewEngine = USE_NEW_CARD_RESOLVER && unsupportedEffects.length === 0;
+
+    // === NEW ENGINE PATH ===
+    if (shouldUseNewEngine) {
+        getGlobalLogger().log('CARD_PLAY', `[NEW ENGINE] Playing ${card.name}`, { cardId: card.id, cost: costPaid });
+        
+        // Handle doubleTap - attacks play twice
+        const playerStatuses = { ...prev.playerStats.statuses };
+        const repeatCount = card.type === 'attack' && playerStatuses.doubleTap > 0 ? 2 : 1;
+        if (repeatCount > 1) {
+            playerStatuses.doubleTap = Math.max(0, playerStatuses.doubleTap - 1);
+        }
+        
+        // Handle rage - gain block when playing attacks
+        let rageMitigation = prev.playerStats.mitigation;
+        if (card.type === 'attack' && playerStatuses.rage > 0) {
+            let rageBlock = playerStatuses.rage;
+            if (playerStatuses.frail > 0) {
+                rageBlock = Math.floor(rageBlock * 0.75);
+            }
+            rageMitigation += rageBlock * repeatCount;
+        }
+        
+        // Build initial state with status updates
+        let workingState: GameState = {
+            ...prev,
+            playerStats: {
+                ...prev.playerStats,
+                statuses: playerStatuses,
+                mitigation: rageMitigation,
+            },
+        };
+        
+        // Process card effects (potentially multiple times for doubleTap)
+        for (let r = 0; r < repeatCount; r++) {
+            const actions = cardToActions(card, target, targetEnemyId, r === 0 ? costPaid : 0);
+            const queue = new ActionQueue();
+            queue.enqueueMany(actions);
+            
+            const eventLog = new EventLog();
+            const reducer = new ActionReducer(workingState, queue, eventLog, undefined);
+            
+            const { state, events } = reducer.processAll();
+            workingState = {
+                ...state,
+                pendingEvents: [...(workingState.pendingEvents || []), ...events],
+            };
+        }
+        
+        // Attach final message
+        const finalState: GameState = {
+            ...workingState,
+            message: `Deployed ${card.name}.`,
+        };
+        
+        // Handle card destination (exhaust or discard)
+        // Remove card from hand first
+        finalState.hand = finalState.hand.filter(c => c !== card);
+        if (card.exhaust) {
+            finalState.exhaustPile = [...finalState.exhaustPile, card];
+        } else {
+            finalState.discardPile = [...finalState.discardPile, card];
+        }
+        
+        return finalState;
+    }
+    // === END NEW ENGINE PATH ===
+
+    if (USE_NEW_CARD_RESOLVER && !shouldUseNewEngine) {
+        getGlobalLogger().log('CARD_PLAY_FALLBACK', `[NEW ENGINE] Falling back to legacy resolver for ${card.name}`, {
+            cardId: card.id,
+            unsupportedEffects: unsupportedEffects.map(e => e.type),
+        });
     }
 
     getGlobalLogger().log('CARD_PLAY', `Played ${card.name}`, {
