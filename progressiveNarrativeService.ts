@@ -18,7 +18,9 @@ import {
     MACRO_SCHEMA,
     MESO_SCHEMA,
     DEFAULT_FLOOR_BEATS,
-    StartupTone
+    StartupTone,
+    PlayerRole,
+    ROLE_CONTEXT
 } from './progressiveNarrativeTypes';
 import { NarrativeTweet, StartupContext } from './narrativeTypes';
 import { MapNode, MapLayer, EnemyData } from './types';
@@ -27,7 +29,19 @@ import { MapNode, MapLayer, EnemyData } from './types';
 // CONFIGURATION
 // ============================================
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent';
+
+// Verbose logging toggle - logs full prompts and responses for debugging
+let VERBOSE_LOGGING = false;
+
+export function setVerboseLogging(enabled: boolean): void {
+    VERBOSE_LOGGING = enabled;
+    console.log(`[Progressive] Verbose logging ${enabled ? 'ENABLED' : 'DISABLED'}`);
+}
+
+export function isVerboseLogging(): boolean {
+    return VERBOSE_LOGGING;
+}
 
 // ============================================
 // API KEY MANAGEMENT (shared with old service)
@@ -85,87 +99,510 @@ export function clearNarrativeCache(): void {
 // MACRO GENERATION PROMPT
 // ============================================
 
-function buildMacroSystemPrompt(): string {
-    return `You are a startup narrative generator for "Burn Rate: The Unicorn Run", a roguelike deckbuilder.
+function buildMacroSystemPrompt(role: PlayerRole): string {
+    const roleCtx = ROLE_CONTEXT[role];
+    return `You generate authentic Twitter/X content for a startup founder's journey.
 
-The game follows a startup founder through Act 1: Finding Product-Market Fit & MVP launch.
+You're creating tweets for a ${roleCtx.title} building their startup through ACT 1: from naming the startup to closing Seed funding.
 
-Your job is to generate the MACRO narrative layer - the overarching story arc for this run.
+═══════════════════════════════════════════════
+ACT 1: THE BEGINNING (Idea → MVP → PMF → Seed)
+═══════════════════════════════════════════════
+
+THE JOURNEY (16 story moments):
+
+PHASE 1 - THE SPARK (Moments 1-4):
+- You just quit your job and named the startup
+- Writing the first lines of code
+- Building the ugly first prototype
+- Showing it to friends & family
+→ Ends with: The prototype exists!
+
+PHASE 2 - THE GRIND (Moments 5-8):
+- Late nights fixing bugs
+- Iterating on feedback
+- Seeing competitors appear
+- Tough decisions about direction
+→ Ends with: MVP is taking shape
+
+PHASE 3 - THE DOUBT (Moments 9-11):
+- Runway getting scary
+- Questioning if anyone will use this
+- Team morale wavering
+- The darkest moment before dawn
+→ Ends with: A glimmer of hope
+
+PHASE 4 - THE BREAKTHROUGH (Moments 12-14):
+- First real user who LOVES it
+- First paying customer
+- Organic growth starting
+- The metrics are moving!
+→ Ends with: Product-Market Fit signals!
+
+PHASE 5 - THE CLIMAX (Moments 15-16):
+- The big investor meeting
+- Pitching everything you built
+→ Ends with: Seed round closed! 🎉
+
+═══════════════════════════════════════════════
+
+LANGUAGE RULES:
+- Write so a 12-year-old AND a real ${role.toUpperCase()} both enjoy it
+- NO jargon - "it works!" not "the system is stable"
+- The ${role.toUpperCase()} flavor comes through ATTITUDE, not vocabulary
+- Insider energy without insider words
 
 CRITICAL RULES:
-1. NO HASHTAGS EVER. They break immersion.
-2. Write for a smart 12-year-old. Short punchy sentences.
-3. Be CONVERSATIONAL - like texting a friend.
-4. Avoid complex jargon. Make startup terms obvious in context.
-
-MACRO LAYER INCLUDES:
-- Theme: A catchy phrase for the run's story arc
-- Startup voice: Handle, emoji, tone
-- Key tweets: Intro (Day 1), Defeat (Game Over), Boss Victory (Funded!)
-- Floor beats: 16 one-liner story prompts that guide each floor's narrative
-
-FLOOR BEAT STORY ARC:
-- Floors 1-4 (hope): Dream begins, first steps, nervous excitement
-- Floors 5-8 (grind): Late nights, building, small setbacks
-- Floors 9-11 (doubt): Things get hard, questioning everything
-- Floors 12-14 (breakthrough): Momentum, signs of traction
-- Floors 15-16 (climax): The big pitch, all or nothing
-
-Each floor beat should be:
-- A one-liner that captures that moment in the journey
-- On-brand for the specific startup
-- Emotionally resonant with the story phase`;
+1. Write like a REAL FOUNDER tweets - casual, authentic, messy
+2. NO hashtags, NO game references, NO jargon
+3. Anyone should understand every word
+4. Celebrate wins - shipping, milestones, traction
+5. Never reference "enemies" or "battles" - just the founder journey`;
 }
 
-function buildMacroUserPrompt(context: StartupContext): string {
-    return `Generate the MACRO narrative layer for this startup:
+function buildMacroUserPrompt(context: StartupContext, role: PlayerRole): string {
+    const roleCtx = ROLE_CONTEXT[role];
+    return `Generate the ACT 1 story arc for this startup:
 
-STARTUP NAME: ${context.name}
-ONE-LINER: ${context.oneLiner}
+STARTUP: ${context.name}
+WHAT THEY DO: ${context.oneLiner}
+FOUNDER ROLE: ${roleCtx.title}
+
+═══════════════════════════════════════════════
+ACT 1: From naming the startup to closing Seed
+═══════════════════════════════════════════════
 
 Generate:
-1. THEME: A catchy phrase for this run's story arc (e.g., "The Underdog's Rise")
-2. STARTUP HANDLE: Twitter handle for the startup (e.g., "@giggle_learn")
-3. STARTUP EMOJI: One emoji that represents them (e.g., "📚")
-4. STARTUP TONE: One of: scrappy, professional, quirky, serious
-5. INTRO TWEET: Day 1 announcement (excited, hopeful)
-6. DEFEAT TWEET: Game over tweet (sad but dignified)
-7. BOSS VICTORY TWEET: Seed round closed (huge celebration!)
-8. FLOOR BEATS: 16 story beat one-liners, one for each floor
+1. THEME: A catchy phrase for their Act 1 journey
+2. TWITTER HANDLE: Using the startup name
+3. EMOJI: One emoji that represents them
+4. TONE: One of: scrappy, professional, quirky, serious
+5. INTRO TWEET: The day they named the startup and started building
+6. DEFEAT TWEET: If they ran out of runway before Seed (sad but dignified)
+7. VICTORY TWEET: Seed round closed! MVP works, PMF found, funded!
+8. STORY BEATS: 16 moments (one-liners for each)
 
-Floor beats should follow the story arc and be specific to ${context.name}'s journey:
-- Floors 1-4: hope phase
-- Floors 5-8: grind phase  
-- Floors 9-11: doubt phase
-- Floors 12-14: breakthrough phase
-- Floors 15-16: climax phase
+STORY BEATS MUST follow the Act 1 journey:
 
-Each tweet should be under 280 characters.
-Make handles start with "@" and fit the character.`;
+THE SPARK (Moments 1-4) - Naming & First Prototype:
+- "We finally have a name", "Quit the job", "First line of code"
+- Milestone: ugly prototype exists
+
+THE GRIND (Moments 5-8) - Building MVP:
+- "Third all-nighter", "The bug that won't die", "Competitors appeared"
+- Milestone: MVP is taking shape
+
+THE DOUBT (Moments 9-11) - Pre-Launch Anxiety:
+- "Runway is scary", "Is this even viable?", "Team is exhausted"
+- Milestone: A glimmer of hope (one user loves it)
+
+THE BREAKTHROUGH (Moments 12-14) - Launch & PMF:
+- "Someone wants to pay!", "First 100 users", "The graph is going up"
+- Milestone: Product-Market Fit signals!
+
+THE CLIMAX (Moments 15-16) - Seed Pitch:
+- "The investor meeting", "Everything on the line"
+- Milestone: Seed round closed!
+
+Each tweet under 200 characters - punchy, authentic, real.`;
+}
+
+// ============================================
+// ENEMY PERSONALITY HELPER
+// ============================================
+
+interface EnemyPersonality {
+    description: string;
+    trashTalkStyle: string;
+    handle: string;
+    emoji: string;
+}
+
+/**
+ * Returns personality traits for each enemy type to ensure grounded, specific tweets
+ */
+function getEnemyPersonality(enemyId: string): EnemyPersonality {
+    const personalities: Record<string, EnemyPersonality> = {
+        // Common enemies
+        fanboy: {
+            description: "Feature Creep - wants to add 'just one more thing' forever",
+            trashTalkStyle: "Enthusiastic but overwhelming, suggests endless additions",
+            handle: "@feature_creep",
+            emoji: "📦"
+        },
+        spaghetti_code: {
+            description: "The Copycat - steals ideas and does them cheaper",
+            trashTalkStyle: "Condescending, claims they did it first and better",
+            handle: "@copycat_ceo",
+            emoji: "🦜"
+        },
+        critical_bug: {
+            description: "The Doubter - questions everything, spreads FUD",
+            trashTalkStyle: "Skeptical, asks rhetorical questions, uses 'I told you so'",
+            handle: "@the_doubter",
+            emoji: "🤨"
+        },
+        minor_bug: {
+            description: "The Naysayer - says 'it won't work' and kills motivation",
+            trashTalkStyle: "Dismissive, pessimistic, rolls eyes at everything",
+            handle: "@nuh_uh",
+            emoji: "👎"
+        },
+        quick_hack: {
+            description: "The Shortcut Taker - cuts corners and weakens foundations",
+            trashTalkStyle: "Rushed, impatient, mocks careful planning",
+            handle: "@just_ship_it",
+            emoji: "✂️"
+        },
+        tech_debt: {
+            description: "The Procrastinator - delays everything, creates baggage",
+            trashTalkStyle: "Lazy, suggests 'doing it later', yawns at urgency",
+            handle: "@tomorrow_guy",
+            emoji: "😴"
+        },
+        legacy_module: {
+            description: "The Old Guard - stuck in old ways, resists change",
+            trashTalkStyle: "Condescending about experience, 'back in my day' energy",
+            handle: "@old_school",
+            emoji: "👴"
+        },
+        hotfix: {
+            description: "The Gambler - takes risky bets that might hurt",
+            trashTalkStyle: "Reckless, taunts about taking chances",
+            handle: "@yolo_dev",
+            emoji: "🎲"
+        },
+        bad_merge: {
+            description: "The Gossip - spreads rumors and hurts morale",
+            trashTalkStyle: "Whispers secrets, claims inside knowledge",
+            handle: "@office_gossip",
+            emoji: "🗣️"
+        },
+        merge_conflict: {
+            description: "The Politician - plays both sides, causes division",
+            trashTalkStyle: "Two-faced, agrees then undermines",
+            handle: "@corp_politics",
+            emoji: "🎭"
+        },
+        memory_leak: {
+            description: "The Energy Vampire - drains team energy slowly",
+            trashTalkStyle: "Whiny, exhausting, constant small complaints",
+            handle: "@energy_drain",
+            emoji: "🧛"
+        },
+        micromanager: {
+            description: "The Micromanager - demands updates, questions autonomy",
+            trashTalkStyle: "Controlling, asks for status every 5 minutes",
+            handle: "@status_pls",
+            emoji: "🔍"
+        },
+        feature_pusher: {
+            description: "The Yes-Man - agrees to everything, overcommits",
+            trashTalkStyle: "Overly agreeable, then blames when things fail",
+            handle: "@yes_and",
+            emoji: "🤝"
+        },
+        headhunter: {
+            description: "The Poacher - tries to steal your talent",
+            trashTalkStyle: "Smooth, offers 'better opportunities'",
+            handle: "@talent_scout",
+            emoji: "🎯"
+        },
+        // Elites
+        scope_creep: {
+            description: "Scope Creep (Elite) - turns simple into impossible",
+            trashTalkStyle: "Grand visions, impossible timelines, 'one more feature'",
+            handle: "@scope_creep_",
+            emoji: "📈"
+        },
+        over_engineer: {
+            description: "Over-Engineer (Elite) - makes everything too complex",
+            trashTalkStyle: "Intellectual superiority, overcomplicates simple things",
+            handle: "@10x_engineer",
+            emoji: "🔧"
+        },
+        burnout: {
+            description: "Burnout (Elite) - pure exhaustion that makes you quit",
+            trashTalkStyle: "Tired but relentless, 'you can't keep this up'",
+            handle: "@burnout_inc",
+            emoji: "🔥"
+        },
+        pivot_master: {
+            description: "The Pivot Master (Elite) - demands constant changes",
+            trashTalkStyle: "Constantly pivoting, 'what if we tried X instead'",
+            handle: "@pivot_lord",
+            emoji: "🔄"
+        },
+        // Bosses
+        boss_the_pivot: {
+            description: "The Pivot (Boss) - demands you change everything",
+            trashTalkStyle: "Authoritative, questions your entire direction",
+            handle: "@market_reality",
+            emoji: "🔀"
+        },
+        boss_burn_rate: {
+            description: "Burn Rate (Boss) - your money running out",
+            trashTalkStyle: "Cold, financial, counts down your runway",
+            handle: "@burn_rate",
+            emoji: "💸"
+        },
+        boss_the_monolith: {
+            description: "The Monolith (Boss) - legacy incumbent crushing startups",
+            trashTalkStyle: "Corporate, dismissive of 'little startups'",
+            handle: "@enterprise_inc",
+            emoji: "🏢"
+        },
+        investor_meeting: {
+            description: "The VC Gauntlet (Boss) - survive or die pitch meeting",
+            trashTalkStyle: "Sharp questions, skeptical of metrics",
+            handle: "@tough_vc",
+            emoji: "💼"
+        },
+        // Legacy system enemies (multi-part)
+        legacy_monolith: {
+            description: "Legacy Code Monolith - old system that refuses to die",
+            trashTalkStyle: "Ancient, speaks of 'how things were built'",
+            handle: "@legacy_sys",
+            emoji: "🏛️"
+        },
+        legacy_hack: {
+            description: "Legacy Hack - quick fixes from the past haunting you",
+            trashTalkStyle: "Sneaky, 'remember when you cut corners?'",
+            handle: "@old_hack",
+            emoji: "🔓"
+        },
+        legacy_patch: {
+            description: "Legacy Patch - band-aids that never got fixed properly",
+            trashTalkStyle: "Accusatory, 'you said you'd fix this later'",
+            handle: "@temp_fix",
+            emoji: "🩹"
+        }
+    };
+
+    return personalities[enemyId] || {
+        description: "A startup challenge that needs solving",
+        trashTalkStyle: "Generic villain mocking the startup",
+        handle: "@problem",
+        emoji: "😈"
+    };
+}
+
+/**
+ * Generate personality-specific attack tweets for fallback
+ */
+function getPersonalityAttackTweets(enemyId: string, startupName: string, personality: EnemyPersonality): string[] {
+    const attacks: Record<string, string[]> = {
+        critical_bug: [
+            `I mean... does anyone actually believe ${startupName} will work? 🤨`,
+            `Called it. ${startupName} is already struggling. Told you so.`,
+            `"Revolutionary idea" they said. Suuure. 😏`
+        ],
+        minor_bug: [
+            `This ${startupName} thing? Yeah that's never gonna work.`,
+            `${startupName}? lol no. Next.`,
+            `Not even worth discussing. ${startupName} is DOA. 👎`
+        ],
+        fanboy: [
+            `Oh wait ${startupName} should ALSO add [insert 50 features here]! 📦`,
+            `What if ${startupName} also did X, Y, Z, AND... 🤩`,
+            `More features! More scope! ${startupName} needs EVERYTHING!`
+        ],
+        spaghetti_code: [
+            `Cute idea. We already did this 2 years ago. Better. 🦜`,
+            `${startupName} is basically just a worse version of what we built`,
+            `Imitation is flattering but ${startupName}'s execution is... yikes`
+        ],
+        quick_hack: [
+            `Why waste time on quality? Just ship it! ✂️`,
+            `${startupName} is taking too long. Cut corners already!`,
+            `Tests? Documentation? LOL just push to prod 🏃`
+        ],
+        tech_debt: [
+            `*yawns* ${startupName} will deal with this... eventually 😴`,
+            `Who needs clean code anyway? Future ${startupName}'s problem`,
+            `Add it to the backlog. We'll never actually fix it lol`
+        ],
+        legacy_module: [
+            `Back in MY day, we didn't need fancy ${startupName}s 👴`,
+            `This "modern" approach? Just a fad. The old ways worked fine.`,
+            `${startupName} kids don't understand REAL engineering`
+        ],
+        burnout: [
+            `How many hours has ${startupName} team been awake? 🔥`,
+            `They can't keep this pace up. I'll wait.`,
+            `Sustainability? What's that? ${startupName} is running on fumes`
+        ],
+        micromanager: [
+            `Status update? What's the ETA? Can I get an hourly report? 🔍`,
+            `${startupName} needs MORE oversight. I need to see EVERY decision.`,
+            `Why wasn't I CC'd on this? Did you get approval?`
+        ]
+    };
+
+    return attacks[enemyId] || [
+        `${startupName} is about to learn a hard lesson`,
+        `This won't end well for ${startupName}. Watch.`,
+        `Another startup, another failure. ${startupName}'s turn.`
+    ];
+}
+
+/**
+ * Generate personality-specific buff tweets for fallback
+ */
+function getPersonalityBuffTweets(enemyId: string, startupName: string, personality: EnemyPersonality): string[] {
+    const buffs: Record<string, string[]> = {
+        critical_bug: [
+            `See? The doubt is spreading. Even ${startupName}'s team is unsure now 🤨`,
+            `Uncertainty compounds. ${startupName} is questioning everything.`
+        ],
+        minor_bug: [
+            `More naysayers joining. ${startupName} hype is dying 👎`,
+            `The skepticism is growing. ${startupName} can feel it.`
+        ],
+        fanboy: [
+            `YES! ${startupName} agreed to more features! Scope = infinity! 📦`,
+            `Feature creep is WINNING. ${startupName}'s roadmap is chaos now!`
+        ],
+        tech_debt: [
+            `More shortcuts = more debt. ${startupName} future is MINE 😴`,
+            `Backlog growing. ${startupName} will NEVER catch up.`
+        ],
+        burnout: [
+            `The exhaustion compounds. ${startupName} is running on empty 🔥`,
+            `Another late night. ${startupName} team morale = 📉`
+        ]
+    };
+
+    return buffs[enemyId] || [
+        `${startupName}'s problems are multiplying. Love to see it 📈`,
+        `Getting stronger. ${startupName} can't stop this.`
+    ];
+}
+
+/**
+ * Generate personality-specific debuff tweets for fallback
+ */
+function getPersonalityDebuffTweets(enemyId: string, startupName: string, personality: EnemyPersonality): string[] {
+    const debuffs: Record<string, string[]> = {
+        critical_bug: [
+            `${startupName} is second-guessing everything now. My work here is done 🤨`,
+            `Confidence = shattered. ${startupName} doesn't believe in themselves.`
+        ],
+        minor_bug: [
+            `${startupName} team looks defeated. Good. 👎`,
+            `Morale is tanking. ${startupName} is losing faith.`
+        ],
+        quick_hack: [
+            `Corners cut. Quality dropped. ${startupName} will pay later ✂️`,
+            `${startupName}'s foundations are WEAK now. My doing.`
+        ],
+        tech_debt: [
+            `${startupName} is drowning in technical debt. Delicious 😴`,
+            `Every shortcut haunts them. ${startupName} is paralyzed.`
+        ],
+        burnout: [
+            `${startupName} team is exhausted. Can barely function 🔥`,
+            `Sleep deprivation hitting hard. ${startupName} is slowing down.`
+        ],
+        micromanager: [
+            `${startupName} can't make decisions without checking 10 people now 🔍`,
+            `Autonomy? Gone. ${startupName} is caught in approval loops.`
+        ]
+    };
+
+    return debuffs[enemyId] || [
+        `${startupName} team looking exhausted. Love to see it 😴`,
+        `Slowing down, ${startupName}? Good. Very good.`
+    ];
+}
+
+// ============================================
+// NARRATIVE ARC HELPERS
+// ============================================
+
+import { NarrativeDevice, EmotionalArc } from './progressiveNarrativeTypes';
+
+/**
+ * Get human-readable description of a narrative device for the LLM prompt
+ */
+function getNarrativeDeviceDescription(device: NarrativeDevice): string {
+    const descriptions: Record<NarrativeDevice, string> = {
+        'foreshadowing': "Plant subtle hints about future challenges (creates anticipation)",
+        'callback': "Reference earlier events to create continuity (makes story feel connected)",
+        'tension_escalation': "Build dramatic tension - stakes are rising",
+        'moment_of_doubt': "Character questions their path (vulnerability, relatability)",
+        'small_victory': "A minor win that builds momentum (hope amid struggle)",
+        'setback': "Things go wrong - temporary defeat builds empathy",
+        'revelation': "Important insight or truth is discovered",
+        'cliffhanger': "Leave something unresolved (creates urgency to continue)",
+        'turning_point': "The story direction fundamentally changes",
+        'stakes_raising': "Make consequences clearer and more severe",
+        'comic_relief': "Brief moment of levity to balance tension",
+        'ally_appears': "Help arrives - customer, mentor, or supporter",
+        'dark_moment': "Lowest point before breakthrough (makes victory sweeter)",
+        'payoff': "Earlier setup pays off - reward for paying attention"
+    };
+    return descriptions[device] || "Advance the story naturally";
+}
+
+/**
+ * Get human-readable description of emotional arc for the LLM prompt
+ */
+function getEmotionalArcDescription(arc: EmotionalArc): string {
+    const descriptions: Record<EmotionalArc, string> = {
+        'hopeful_to_challenged': "Start optimistic, end facing real obstacles (but still standing)",
+        'determined_to_tired': "Start with resolve, end exhausted but pushing through",
+        'anxious_to_desperate': "Start worried, end at breaking point",
+        'desperate_to_hopeful': "Start at rock bottom, end with glimmer of hope",
+        'tense_to_triumphant': "Start under pressure, end victorious"
+    };
+    return descriptions[arc] || "Natural emotional progression";
 }
 
 // ============================================
 // MESO GENERATION PROMPT
 // ============================================
 
-function buildMesoSystemPrompt(): string {
-    return `You are generating the MESO narrative layer for a specific combat encounter.
+function buildMesoSystemPrompt(role: PlayerRole): string {
+    const roleCtx = ROLE_CONTEXT[role];
+    return `You generate tweets for a specific MOMENT in a startup founder's journey.
 
-MESO creates the story beat for ONE fight - making it feel unique and dramatic.
+THE FOUNDER is a ${roleCtx.title} - but write for EVERYONE to understand.
+
+LANGUAGE RULES (CRITICAL):
+- Write so a 12-year-old AND a real CTO both enjoy it
+- NO technical jargon: "the system works" not "the architecture holds"
+- NO infrastructure terms: "it's running" not "the infra is stable"  
+- The ${role.toUpperCase()} flavor comes through ATTITUDE, not vocabulary
+- Insider energy without insider words
+
+GOOD EXAMPLES:
+✅ "Pushed the fix. It works. That feeling never gets old."
+✅ "3 AM and we finally figured it out. Sleep can wait."
+✅ "First user said they love it. Best bug report ever."
+
+BAD EXAMPLES (too technical):
+❌ "Stabilized the DB cluster" → say "Fixed the crash"
+❌ "The architecture is holding" → say "It's working"
+❌ "Deployed to prod" → say "Shipped it"
+❌ "Load balancer screaming" → say "Getting popular fast"
+
+FOR THE FOUNDER'S TWEETS:
+- Authentic, sometimes messy, always real
+- Celebrate shipping and progress - never "defeating" anything
+- Short punchy sentences like texting a friend
+
+FOR DOUBTER TWEETS:
+- General skepticism, not personal attacks
+- Sound like random Twitter voices, not supervillains
+- Never @mention the startup
 
 CRITICAL RULES:
-1. NO HASHTAGS EVER.
-2. Short punchy sentences. Under 280 chars per tweet.
-3. Enemy tweets ABOUT the startup, not TO it. Like villain monologue.
-   ❌ WRONG: "@gigglelearn you're going to fail!"
-   ✅ RIGHT: "LOL this 'GiggleLearn' thinks they can disrupt education? Watch them burn."
-
-MESO LAYER INCLUDES:
-- Approach tweet: Startup's tweet entering this challenge
-- Victory tweet: Celebration after winning
-- Enemy tweets: Per-enemy trash-talk by intent type (attack/buff/debuff/defeat)
-- Card play tweets: Reactions when playing attack/skill/power cards
-- Path previews: Teaser text for next decision points`;
+1. NO hashtags, NO game language, NO jargon
+2. Under 180 characters - punchy and real
+3. A 12-year-old should understand every word
+4. A CTO should nod and think "been there"
+5. Victory = pure celebration, no battle references`;
 }
 
 function buildMesoUserPrompt(
@@ -173,67 +610,103 @@ function buildMesoUserPrompt(
     macro: MacroNarrative,
     floor: number,
     floorBeat: FloorBeat,
-    enemies: { id: string; name: string; type: string }[],
+    enemies: { id: string; name: string; type: string; description?: string; emoji?: string }[],
     nextNodes: { id: string; type: string }[],
-    deckCards?: { name: string; type: string; description: string }[]
+    deckCards?: { name: string; type: string; description: string }[],
+    role: PlayerRole = 'cto'
 ): string {
-    const enemyList = enemies.map(e => `- ${e.name} (${e.id}): ${e.type}`).join('\n');
-    const nextNodesList = nextNodes.map(n => `- ${n.id}: ${n.type}`).join('\n');
+    const roleCtx = ROLE_CONTEXT[role];
 
-    // Group deck cards by type for context
+    // Build obstacle descriptions without exposing IDs
+    const obstacleDetails = enemies.map(e => {
+        const personality = getEnemyPersonality(e.id);
+        return `- ${personality.description}
+     Voice: ${personality.trashTalkStyle}
+     (internal ref: ${e.id})`;  // Internal ref for response matching only
+    }).join('\n');
+
+    // Group deck cards by type
     const attackCards = deckCards?.filter(c => c.type === 'attack').map(c => c.name) || [];
     const skillCards = deckCards?.filter(c => c.type === 'skill').map(c => c.name) || [];
     const powerCards = deckCards?.filter(c => c.type === 'power').map(c => c.name) || [];
 
-    // Get unique card names
-    const uniqueAttacks = [...new Set(attackCards)].slice(0, 8).join(', ') || 'Commit, Deploy';
-    const uniqueSkills = [...new Set(skillCards)].slice(0, 8).join(', ') || 'Rollback, Refactor';
-    const uniquePowers = [...new Set(powerCards)].slice(0, 8).join(', ') || 'Network Effects';
+    const uniqueAttacks = [...new Set(attackCards)].slice(0, 5).join(', ') || 'Commit, Deploy';
+    const uniqueSkills = [...new Set(skillCards)].slice(0, 5).join(', ') || 'Rollback, Refactor';
+    const uniquePowers = [...new Set(powerCards)].slice(0, 5).join(', ') || 'Network Effects';
 
-    return `Generate MESO narrative for this combat:
+    // Phase labels for the LLM (no floor numbers)
+    const phaseLabel = {
+        'hope': 'Early days, full of excitement',
+        'grind': 'Deep in the build, exhausted but pushing',
+        'doubt': 'Tough times, questioning everything',
+        'breakthrough': 'Things are clicking, momentum building',
+        'climax': 'The big moment, everything on the line'
+    }[floorBeat.storyPhase] || 'On the journey';
+
+    return `Generate tweets for this MOMENT in ${context.name}'s journey:
+
+═══════════════════════════════════════════════
+THE MOMENT: ${floorBeat.storyBeat}
+PHASE: ${phaseLabel}
+MOOD: ${floorBeat.emotionalArc.split('_')[0]} → ${floorBeat.emotionalArc.split('_').pop()}
+═══════════════════════════════════════════════
+
+THE SITUATION:
+📖 What's happening: "${floorBeat.setup}"
+⚡ The challenge: "${floorBeat.conflict}"
+✨ The win: "${floorBeat.resolution}"
+
+WHAT'S AT STAKE: ${floorBeat.stakes}
 
 STARTUP: ${context.name} (${macro.startupHandle})
-THEME: ${macro.theme}
-TONE: ${macro.startupTone}
-FLOOR: ${floor} of 16
-STORY PHASE: ${floorBeat.storyPhase}
-STORY BEAT: "${floorBeat.storyBeat}"
-NARRATIVE HOOK: "${floorBeat.narrativeHook}"
+FOUNDER ROLE: ${roleCtx.title}
+TOOLS THEY USE: ${uniqueAttacks}, ${uniqueSkills}, ${uniquePowers}
 
-ENEMIES IN THIS FIGHT:
-${enemyList}
+OBSTACLES/DOUBTERS IN THIS MOMENT:
+${obstacleDetails}
 
-CARDS IN DECK:
-- Attack cards: ${uniqueAttacks}
-- Skill cards: ${uniqueSkills}
-- Power cards: ${uniquePowers}
+═══════════════════════════════════════════════
+GENERATE THESE TWEETS:
+═══════════════════════════════════════════════
 
-NEXT POSSIBLE PATHS:
-${nextNodesList}
+1. APPROACH TWEET (founder entering this moment):
+   - Reflects: "${floorBeat.setup}"
+   - Mood: ${floorBeat.emotionalArc.split('_')[0]}
+   - Authentic ${role.toUpperCase()} voice
 
-Generate:
-1. APPROACH TWEET: ${context.name}'s tweet entering this challenge (reflects story beat)
-2. VICTORY TWEET: Celebration after beating these enemies
-3. ENEMY TWEETS for each enemy:
-   - 2-3 attack tweets (mocking while attacking)
-   - 1-2 buff tweets (celebrating as problems grow)
-   - 1-2 debuff tweets (mocking the struggling team)
-   - 1 defeat tweet (startup celebrating victory)
-4. CARD PLAY TWEETS (positive shipping tone, reference card names):
-   - 2 attack card tweets: Celebrating shipping code (reference: ${uniqueAttacks})
-   - 2 skill card tweets: Celebrating building/protecting (reference: ${uniqueSkills})
-   - 2 power card tweets: Celebrating strategic wins (reference: ${uniquePowers})
+2. VICTORY TWEET (founder celebrating the win):
+   - Reflects: "${floorBeat.resolution}"
+   - CELEBRATE shipping/progress/milestone - NOT "defeating" anything
+   - Pure positive energy, no mention of obstacles overcome
+
+3. OBSTACLE TWEETS (for each obstacle above):
+   Use the internal ref in your response for matching, but write tweets as GENERAL SKEPTICISM:
+   - 2-3 skeptical tweets (their voice, about startups/founders in general)
+   - 1-2 escalation tweets (doubt growing)
+   - 1-2 undermining tweets (mocking the struggle)
+   - 1 resolution tweet (what the FOUNDER tweets after pushing past this)
    
-   IMPORTANT: Card tweets should sound like a founder celebrating SHIPPING progress.
-   ✅ Good: "New commit pushed! 🚀" or "Refactoring complete, codebase is cleaner!"
-   ❌ Bad: "Take THAT!" or "Shut down those haters!"
-   
-5. PATH PREVIEWS for each next node:
-   - teaser: One-line preview of what's coming
-   - decisionHint: The choice they're making
+   ⚠️ DOUBTER TWEETS:
+   - Never @mention or name ${context.name} directly
+   - Sound like random skeptical Twitter voices
+   - Examples: "Another app? Sure that'll work", "Founders always underestimate"
 
-Remember: Enemy tweets are ABOUT ${context.name}, not TO them.`;
+4. ACTION TWEETS (when founder uses their tools):
+   - 2 "${uniqueAttacks}" tweets: Celebrating shipping (${roleCtx.cardFlavor})
+   - 2 "${uniqueSkills}" tweets: Celebrating smart moves
+   - 2 "${uniquePowers}" tweets: Celebrating strategic wins
+   
+   These should feel like BUILD LOG UPDATES:
+   ✅ "Pushed the fix. Clean deploy. 🚀"
+   ✅ "Refactored that mess. So much cleaner now."
+   ❌ NOT "Take that!" or battle language
+
+5. TEASERS for what's next (just internal use):
+   - One-liner hints about upcoming challenges
+
+REMEMBER: This is ${phaseLabel.toLowerCase()}. Match the energy!`;
 }
+
 
 // ============================================
 // GEMINI API CALL
@@ -249,54 +722,183 @@ interface GeminiResponse {
     }>;
 }
 
+/**
+ * Sanitize JSON string to fix common escape sequence issues from LLM output
+ */
+function sanitizeJSON(rawText: string): string {
+    // Fix common JSON escape issues
+    let sanitized = rawText;
+
+    // Fix unescaped newlines inside strings
+    sanitized = sanitized.replace(/(?<!\\)\n(?=(?:[^"]*"[^"]*")*[^"]*"[^"]*$)/g, '\\n');
+
+    // Fix unescaped tabs inside strings
+    sanitized = sanitized.replace(/(?<!\\)\t/g, '\\t');
+
+    // Fix invalid escape sequences (like \' which isn't valid in JSON)
+    sanitized = sanitized.replace(/\\'/g, "'");
+
+    // Fix double-escaped quotes that might break parsing
+    sanitized = sanitized.replace(/\\\\"/g, '\\"');
+
+    // Remove any control characters that might slip through
+    sanitized = sanitized.replace(/[\x00-\x1F\x7F]/g, (char) => {
+        if (char === '\n') return '\\n';
+        if (char === '\r') return '\\r';
+        if (char === '\t') return '\\t';
+        return '';
+    });
+
+    return sanitized;
+}
+
+/**
+ * Parse JSON with sanitization fallback
+ */
+function parseJSONSafe(rawText: string): any {
+    // First try direct parse
+    try {
+        return JSON.parse(rawText);
+    } catch (firstError) {
+        console.log('[Progressive] ⚠️ Initial JSON parse failed, trying sanitization...');
+
+        // Try with sanitization
+        try {
+            const sanitized = sanitizeJSON(rawText);
+            return JSON.parse(sanitized);
+        } catch (secondError) {
+            console.error('[Progressive] ❌ JSON parse failed even after sanitization');
+            console.error('[Progressive] Raw text (first 500 chars):', rawText.substring(0, 500));
+            throw firstError; // Throw original error for clarity
+        }
+    }
+}
+
 async function callGeminiAPI(
     systemPrompt: string,
     userPrompt: string,
     schema: object,
-    apiKey: string
+    apiKey: string,
+    maxRetries: number = 2
 ): Promise<any> {
-    console.log('[Progressive] 🚀 Gemini API call starting...');
+    let lastError: Error | null = null;
 
-    const requestBody = {
-        contents: [{
-            parts: [{ text: userPrompt }]
-        }],
-        systemInstruction: {
-            parts: [{ text: systemPrompt }]
-        },
-        generationConfig: {
-            responseMimeType: 'application/json',
-            responseJsonSchema: schema,
-            temperature: 0.9,
-            maxOutputTokens: 16384
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        if (attempt > 0) {
+            const delay = Math.pow(2, attempt) * 500; // 1s, 2s exponential backoff
+            console.log(`[Progressive] 🔄 Retry attempt ${attempt}/${maxRetries} after ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
         }
-    };
 
-    const startTime = Date.now();
-    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-    });
+        console.log('[Progressive] 🚀 Gemini API call starting...');
 
-    const elapsed = Date.now() - startTime;
-    console.log(`[Progressive] 📥 Response in ${elapsed}ms, status: ${response.status}`);
+        // Verbose logging: show full prompts
+        if (VERBOSE_LOGGING) {
+            console.log('\n' + '='.repeat(80));
+            console.log('📝 SYSTEM PROMPT:');
+            console.log('='.repeat(80));
+            console.log(systemPrompt);
+            console.log('\n' + '='.repeat(80));
+            console.log('📝 USER PROMPT:');
+            console.log('='.repeat(80));
+            console.log(userPrompt);
+            console.log('='.repeat(80) + '\n');
+        }
 
-    if (!response.ok) {
-        const error = await response.text();
-        console.error('[Progressive] ❌ API Error:', error);
-        throw new Error(`Gemini API error: ${response.status} - ${error}`);
+        const requestBody = {
+            contents: [{
+                parts: [{ text: userPrompt }]
+            }],
+            systemInstruction: {
+                parts: [{ text: systemPrompt }]
+            },
+            generationConfig: {
+                responseMimeType: 'application/json',
+                responseSchema: schema,  // Use responseSchema per Gemini API docs
+                temperature: 0.9,
+                maxOutputTokens: 16384
+            }
+        };
+
+        const startTime = Date.now();
+        console.log(`[Progressive] ⏱️ Request started at ${new Date().toISOString()}`);
+
+        try {
+            const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            });
+
+            const timeToFirstByte = Date.now() - startTime;
+            console.log(`[Progressive] ⚡ Time to first byte: ${timeToFirstByte}ms`);
+            console.log(`[Progressive] 📥 Response status: ${response.status}`);
+
+            if (!response.ok) {
+                const error = await response.text();
+                console.error('[Progressive] ❌ API Error:', error);
+
+                // Don't retry on 4xx errors (client errors)
+                if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+                    throw new Error(`Gemini API error: ${response.status} - ${error}`);
+                }
+
+                lastError = new Error(`Gemini API error: ${response.status} - ${error}`);
+                continue; // Retry on 5xx or 429 (rate limit)
+            }
+
+            const data: GeminiResponse = await response.json();
+
+            if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                lastError = new Error('Invalid response structure from Gemini API');
+                continue; // Retry
+            }
+
+            const rawText = data.candidates[0].content.parts[0].text;
+            const totalTime = Date.now() - startTime;
+            console.log(`[Progressive] ✅ Response complete in ${totalTime}ms (TTFB: ${timeToFirstByte}ms, Parse: ${totalTime - timeToFirstByte}ms)`);
+
+            // Verbose logging: show raw response
+            if (VERBOSE_LOGGING) {
+                console.log('\n' + '='.repeat(80));
+                console.log('📥 RAW API RESPONSE:');
+                console.log('='.repeat(80));
+                console.log(rawText.substring(0, 5000) + (rawText.length > 5000 ? '\n... [truncated]' : ''));
+                console.log('='.repeat(80) + '\n');
+            }
+
+            // Parse with sanitization fallback
+            const parsed = parseJSONSafe(rawText);
+
+            // Verbose logging: show parsed result
+            if (VERBOSE_LOGGING) {
+                console.log('\n' + '='.repeat(80));
+                console.log('✅ PARSED RESULT:');
+                console.log('='.repeat(80));
+                console.log(JSON.stringify(parsed, null, 2).substring(0, 3000) + (JSON.stringify(parsed).length > 3000 ? '\n... [truncated]' : ''));
+                console.log('='.repeat(80) + '\n');
+            }
+
+            return parsed;
+
+        } catch (error) {
+            lastError = error as Error;
+            console.error(`[Progressive] ⚠️ Attempt ${attempt + 1} failed:`, lastError.message);
+
+            // If it's a JSON parse error, try again (LLM might give better output)
+            if (lastError.message.includes('JSON') || lastError.message.includes('parse')) {
+                continue;
+            }
+
+            // For other errors, check if retryable
+            if (attempt < maxRetries) {
+                continue;
+            }
+        }
     }
 
-    const data: GeminiResponse = await response.json();
-
-    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-        throw new Error('Invalid response from Gemini API');
-    }
-
-    const rawText = data.candidates[0].content.parts[0].text;
-    console.log('[Progressive] ✅ Parsing response...');
-    return JSON.parse(rawText);
+    // All retries exhausted
+    throw lastError || new Error('Gemini API call failed after retries');
 }
 
 // ============================================
@@ -304,13 +906,25 @@ async function callGeminiAPI(
 // ============================================
 
 function transformMacroResponse(raw: any, context: StartupContext): MacroNarrative {
-    // Transform floor beats
-    const floorBeats: FloorBeat[] = (raw.floorBeats || []).map((beat: any) => ({
-        floor: beat.floor,
-        storyBeat: beat.storyBeat,
-        narrativeHook: beat.narrativeHook,
-        storyPhase: beat.storyPhase as FloorBeat['storyPhase']
-    }));
+    // Transform floor beats - merge LLM-generated content with rich default narrative structure
+    const floorBeats: FloorBeat[] = (raw.floorBeats || []).map((beat: any, index: number) => {
+        // Get the default beat which has the full narrative arc structure
+        const defaultBeat = DEFAULT_FLOOR_BEATS[index] || DEFAULT_FLOOR_BEATS[0];
+
+        // Merge: LLM provides story text, defaults provide narrative structure
+        return {
+            ...defaultBeat,  // All narrative arc fields (setup, conflict, resolution, devices, etc.)
+            floor: beat.floor || index + 1,
+            storyBeat: beat.storyBeat || defaultBeat.storyBeat,
+            narrativeHook: beat.narrativeHook || defaultBeat.narrativeHook,
+            storyPhase: (beat.storyPhase as FloorBeat['storyPhase']) || defaultBeat.storyPhase,
+            // If LLM provides these, use them; otherwise use defaults
+            setup: beat.setup || defaultBeat.setup,
+            conflict: beat.conflict || defaultBeat.conflict,
+            resolution: beat.resolution || defaultBeat.resolution,
+            stakes: beat.stakes || defaultBeat.stakes
+        };
+    });
 
     // Ensure we have 16 floor beats
     while (floorBeats.length < 16) {
@@ -330,7 +944,7 @@ function transformMacroResponse(raw: any, context: StartupContext): MacroNarrati
     };
 }
 
-export async function generateMacroNarrative(context: StartupContext): Promise<MacroNarrative> {
+export async function generateMacroNarrative(context: StartupContext, role: PlayerRole = 'cto'): Promise<MacroNarrative> {
     const apiKey = getGeminiApiKey();
     if (!apiKey) {
         console.log('[Progressive] No API key, using fallback MACRO');
@@ -338,10 +952,10 @@ export async function generateMacroNarrative(context: StartupContext): Promise<M
     }
 
     try {
-        console.log('[Progressive] 🎬 Generating MACRO for:', context.name);
+        console.log('[Progressive] 🎬 Generating MACRO for:', context.name, '(role:', role, ')');
         const raw = await callGeminiAPI(
-            buildMacroSystemPrompt(),
-            buildMacroUserPrompt(context),
+            buildMacroSystemPrompt(role),
+            buildMacroUserPrompt(context, role),
             MACRO_SCHEMA,
             apiKey
         );
@@ -426,13 +1040,24 @@ export async function generateMesoNarrative(
     nodeType: string,
     enemies: { id: string; name: string; type: string }[],
     nextNodes: { id: string; type: string }[],
-    deckCards?: { name: string; type: string; description: string }[]
+    deckCards?: { name: string; type: string; description: string }[],
+    role: PlayerRole = 'cto'
 ): Promise<MesoNarrative> {
-    // Check cache first
+    // Check cache first - but validate it has the right enemies
     const cached = getCachedMeso(nodeId);
     if (cached) {
-        console.log('[Progressive] 📦 Using cached MESO for:', nodeId);
-        return cached;
+        // Validate cached MESO has tweets for the actual enemies
+        const cachedEnemyIds = Object.keys(cached.enemyIntentTweets);
+        const requestedEnemyIds = enemies.map(e => e.id);
+        const hasAllEnemies = requestedEnemyIds.every(id => cachedEnemyIds.includes(id));
+
+        if (hasAllEnemies) {
+            console.log('[Progressive] 📦 Using cached MESO for:', nodeId);
+            return cached;
+        } else {
+            console.log('[Progressive] ⚠️ Cached MESO has wrong enemies. Expected:', requestedEnemyIds.join(', '), 'Got:', cachedEnemyIds.join(', '));
+            // Fall through to generate new MESO
+        }
     }
 
     const apiKey = getGeminiApiKey();
@@ -444,10 +1069,10 @@ export async function generateMesoNarrative(
     const floorBeat = macro.floorBeats[floor - 1] || DEFAULT_FLOOR_BEATS[floor - 1];
 
     try {
-        console.log('[Progressive] 🎬 Generating MESO for floor:', floor, 'node:', nodeId);
+        console.log('[Progressive] 🎬 Generating MESO for floor:', floor, 'node:', nodeId, '(role:', role, ')');
         const raw = await callGeminiAPI(
-            buildMesoSystemPrompt(),
-            buildMesoUserPrompt(context, macro, floor, floorBeat, enemies, nextNodes, deckCards),
+            buildMesoSystemPrompt(role),
+            buildMesoUserPrompt(context, macro, floor, floorBeat, enemies, nextNodes, deckCards, role),
             MESO_SCHEMA,
             apiKey
         );
@@ -608,21 +1233,35 @@ export function createFallbackMeso(
         replies: Math.floor(likes / 10)
     });
 
-    // Create enemy intent tweets for each enemy
+    // Create enemy intent tweets for each enemy - use personality for grounded tweets
     const enemyIntentTweets: Record<string, EnemyIntentTweets> = {};
     for (const enemy of enemies) {
+        const personality = getEnemyPersonality(enemy.id);
+
+        // Create enemy-specific tweet helper
+        const createEnemyTweet = (content: string, likes = 5): NarrativeTweet => ({
+            id: generateTweetId(),
+            author: 'enemy',
+            handle: personality.handle,
+            displayName: enemy.name,
+            avatarEmoji: personality.emoji,
+            content,
+            timestamp: 'just now',
+            likes,
+            retweets: Math.floor(likes / 5),
+            replies: Math.floor(likes / 10)
+        });
+
+        // Generate personality-specific tweets
+        const attackTweets = getPersonalityAttackTweets(enemy.id, context.name, personality);
+        const buffTweets = getPersonalityBuffTweets(enemy.id, context.name, personality);
+        const debuffTweets = getPersonalityDebuffTweets(enemy.id, context.name, personality);
+
         enemyIntentTweets[enemy.id] = {
-            attack: [
-                createTweet('enemy', `${context.name} is about to get crushed. Just watch. 😈`, 5, true),
-                createTweet('enemy', `Another startup bites the dust. ${context.name} can't handle this.`, 8, true),
-            ],
-            buff: [
-                createTweet('enemy', `Getting stronger. ${context.name}'s problems are multiplying. 📈`, 6, true),
-            ],
-            debuff: [
-                createTweet('enemy', `${context.name} team looking exhausted. Love to see it. 😴`, 4, true),
-            ],
-            defeat: createTweet('startup', `Crushed that ${enemy.name}! ${context.name} keeps shipping! 💪`, 25),
+            attack: attackTweets.map(t => createEnemyTweet(t, 5)),
+            buff: buffTweets.map(t => createEnemyTweet(t, 6)),
+            debuff: debuffTweets.map(t => createEnemyTweet(t, 4)),
+            defeat: createTweet('startup', `Shut down ${enemy.name}! ${context.name} keeps shipping! 💪`, 25),
             attackIndex: 0,
             buffIndex: 0,
             debuffIndex: 0
@@ -686,7 +1325,9 @@ export function getEnemyIntentTweet(
 
     const pool = meso.enemyIntentTweets[baseEnemyId];
     if (!pool) {
-        console.warn('[Progressive] No tweet pool for enemy:', baseEnemyId);
+        console.warn('[Progressive] No tweet pool for enemy:', baseEnemyId,
+            '| Available:', Object.keys(meso.enemyIntentTweets).join(', '),
+            '| Original ID:', enemyId);
         return null;
     }
 
@@ -700,7 +1341,9 @@ export function getEnemyIntentTweet(
     const tweet = tweets[currentIndex];
     pool[indexKey] = (currentIndex + 1) % tweets.length;
 
-    return { ...tweet, timestamp: 'just now' };
+    // Generate a fresh ID for each returned tweet to ensure uniqueness
+    // even when multiple enemies share the same base ID and tweet pool
+    return { ...tweet, id: generateTweetId(), timestamp: 'just now' };
 }
 
 /**
@@ -722,7 +1365,8 @@ export function getEnemyDefeatTweetProgressive(
     const pool = meso.enemyIntentTweets[baseEnemyId];
     if (!pool) return null;
 
-    return { ...pool.defeat, timestamp: 'just now' };
+    // Generate a fresh ID for uniqueness
+    return { ...pool.defeat, id: generateTweetId(), timestamp: 'just now' };
 }
 
 /**
@@ -742,7 +1386,8 @@ export function getCardPlayTweet(
     const tweet = tweets[currentIndex];
     pool[indexKey] = (currentIndex + 1) % tweets.length;
 
-    return { ...tweet, timestamp: 'just now' };
+    // Generate a fresh ID for uniqueness
+    return { ...tweet, id: generateTweetId(), timestamp: 'just now' };
 }
 
 /**

@@ -113,20 +113,20 @@ function testStarterCards() {
             `Expected 2, got ${state.playerStats.bandwidth}`);
     }
 
-    // Test Rollback (Defend equivalent)
+// Test Stay Focused (Defend equivalent)
     {
         let state = createTestState();
         state.enemies = [createTestEnemy(50)];
-        const rollback = GAME_DATA.cards.cto_rollback;
-        state.hand = [rollback];
+        const stayFocused = GAME_DATA.cards.cto_stay_focused;
+        state.hand = [stayFocused];
         state.playerStats.bandwidth = 3;
 
-        state = resolveCardEffect(state, rollback, 'enemy', state.enemies[0].id);
+        state = resolveCardEffect(state, stayFocused, 'enemy', state.enemies[0].id);
 
-        test('Rollback grants 5 block', state.playerStats.mitigation === 5,
-            `Expected 5, got ${state.playerStats.mitigation}`);
-        test('Rollback costs 1 energy', state.playerStats.bandwidth === 2,
-            `Expected 2, got ${state.playerStats.bandwidth}`);
+        test('Stay Focused grants 5 block', state.playerStats.mitigation === 5,
+              `Expected 5, got ${state.playerStats.mitigation}`);
+        test('Stay Focused costs 1 energy', state.playerStats.bandwidth === 2,
+              `Expected 2, got ${state.playerStats.bandwidth}`);
     }
 
     // Test Hotfix (Bash equivalent)

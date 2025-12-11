@@ -225,16 +225,16 @@ export const GAME_DATA = {
             icon: "🤝",
             tooltip: { term: "Leverage", definition: "Victories snowball with the right approach." }
         } as RelicData,
-        focus_mode: {
-            id: "relic_focus_mode",
+        ship_cadence: {
+            id: "relic_ship_cadence",
             character: "shared",
-            name: "Focus Mode",
+            name: "Ship Cadence",
             rarity: "uncommon",
             trigger: "on_attack_count",
             effect: { type: "block_per_attacks", value: 4, threshold: 3 },
             description: "Every time you play 3 Attacks in a turn, gain 4 Buffer.",
-            icon: "🎯",
-            tooltip: { term: "Concentration", definition: "Focus creates protection." }
+            icon: "🚀",
+            tooltip: { term: "Ship Cadence", definition: "Find your rhythm. Ship fast, stay safe." }
         } as RelicData,
         secret_weapon: {
             id: "relic_secret_weapon",
@@ -912,18 +912,18 @@ export const GAME_DATA = {
             keywords: [],
             tooltip: { term: "Commit", definition: "Shipping small code chunks. Not pretty, but progress." }
         } as CardData,
-        cto_rollback: {
-            id: "cto_rollback",
+        cto_stay_focused: {
+            id: "cto_stay_focused",
             character: "cto",
-            name: "Rollback",
+            name: "Stay Focused",
             type: "skill",
             rarity: "starter",
             cost: 1,
             description: "Gain 5 Buffer.",
             effects: [{ type: "block", value: 5, target: "self" }],
-            icon: "⏪",
+            icon: "🎯",
             keywords: [],
-            tooltip: { term: "Rollback", definition: "Reverting to a stable state. Prevents the crash." }
+            tooltip: { term: "Stay Focused", definition: "Block out the noise. Protect the team's focus." }
         } as CardData,
         cto_hotfix: {
             id: "cto_hotfix",

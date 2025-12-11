@@ -443,6 +443,83 @@ const App: React.FC = () => {
 
     }, [gameState.status, gameState.currentMapPosition, macroNarrative]);
 
+    // === PRE-GENERATE MESO DURING BLESSING SCREEN ===
+    // First encounter is always a fight, so generate MESO early while player picks blessing
+    useEffect(() => {
+        if (gameState.status !== 'NEOW_BLESSING' || !macroNarrative || !gameState.map?.length) return;
+
+        // Get first floor combat nodes (first encounter is always a fight)
+        const firstFloorNodes = gameState.map[0]?.filter(n =>
+            n.type === 'problem' || n.type === 'enemy'
+        ) || [];
+
+        if (firstFloorNodes.length === 0) {
+            console.log('[Progressive] ⚠️ Blessing screen: No combat nodes found on floor 1');
+            return;
+        }
+
+        const context = {
+            name: gameState.startupName || 'Startup',
+            oneLiner: gameState.startupOneLiner || 'Building something great'
+        };
+
+        console.log('[Progressive] 🔮 BLESSING SCREEN: Pre-generating MESO for', firstFloorNodes.length, 'first floor combat nodes');
+        const pregenStartTime = Date.now();
+
+        // Extract base ID helper
+        const extractBaseId = (id: string) => {
+            const parts = id.split('_');
+            const baseParts: string[] = [];
+            for (const part of parts) {
+                if (/^\d{10,}$/.test(part)) break;
+                if (/^\d{1,2}$/.test(part) && baseParts.length > 0) break;
+                baseParts.push(part);
+            }
+            return baseParts.join('_') || id;
+        };
+
+        // Get enemies for a node
+        const getEnemiesForFirstFloorNode = (nodeType: string) => {
+            if (nodeType === 'problem' || nodeType === 'enemy') {
+                const enemies = getEncounterForFloor(1, rngRef.current?.encounters);
+                return enemies.map(e => ({
+                    id: extractBaseId(e.id),
+                    name: e.name,
+                    type: 'enemy'
+                }));
+            }
+            return [];
+        };
+
+        // Pre-generate for first 2 accessible nodes (typical branching paths)
+        const nodesToPregen = firstFloorNodes.slice(0, 2);
+        let completedCount = 0;
+
+        for (const node of nodesToPregen) {
+            const nodeStartTime = Date.now();
+            console.log(`[Progressive] 🎯 BLESSING PREGEN: Starting for node ${node.id} (${node.type})`);
+
+            const enemies = getEnemiesForFirstFloorNode(node.type);
+            const nextNodes = getConnectedNodes(gameState.map, { floor: 1, nodeId: node.id })
+                .map(n => ({ id: n.id, type: n.type }));
+
+            generateMesoNarrative(context, macroNarrative, node.id, 1, node.type, enemies, nextNodes)
+                .then(() => {
+                    completedCount++;
+                    const nodeElapsed = Date.now() - nodeStartTime;
+                    console.log(`[Progressive] ✅ BLESSING PREGEN: Cached MESO for ${node.id} in ${nodeElapsed}ms`);
+
+                    if (completedCount === nodesToPregen.length) {
+                        const totalElapsed = Date.now() - pregenStartTime;
+                        console.log(`[Progressive] 🎉 BLESSING PREGEN COMPLETE: All ${completedCount} nodes cached in ${totalElapsed}ms`);
+                    }
+                })
+                .catch(err => {
+                    console.error(`[Progressive] ❌ BLESSING PREGEN FAILED for ${node.id}:`, err);
+                });
+        }
+    }, [gameState.status, macroNarrative, gameState.map, gameState.startupName, gameState.startupOneLiner]);
+
     // --- START GAME LOGIC ---
 
     const handleStartRun = (characterId: string) => {
@@ -857,6 +934,19 @@ const App: React.FC = () => {
 
     const playCard = (card: CardData, target: 'enemy' | 'self', targetEnemyId?: string) => {
         setGameState(prev => resolveCardEffect(prev, card, target, targetEnemyId, rngRef.current?.cards));
+
+        // Generate card play tweet for variety during combat
+        if (currentMeso) {
+            const cardType = card.type as 'attack' | 'skill' | 'power';
+            const tweet = getCardPlayTweet(currentMeso, cardType);
+            if (tweet) {
+                setCurrentTweet(tweet);
+                setTweetHistory(hist => {
+                    const isDup = hist.some(t => t.content === tweet.content);
+                    return isDup ? hist : [...hist, tweet];
+                });
+            }
+        }
     };
 
 
@@ -1111,6 +1201,15 @@ const App: React.FC = () => {
     };
 
     const handleVictoryProceed = () => {
+        // Add victory tweet to timeline if not already there
+        if (currentMeso?.victoryTweet) {
+            setTweetHistory(hist => {
+                const isDup = hist.some(t => t.content === currentMeso.victoryTweet.content);
+                return isDup ? hist : [...hist, currentMeso.victoryTweet];
+            });
+        }
+
+        // Proceed to map
         setGameState(prev => {
             // Mark current node as completed
             let newMap = [...prev.map];
@@ -2975,23 +3074,49 @@ const App: React.FC = () => {
                 )}
 
 
+                {/* === VICTORY SCREEN - "SHIPPED!" === */}
+                {/* The main victory experience - shows tweet + rewards + next challenge button */}
                 {gameState.status === 'VICTORY' && (
-                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                        <div className="relative z-50 bg-surface border border-primary p-8 rounded-2xl flex flex-col items-center text-center max-w-2xl shadow-[0_0_50px_rgba(0,255,136,0.1)]">
-                            <CheckCircle2 size={48} className="text-primary mb-4" />
-                            <h2 className="text-3xl font-display font-bold text-white mb-2">Problem Solved</h2>
-                            <p className="text-gray-400 mb-6">The bug has been fixed and deployed to production.</p>
+                    <div className="fixed inset-0 z-[100] bg-gradient-to-b from-primary/5 via-black/95 to-black flex items-center justify-center animate-in fade-in duration-500">
+                        <div className="max-w-2xl w-full p-8 flex flex-col items-center">
+                            {/* Victory celebration */}
+                            <div className="text-6xl mb-4 animate-bounce">🚀</div>
+                            <h2 className="text-3xl font-display font-bold text-primary mb-2">Shipped!</h2>
+                            <p className="text-gray-400 mb-6 text-center">Another challenge crushed. Your startup lives to fight another day.</p>
+
+                            {/* Tweet Display */}
+                            {currentMeso?.victoryTweet && (
+                                <div className="w-full bg-surface border border-primary/30 rounded-2xl p-6 mb-6 shadow-[0_0_30px_rgba(0,255,136,0.1)]">
+                                    <div className="flex items-start gap-4">
+                                        <div className="text-3xl bg-primary/20 rounded-full p-2">
+                                            {macroNarrative?.startupEmoji || '🚀'}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="font-bold text-white">{gameState.startupName || 'Startup'}</span>
+                                                <span className="text-gray-500 text-sm">{macroNarrative?.startupHandle || '@startup'}</span>
+                                            </div>
+                                            <p className="text-white text-lg leading-relaxed">{currentMeso.victoryTweet.content}</p>
+                                            <div className="flex items-center gap-6 mt-4 text-gray-500 text-sm">
+                                                <span>❤️ {currentMeso.victoryTweet.likes || 42}</span>
+                                                <span>🔁 {currentMeso.victoryTweet.retweets || 8}</span>
+                                                <span>💬 {currentMeso.victoryTweet.replies || 3}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Rewards Section */}
                             {gameState.lastVictoryReward && (
-                                <div className="w-full space-y-4 mb-6">
+                                <div className="w-full space-y-3 mb-6">
                                     {/* Gold Reward */}
                                     <div className={`bg-black/40 p-4 rounded-lg flex items-center justify-between ${gameState.lastVictoryReward.goldCollected ? 'opacity-50' : ''}`}>
                                         <div className="flex items-center gap-3">
                                             <DollarSign size={24} className="text-warning" />
                                             <div className="text-left">
                                                 <div className="text-warning font-mono font-bold text-lg">${gameState.lastVictoryReward.capital}k Capital</div>
-                                                <div className="text-xs text-gray-500">Funding from problem resolution</div>
+                                                <div className="text-xs text-gray-500">Revenue from shipping</div>
                                             </div>
                                         </div>
                                         {!gameState.lastVictoryReward.goldCollected ? (
@@ -2999,7 +3124,7 @@ const App: React.FC = () => {
                                                 onClick={handleTakeGold}
                                                 className="bg-warning/20 border border-warning text-warning px-4 py-2 rounded font-mono text-sm hover:bg-warning hover:text-black transition-colors"
                                             >
-                                                Take Gold
+                                                Collect
                                             </button>
                                         ) : (
                                             <span className="text-primary font-mono text-sm">✓ Collected</span>
@@ -3011,9 +3136,9 @@ const App: React.FC = () => {
                                         <div className={`bg-black/40 p-4 rounded-lg ${gameState.lastVictoryReward.cardCollected ? 'opacity-50' : ''}`}>
                                             <div className="flex items-center gap-2 mb-4">
                                                 <Gift size={20} className="text-primary" />
-                                                <span className="text-white font-mono">Card Reward</span>
+                                                <span className="text-white font-mono">New Feature Unlocked</span>
                                                 {gameState.lastVictoryReward.cardCollected && (
-                                                    <span className="text-primary font-mono text-sm ml-auto">✓ Collected</span>
+                                                    <span className="text-primary font-mono text-sm ml-auto">✓ Added</span>
                                                 )}
                                             </div>
                                             {!gameState.lastVictoryReward.cardCollected ? (
@@ -3033,16 +3158,16 @@ const App: React.FC = () => {
                                                         onClick={handleSkipCard}
                                                         className="text-gray-500 hover:text-white font-mono text-xs flex items-center gap-1 mx-auto"
                                                     >
-                                                        Skip Card <ArrowRight size={12} />
+                                                        Skip <ArrowRight size={12} />
                                                     </button>
                                                 </>
                                             ) : (
-                                                <div className="text-gray-500 text-sm italic">Card selected</div>
+                                                <div className="text-gray-500 text-sm italic">Feature added to deck</div>
                                             )}
                                         </div>
                                     )}
 
-                                    {/* Relic Reward - StS Style: Click to take */}
+                                    {/* Relic Reward */}
                                     {gameState.lastVictoryReward.relic && (
                                         <div
                                             onClick={!gameState.lastVictoryReward.relicCollected ? handleTakeRelic : undefined}
@@ -3052,30 +3177,13 @@ const App: React.FC = () => {
                                             `}
                                         >
                                             <div className="flex items-center gap-4">
-                                                {/* Relic Icon */}
-                                                <div className="relative group">
-                                                    <div className="text-3xl bg-purple-900/50 p-2.5 rounded-lg border border-purple-500/30">
-                                                        {gameState.lastVictoryReward.relic.icon}
-                                                    </div>
-                                                    {/* Tooltip on hover */}
-                                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-black/95 border border-purple-500/50 rounded-lg p-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
-                                                        <div className="text-purple-300 font-bold text-sm mb-1">{gameState.lastVictoryReward.relic.name}</div>
-                                                        <div className="text-[10px] text-purple-500 uppercase tracking-wider mb-2 font-mono">{gameState.lastVictoryReward.relic.rarity} Relic</div>
-                                                        <div className="text-xs text-gray-300 leading-relaxed">{gameState.lastVictoryReward.relic.description}</div>
-                                                    </div>
+                                                <div className="text-3xl bg-purple-900/50 p-2.5 rounded-lg border border-purple-500/30">
+                                                    {gameState.lastVictoryReward.relic.icon}
                                                 </div>
-
-                                                {/* Relic Info */}
                                                 <div className="flex-1 text-left">
-                                                    <div className="text-purple-200 font-bold">
-                                                        {gameState.lastVictoryReward.relic.name}
-                                                    </div>
-                                                    <div className="text-sm text-gray-400">
-                                                        {gameState.lastVictoryReward.relic.description}
-                                                    </div>
+                                                    <div className="text-purple-200 font-bold">{gameState.lastVictoryReward.relic.name}</div>
+                                                    <div className="text-sm text-gray-400">{gameState.lastVictoryReward.relic.description}</div>
                                                 </div>
-
-                                                {/* Status */}
                                                 {gameState.lastVictoryReward.relicCollected ? (
                                                     <span className="text-primary font-mono text-sm">✓ Acquired</span>
                                                 ) : (
@@ -3100,9 +3208,7 @@ const App: React.FC = () => {
                                                                 'bg-white/10 text-gray-400'
                                                             }`}>{gameState.pendingPotionReward.rarity}</span>
                                                     </div>
-                                                    <div className="text-sm text-gray-400">
-                                                        {gameState.pendingPotionReward.description}
-                                                    </div>
+                                                    <div className="text-sm text-gray-400">{gameState.pendingPotionReward.description}</div>
                                                 </div>
                                                 <div className="flex flex-col gap-2">
                                                     <button
@@ -3113,7 +3219,7 @@ const App: React.FC = () => {
                                                             : 'bg-gray-800 border border-gray-600 text-gray-500 cursor-not-allowed'
                                                             }`}
                                                     >
-                                                        {canAcquirePotion(gameState.potions) ? 'Take Stash Item' : 'Slots Full'}
+                                                        {canAcquirePotion(gameState.potions) ? 'Take' : 'Full'}
                                                     </button>
                                                     <button
                                                         onClick={handleSkipPotion}
@@ -3128,13 +3234,16 @@ const App: React.FC = () => {
                                 </div>
                             )}
 
+                            {/* Next Challenge Button */}
                             <button
                                 onClick={handleVictoryProceed}
-                                className="bg-primary text-black font-bold py-3 px-8 rounded hover:bg-white transition-colors font-mono text-sm uppercase tracking-wider flex items-center gap-2"
+                                className="group bg-primary text-black font-bold py-4 px-10 rounded-lg hover:bg-white transition-all duration-200 font-mono text-sm uppercase tracking-wider flex items-center gap-3 shadow-[0_0_20px_rgba(0,255,136,0.3)]"
                             >
-                                <RefreshCw size={16} />
-                                {gameState.lastVictoryReward?.goldCollected || !gameState.lastVictoryReward ? 'Next Sprint' : 'Skip Remaining & Proceed'}
+                                <span>Next Challenge</span>
+                                <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
                             </button>
+
+                            <p className="text-gray-600 text-xs mt-4 font-mono">Keep building. Keep shipping. 🚀</p>
                         </div>
                     </div>
                 )}

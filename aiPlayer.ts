@@ -449,7 +449,7 @@ abstract class BaseAI implements AIPlayer {
 
             // Priority 3: Remove basic Defends
             const defends = state.deck.filter(c =>
-                c.id.includes('cto_rollback') && !c.upgraded
+                c.id.includes('cto_stay_focused') && !c.upgraded
             );
             if (defends.length > 2) { // Keep at least 2
                 return { type: 'remove_card', card: defends[0] };

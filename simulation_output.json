@@ -1,0 +1,1220 @@
+{
+  "startup": {
+    "name": "GiggleLearn",
+    "oneLiner": "Netflix for educational kids content - learning that feels like play"
+  },
+  "macro": {
+    "theme": "Building Magic That Actually Teaches",
+    "startupHandle": "GiggleLearn",
+    "startupEmoji": "🧠",
+    "startupTone": "quirky",
+    "introTweet": {
+      "author": "Alex Chen",
+      "handle": "@AlexCTO_GL",
+      "displayName": "Alex Chen (CTO)",
+      "avatarEmoji": "👨‍💻",
+      "content": "Goodbye stable salary. Hello GiggleLearn. Trading my office chair for a beanbag and writing the first line of code that makes learning fun. Wish me luck. This is happening.",
+      "likes": 155,
+      "retweets": 32,
+      "replies": 18,
+      "timestamp": "just now",
+      "id": "tweet_1_1765476180850"
+    },
+    "defeatTweet": {
+      "author": "Alex Chen",
+      "handle": "@AlexCTO_GL",
+      "displayName": "Alex Chen (CTO)",
+      "avatarEmoji": "😔",
+      "content": "We got so close. The tech was solid, the vision was clear, but we ran out of runway before the market confirmed our hunch. Thanks to everyone who believed. Time to recharge and rethink the architecture for V2. We built something cool, promise.",
+      "likes": 88,
+      "retweets": 15,
+      "replies": 25,
+      "timestamp": "just now",
+      "isDefeat": true,
+      "id": "tweet_2_1765476180850"
+    },
+    "bossVictoryTweet": {
+      "author": "Alex Chen",
+      "handle": "@AlexCTO_GL",
+      "displayName": "Alex Chen (CTO)",
+      "avatarEmoji": "🚀",
+      "content": "We just closed our Seed round! 🤯 Months of zero sleep, coffee fumes, and proving the engine works paid off. Now we can finally build the *real* GiggleLearn. To the future of play-based learning! 🎉",
+      "likes": 1290,
+      "retweets": 280,
+      "replies": 110,
+      "timestamp": "just now",
+      "isVictory": true,
+      "id": "tweet_3_1765476180850"
+    },
+    "floorBeats": [
+      {
+        "floor": 1,
+        "storyPhase": "PHASE 1 - THE SPARK",
+        "setup": "You quit your job. The idea burns bright.",
+        "conflict": "But the first day alone feels terrifying.",
+        "resolution": "You write the first line of code anyway.",
+        "storyBeat": "We finally have a name: GiggleLearn. I quit my job today.",
+        "narrativeHook": "The freedom feels insane.",
+        "primaryDevice": "foreshadowing",
+        "foreshadowsFloor": 9,
+        "emotionalArc": "hopeful_to_challenged",
+        "stakes": "Your dream of being a founder"
+      },
+      {
+        "floor": 2,
+        "storyPhase": "PHASE 1 - THE SPARK",
+        "setup": "The prototype is taking shape.",
+        "conflict": "Nothing works the way you imagined.",
+        "resolution": "But you see a glimmer of what it could be.",
+        "storyBeat": "The first lines of code are typing. It's just a placeholder database connection, but it's mine.",
+        "narrativeHook": "My fingers hurt already.",
+        "primaryDevice": "small_victory",
+        "emotionalArc": "hopeful_to_challenged",
+        "stakes": "Proving the concept is even possible"
+      },
+      {
+        "floor": 3,
+        "storyPhase": "PHASE 1 - THE SPARK",
+        "setup": "You have something to show.",
+        "conflict": "It's ugly. Really ugly.",
+        "resolution": "But... it works. Kind of.",
+        "storyBeat": "The ugly first prototype exists. It looks like a 1998 GeoCities site, but the core logic is there.",
+        "narrativeHook": "Function over form, always.",
+        "primaryDevice": "revelation",
+        "foreshadowsFloor": 12,
+        "emotionalArc": "hopeful_to_challenged",
+        "stakes": "The first working demo"
+      },
+      {
+        "floor": 4,
+        "storyPhase": "PHASE 1 - THE SPARK",
+        "setup": "You show it to friends and family.",
+        "conflict": "Their feedback is... polite. Too polite.",
+        "resolution": "Someone actually signs up. For real.",
+        "storyBeat": "Showed the prototype to my niece. She didn't complain or ask for YouTube. Milestone: Prototype exists!",
+        "narrativeHook": "That's the first 'Yes'.",
+        "primaryDevice": "ally_appears",
+        "secondaryDevice": "comic_relief",
+        "emotionalArc": "hopeful_to_challenged",
+        "stakes": "Your first real user (not your mom)"
+      },
+      {
+        "floor": 5,
+        "storyPhase": "PHASE 2 - THE GRIND",
+        "setup": "The initial excitement fades.",
+        "conflict": "The work is harder than you thought.",
+        "resolution": "You find a rhythm, but it's exhausting.",
+        "storyBeat": "It's 3 AM again. Fixing a rendering bug that only shows up on one specific Android tablet.",
+        "narrativeHook": "This bug is personal.",
+        "primaryDevice": "tension_escalation",
+        "callbackFrom": 1,
+        "emotionalArc": "determined_to_tired",
+        "stakes": "Your energy and motivation"
+      },
+      {
+        "floor": 6,
+        "storyPhase": "PHASE 2 - THE GRIND",
+        "setup": "You ship a big update.",
+        "conflict": "Everything breaks. Users are angry.",
+        "resolution": "You fix it. Barely. At 3am.",
+        "storyBeat": "User testing feedback is harsh but fair. We pivoted the entire navigation flow based on one 7-year-old's tantrum.",
+        "narrativeHook": "The user always knows best.",
+        "primaryDevice": "setback",
+        "secondaryDevice": "tension_escalation",
+        "emotionalArc": "determined_to_tired",
+        "stakes": "User trust and your sanity"
+      },
+      {
+        "floor": 7,
+        "storyPhase": "PHASE 2 - THE GRIND",
+        "setup": "You're making progress.",
+        "conflict": "Then you see THEM. A well-funded competitor.",
+        "resolution": "You decide speed is your advantage.",
+        "storyBeat": "Someone else just launched a 'fun learning app'. They look slicker than us. Time to sharpen our edge.",
+        "narrativeHook": "The world is moving fast.",
+        "primaryDevice": "stakes_raising",
+        "foreshadowsFloor": 16,
+        "emotionalArc": "determined_to_tired",
+        "stakes": "Market position before they catch up"
+      },
+      {
+        "floor": 8,
+        "storyPhase": "PHASE 2 - THE GRIND",
+        "setup": "User feedback is confusing.",
+        "conflict": "Half want feature A, half want B. Neither aligns with your vision.",
+        "resolution": "You make a choice. Time will tell if it's right.",
+        "storyBeat": "Major debate: Should we focus on Math content first or Literacy? We chose Literacy. Sticking to it.",
+        "narrativeHook": "No turning back now.",
+        "primaryDevice": "moment_of_doubt",
+        "secondaryDevice": "cliffhanger",
+        "foreshadowsFloor": 11,
+        "emotionalArc": "determined_to_tired",
+        "stakes": "Your entire product direction"
+      },
+      {
+        "floor": 9,
+        "storyPhase": "PHASE 3 - THE DOUBT",
+        "setup": "You check the bank account.",
+        "conflict": "The numbers are worse than you remembered.",
+        "resolution": "You have weeks, not months.",
+        "storyBeat": "The bank account balance is getting way too low. We're burning cash faster than I can write secure auth layers.",
+        "narrativeHook": "Runway anxiety is real.",
+        "primaryDevice": "stakes_raising",
+        "callbackFrom": 1,
+        "secondaryDevice": "tension_escalation",
+        "emotionalArc": "anxious_to_desperate",
+        "stakes": "Your company's survival - literally"
+      },
+      {
+        "floor": 10,
+        "storyPhase": "PHASE 3 - THE DOUBT",
+        "setup": "The team is quiet.",
+        "conflict": "People are burning out. Someone asks about job security.",
+        "resolution": "You give a speech you're not sure you believe.",
+        "storyBeat": "Staring at our zero daily active users. Did we build something only we think is cool? Deep breath.",
+        "narrativeHook": "The silence is deafening.",
+        "primaryDevice": "dark_moment",
+        "secondaryDevice": "moment_of_doubt",
+        "emotionalArc": "anxious_to_desperate",
+        "stakes": "Your team staying together"
+      },
+      {
+        "floor": 11,
+        "storyPhase": "PHASE 3 - THE DOUBT",
+        "setup": "You wake up at 4am with a pit in your stomach.",
+        "conflict": "Maybe the doubters were right. Maybe this won't work.",
+        "resolution": "But then... a notification. Someone new signed up.",
+        "storyBeat": "The co-founder and I are running on fumes. Had to step in and do some non-tech ops just to keep spirits up.",
+        "narrativeHook": "Team morale is the hardest dependency.",
+        "primaryDevice": "turning_point",
+        "callbackFrom": 8,
+        "foreshadowsFloor": 12,
+        "emotionalArc": "anxious_to_desperate",
+        "stakes": "Your belief in yourself"
+      },
+      {
+        "floor": 12,
+        "storyPhase": "PHASE 3 - THE DOUBT",
+        "setup": "That new user? They LOVE it.",
+        "conflict": "They want to pay. You don't even have a payment system.",
+        "resolution": "You stay up all night to build one.",
+        "storyBeat": "A random email from a teacher. 'My students actually asked for more screen time today.' I almost cried.",
+        "narrativeHook": "A glimmer of hope just landed.",
+        "primaryDevice": "payoff",
+        "callbackFrom": 3,
+        "secondaryDevice": "ally_appears",
+        "emotionalArc": "desperate_to_hopeful",
+        "stakes": "Your first paying customer"
+      },
+      {
+        "floor": 13,
+        "storyPhase": "PHASE 4 - THE BREAKTHROUGH",
+        "setup": "That customer told a friend.",
+        "conflict": "Now there are 10 users. Then 50. You're not ready for this.",
+        "resolution": "It's chaotic, but you're growing.",
+        "storyBeat": "A parent paid the tiny subscription fee we set up. First dollar earned from a complete stranger! I framed the receipt.",
+        "narrativeHook": "Someone sees the value.",
+        "primaryDevice": "small_victory",
+        "secondaryDevice": "tension_escalation",
+        "emotionalArc": "desperate_to_hopeful",
+        "stakes": "Managing growth without breaking everything"
+      },
+      {
+        "floor": 14,
+        "storyPhase": "PHASE 4 - THE BREAKTHROUGH",
+        "setup": "You look at the graphs.",
+        "conflict": "The curve is going up. Not linear. Exponential.",
+        "resolution": "This might actually work. You allow yourself to believe.",
+        "storyBeat": "We hit 50 active users who used the product three times this week. They are coming back without prompting.",
+        "narrativeHook": "The usage curve bent upwards!",
+        "primaryDevice": "revelation",
+        "secondaryDevice": "payoff",
+        "callbackFrom": 7,
+        "emotionalArc": "desperate_to_hopeful",
+        "stakes": "Proving you have product-market fit"
+      },
+      {
+        "floor": 15,
+        "storyPhase": "PHASE 5 - THE CLIMAX",
+        "setup": "An investor wants to meet.",
+        "conflict": "This is it. The meeting that could change everything.",
+        "resolution": "You prepare the pitch of your life.",
+        "storyBeat": "Today is the big meeting. Pitched the code, the vision, and the sticky kids. Felt like the entire past year was in that slide deck.",
+        "narrativeHook": "Show them the magic.",
+        "primaryDevice": "stakes_raising",
+        "callbackFrom": 9,
+        "foreshadowsFloor": 16,
+        "emotionalArc": "tense_to_triumphant",
+        "stakes": "Getting funded or running out of runway"
+      },
+      {
+        "floor": 16,
+        "storyPhase": "PHASE 5 - THE CLIMAX",
+        "setup": "You walk into the room.",
+        "conflict": "The investors are skeptical. They've heard a thousand pitches.",
+        "resolution": "But you have something they don't: proof.",
+        "storyBeat": "We got the commitment. Seed round closed! Time to hire engineers and scale this whole thing. Thank you, world.",
+        "narrativeHook": "We're funded. Let's build!",
+        "primaryDevice": "payoff",
+        "secondaryDevice": "turning_point",
+        "callbackFrom": 1,
+        "emotionalArc": "tense_to_triumphant",
+        "stakes": "Your startup's future"
+      }
+    ]
+  },
+  "floors": [
+    {
+      "floor": 1,
+      "floorBeat": {
+        "floor": 1,
+        "storyPhase": "PHASE 1 - THE SPARK",
+        "setup": "You quit your job. The idea burns bright.",
+        "conflict": "But the first day alone feels terrifying.",
+        "resolution": "You write the first line of code anyway.",
+        "storyBeat": "We finally have a name: GiggleLearn. I quit my job today.",
+        "narrativeHook": "The freedom feels insane.",
+        "primaryDevice": "foreshadowing",
+        "foreshadowsFloor": 9,
+        "emotionalArc": "hopeful_to_challenged",
+        "stakes": "Your dream of being a founder"
+      },
+      "enemies": [
+        {
+          "id": "minor_bug",
+          "name": "The Naysayer"
+        }
+      ],
+      "meso": {
+        "approachTweet": "The office is empty now. Just the idea and me. Time to build GiggleLearn. Deep breath. Here we go.",
+        "victoryTweet": "First line written. It's on the screen. The work starts now. This is real.",
+        "enemyTweets": {
+          "minor_bug": {
+            "attack": [
+              "Another educational app? The world needed this precisely.",
+              "Founders always overestimate how much effort it takes to get the first ten users."
+            ],
+            "buff": [
+              "Starting solo is the only way to be sure of the vision. Good move."
+            ],
+            "debuff": [
+              "That initial excitement fades fast when the real work hits. Wait till you see the first crash.",
+              "Hope they have a big savings account. Ideas don't pay the rent."
+            ],
+            "defeat": "The quiet moments are tough. But the idea is louder than the fear. Back to the keyboard."
+          }
+        },
+        "cardPlayTweets": {
+          "attack": [
+            "Pushed the first piece. It works. That feeling never gets old.",
+            "New section live. Small step, big progress."
+          ],
+          "skill": [
+            "That old code was rough. Refactored the whole thing. So much cleaner now.",
+            "Had to undo that last idea. Rolled it back. Smart move saves hours later."
+          ],
+          "power": [
+            "Got the first five people trying it out. Watching them use it is the best fuel.",
+            "If this thing catches on, it's because people share it naturally. That's the goal."
+          ]
+        }
+      }
+    },
+    {
+      "floor": 2,
+      "floorBeat": {
+        "floor": 2,
+        "storyPhase": "PHASE 1 - THE SPARK",
+        "setup": "The prototype is taking shape.",
+        "conflict": "Nothing works the way you imagined.",
+        "resolution": "But you see a glimmer of what it could be.",
+        "storyBeat": "The first lines of code are typing. It's just a placeholder database connection, but it's mine.",
+        "narrativeHook": "My fingers hurt already.",
+        "primaryDevice": "small_victory",
+        "emotionalArc": "hopeful_to_challenged",
+        "stakes": "Proving the concept is even possible"
+      },
+      "enemies": [
+        {
+          "id": "critical_bug",
+          "name": "The Doubter"
+        },
+        {
+          "id": "minor_bug",
+          "name": "The Naysayer"
+        }
+      ],
+      "meso": {
+        "approachTweet": "Just laid down the first few bricks for this thing. It's just a wire connection for now. But it's mine. Hope this road leads somewhere good.",
+        "victoryTweet": "Whoa. It finally did the one thing I wanted it to do. It's clumsy, but it flashes. I can see the whole thing now. This is going to be huge.",
+        "enemyTweets": {
+          "critical_bug": {
+            "attack": [
+              "Every founder thinks their first connection works. Wait until real data hits it. That's where the fun starts.",
+              "Is this another 'revolutionary' thing that will be forgotten by next week? Seems like a lot of effort for a small idea."
+            ],
+            "buff": [
+              "Good founders know the first draft is always trash. Keep the expectations low, maybe you'll surprise someone."
+            ],
+            "debuff": [
+              "If the basic connection is this hard, imagine scaling it. They are already in too deep.",
+              "I'm starting to think that 'glimmer' is just reflection off the screen."
+            ],
+            "defeat": "It's holding. The foundation is set. Now we build the actual house."
+          },
+          "minor_bug": {
+            "attack": [
+              "So much drama over getting two things to talk to each other. Standard Tuesday for any developer.",
+              "That little hiccup they are probably hitting right now? That's the one that kills 90% of these projects."
+            ],
+            "buff": [
+              "The struggle to make the first thing work is the real training ground. Don't skip the hard lessons."
+            ],
+            "debuff": [
+              "I see them wrestling with the basics. They should have outsourced that part if they couldn't handle it.",
+              "If this is challenging, they are not ready for the actual hard parts coming next month."
+            ],
+            "defeat": "Got the communication channel open. We are talking now. Quiet satisfaction."
+          }
+        },
+        "cardPlayTweets": {
+          "attack": [
+            "Pushed the first chunk of code. It's live in the sandbox. Let's see what breaks next.",
+            "It deployed. Small step, but it's forward. That small win matters right now."
+          ],
+          "skill": [
+            "Had to rewrite that connection logic three times. Better structure now. Much cleaner.",
+            "Rolled back that last attempt. Good learning moment. Starting fresh on that small piece."
+          ],
+          "power": [
+            "Saw how quickly the test data flowed. If this scales, our users will love the speed.",
+            "The connections are linking up faster than I expected. This early momentum feels right."
+          ]
+        }
+      }
+    },
+    {
+      "floor": 3,
+      "floorBeat": {
+        "floor": 3,
+        "storyPhase": "PHASE 1 - THE SPARK",
+        "setup": "You have something to show.",
+        "conflict": "It's ugly. Really ugly.",
+        "resolution": "But... it works. Kind of.",
+        "storyBeat": "The ugly first prototype exists. It looks like a 1998 GeoCities site, but the core logic is there.",
+        "narrativeHook": "Function over form, always.",
+        "primaryDevice": "revelation",
+        "foreshadowsFloor": 12,
+        "emotionalArc": "hopeful_to_challenged",
+        "stakes": "The first working demo"
+      },
+      "enemies": [
+        {
+          "id": "spaghetti_code",
+          "name": "The Copycat"
+        }
+      ],
+      "meso": {
+        "approachTweet": "Okay. It’s ugly. It looks like it was built in a basement in 1999. But the thing actually spins up. Time to show the world this mess.",
+        "victoryTweet": "It runs. It actually computes the answer! Feels good when the messy middle finally clicks into place.",
+        "enemyTweets": {
+          "spaghetti_code": {
+            "attack": [],
+            "buff": [],
+            "debuff": [],
+            "defeat": ""
+          }
+        },
+        "cardPlayTweets": {
+          "attack": [
+            "Commit made. Sending this messy brain-dump into the main file. Fingers crossed."
+          ],
+          "skill": [
+            "That section was truly embarrassing. Refactor complete. It looks 10% less like a mistake now.",
+            "Had to hit Rollback on that last batch of changes. Good reminder: test before you trust the quick fixes."
+          ],
+          "power": [
+            "It’s live! First deploy of the week is done. Time to see if anyone notices.",
+            "The early connections are happening naturally. That feeling when the thing starts connecting itself is huge."
+          ]
+        }
+      }
+    },
+    {
+      "floor": 4,
+      "floorBeat": {
+        "floor": 4,
+        "storyPhase": "PHASE 1 - THE SPARK",
+        "setup": "You show it to friends and family.",
+        "conflict": "Their feedback is... polite. Too polite.",
+        "resolution": "Someone actually signs up. For real.",
+        "storyBeat": "Showed the prototype to my niece. She didn't complain or ask for YouTube. Milestone: Prototype exists!",
+        "narrativeHook": "That's the first 'Yes'.",
+        "primaryDevice": "ally_appears",
+        "secondaryDevice": "comic_relief",
+        "emotionalArc": "hopeful_to_challenged",
+        "stakes": "Your first real user (not your mom)"
+      },
+      "enemies": [
+        {
+          "id": "fanboy",
+          "name": "Feature Creep"
+        },
+        {
+          "id": "quick_hack",
+          "name": "The Shortcut"
+        }
+      ],
+      "meso": {
+        "approachTweet": "Showed the thing to my niece. She just used it. No complaints. That's the first test passed.",
+        "victoryTweet": "Someone I don't know signed up. They actually used it without me watching. This is the best feeling.",
+        "enemyTweets": {
+          "fanboy": {
+            "attack": [
+              "You should totally add a whole social layer next. Make it viral right away!",
+              "If you just add these three more features, it will solve everything. Don't ship until it's perfect!"
+            ],
+            "buff": [
+              "Wow, this is a great start! You should definitely explore making it a full platform."
+            ],
+            "debuff": [
+              "But if it doesn't do X, Y, and Z, how will people switch from what they already use?"
+            ],
+            "defeat": "Decided to ship the small thing now. We add the polish later. Focus on the core job."
+          },
+          "quick_hack": {
+            "attack": [
+              "Why are you still messing with that? Just copy that old code snippet and move on. Nobody checks.",
+              "If it works today, why spend time making it perfect? That's wasting time you could spend on marketing."
+            ],
+            "buff": [
+              "Shipping fast means getting real feedback sooner. I get the rush."
+            ],
+            "debuff": [
+              "If the base isn't solid, the whole thing will fall apart when 10 people try to use it."
+            ],
+            "defeat": "Spent the morning cleaning up that messy bit. It felt slow, but now it's solid. Worth the extra hour."
+          }
+        },
+        "cardPlayTweets": {
+          "attack": [
+            "Pushed the small update. It's running. Small steps today.",
+            "New version out. Sending it to the first real user now. Wish us luck."
+          ],
+          "skill": [
+            "Refactored that slow part of the setup. It feels much better under the hood now.",
+            "Had to hit rollback this morning. Didn't break anything major, just needed a clean start. Learning fast."
+          ],
+          "power": [
+            "The way users are connecting their accounts today is really smart. This might actually catch on.",
+            "Seeing user two tell user one about us. That's the magic. It's starting to connect itself."
+          ]
+        }
+      }
+    },
+    {
+      "floor": 5,
+      "floorBeat": {
+        "floor": 5,
+        "storyPhase": "PHASE 2 - THE GRIND",
+        "setup": "The initial excitement fades.",
+        "conflict": "The work is harder than you thought.",
+        "resolution": "You find a rhythm, but it's exhausting.",
+        "storyBeat": "It's 3 AM again. Fixing a rendering bug that only shows up on one specific Android tablet.",
+        "narrativeHook": "This bug is personal.",
+        "primaryDevice": "tension_escalation",
+        "callbackFrom": 1,
+        "emotionalArc": "determined_to_tired",
+        "stakes": "Your energy and motivation"
+      },
+      "enemies": [
+        {
+          "id": "tech_debt",
+          "name": "The Procrastinator"
+        }
+      ],
+      "meso": {
+        "approachTweet": "Three AM. The shiny new idea feeling is gone. Now it’s just me and this screen. Gotta find the answer in this mess.",
+        "victoryTweet": "It finally settled into place. The rhythm is there, even if I’m running on fumes. It works on the old brick tablet. That’s something.",
+        "enemyTweets": {
+          "tech_debt": {
+            "attack": [
+              "They always say they'll clean it up later. That 'later' is how companies die slow.",
+              "If you have to spend nights fixing tiny details, maybe the core idea wasn't solid enough to start."
+            ],
+            "buff": [
+              "The real work is the boring, invisible stuff nobody sees. Keep pushing through the slow hours."
+            ],
+            "debuff": [
+              "That specific bug that only happens on one device? That's the universe telling you to take a nap.",
+              "If you can't test on everything easily, you shipped too fast. Plan better next time."
+            ],
+            "defeat": "The little glitch is squashed. Didn't need to rethink the whole blueprint, just needed to stop dragging my feet on that one spot."
+          }
+        },
+        "cardPlayTweets": {
+          "attack": [
+            "Pushed a tiny change to see if it helps the weird display. Fingers crossed this one sticks.",
+            "It’s running on the test machine now. Small update shipped. Hope it stays fixed."
+          ],
+          "skill": [
+            "Dug into the old code section. Reorganized a huge chunk of it. Feels much easier to look at now.",
+            "That last adjustment was bad. Hit undo on that whole section. Going back to the previous good setup."
+          ],
+          "power": [
+            "That fix meant one user told five friends. That's the ripple effect working.",
+            "Every small piece we make better seems to bring in a few more people naturally. The right way to grow."
+          ]
+        }
+      }
+    },
+    {
+      "floor": 6,
+      "floorBeat": {
+        "floor": 6,
+        "storyPhase": "PHASE 2 - THE GRIND",
+        "setup": "You ship a big update.",
+        "conflict": "Everything breaks. Users are angry.",
+        "resolution": "You fix it. Barely. At 3am.",
+        "storyBeat": "User testing feedback is harsh but fair. We pivoted the entire navigation flow based on one 7-year-old's tantrum.",
+        "narrativeHook": "The user always knows best.",
+        "primaryDevice": "setback",
+        "secondaryDevice": "tension_escalation",
+        "emotionalArc": "determined_to_tired",
+        "stakes": "User trust and your sanity"
+      },
+      "enemies": [
+        {
+          "id": "micromanager",
+          "name": "The Micromanager"
+        },
+        {
+          "id": "memory_leak",
+          "name": "Energy Vampire"
+        }
+      ],
+      "meso": {
+        "approachTweet": "Big push went out. Feels heavy, but it's done. Now we watch. Time to see if this thing flies or falls apart.",
+        "victoryTweet": "It's running. Totally quiet now. Found the tiny thing that was rattling the whole house. Coffee tastes amazing at 3 AM.",
+        "enemyTweets": {
+          "micromanager": {
+            "attack": [
+              "Are we sure that big update needed to go live right now? Seems risky. Need confirmation the impact is zero.",
+              "Just checking in on the status report for the thing that shipped an hour ago. How’s the early data looking?"
+            ],
+            "buff": [
+              "Good founders have detailed rollback plans ready before any deploy. That's just good process."
+            ],
+            "debuff": [
+              "If you can't explain what broke in simple terms to a non-engineer, you shouldn't have shipped it."
+            ],
+            "defeat": "Fix is shipped and stable. The process is clear now. No more status pings needed."
+          },
+          "memory_leak": {
+            "attack": [
+              "I am so tired of updates that change everything. Can't we just have one thing that stays the same for more than a week?",
+              "They'll probably have to redo all that work again next month. That's how startups go."
+            ],
+            "buff": [
+              "Every major pivot is just finding a faster way to win. Good job sticking to the mission."
+            ],
+            "debuff": [
+              "Honestly, I'm exhausted just reading about how much they are rebuilding. It sounds like a total mess."
+            ],
+            "defeat": "We found the core problem. The system is smooth now. Less noise, more doing."
+          }
+        },
+        "cardPlayTweets": {
+          "attack": [
+            "Pushed the hotfix. It compiled. Let's see what the real world says now.",
+            "New version is live. Simple, clean ship. Hope this sticks."
+          ],
+          "skill": [
+            "The old way was confusing everyone. Refactored that entire section. Feels much better under the hood.",
+            "That didn't work at all. Quick rollback to the stable version. Back to the drawing board, smarter this time."
+          ],
+          "power": [
+            "The fix made the whole thing connect better. When one thing gets better, everything starts working right.",
+            "Users are sharing it again now that the main flow is clear. That feeling is the best."
+          ]
+        }
+      }
+    },
+    {
+      "floor": 7,
+      "floorBeat": {
+        "floor": 7,
+        "storyPhase": "PHASE 2 - THE GRIND",
+        "setup": "You're making progress.",
+        "conflict": "Then you see THEM. A well-funded competitor.",
+        "resolution": "You decide speed is your advantage.",
+        "storyBeat": "Someone else just launched a 'fun learning app'. They look slicker than us. Time to sharpen our edge.",
+        "narrativeHook": "The world is moving fast.",
+        "primaryDevice": "stakes_raising",
+        "foreshadowsFloor": 16,
+        "emotionalArc": "determined_to_tired",
+        "stakes": "Market position before they catch up"
+      },
+      "enemies": [
+        {
+          "id": "legacy_module",
+          "name": "The Old Guard"
+        }
+      ],
+      "meso": {
+        "approachTweet": "It’s looking solid. We shipped the main features today. Now we see what happens next.",
+        "victoryTweet": "We just pushed three big things live before lunch. Small lead, but it’s ours for now. Keep building fast.",
+        "enemyTweets": {
+          "legacy_module": {
+            "attack": [
+              "Youth always thinks they can just throw code at the wall. Experience matters more than speed.",
+              "A slick frontend is nothing without a solid, tested foundation. Those shortcuts always show up later."
+            ],
+            "buff": [
+              "The market loves a polished surface. The shiny new thing always sucks in users first, regardless of substance."
+            ],
+            "debuff": [
+              "Oh look, another app promising to make learning fun. Yawn. They’ll burn out in six months.",
+              "Founders always think they have a secret advantage. Usually, they just have early debt.",
+              "It's easy to look good when you have investor cash. Let’s see the retention numbers."
+            ],
+            "defeat": "We pushed the core update through. Took an extra hour but the logic is sound now. Moving on."
+          }
+        },
+        "cardPlayTweets": {
+          "attack": [
+            "One more commit pushed. That section of code feels much better now.",
+            "Shipped the latest changes. Things are running smooth over here."
+          ],
+          "skill": [
+            "Spent time cleaning up that old section. It’s so much cleaner to work with now.",
+            "Pulled back a small tweak that wasn't right. Good to know we can fix it instantly."
+          ],
+          "power": [
+            "The way users are connecting features is exactly what we hoped for. That feeling is great.",
+            "Seeing exponential growth from simple sharing. The system is learning how to grow itself."
+          ]
+        }
+      }
+    },
+    {
+      "floor": 8,
+      "floorBeat": {
+        "floor": 8,
+        "storyPhase": "PHASE 2 - THE GRIND",
+        "setup": "User feedback is confusing.",
+        "conflict": "Half want feature A, half want B. Neither aligns with your vision.",
+        "resolution": "You make a choice. Time will tell if it's right.",
+        "storyBeat": "Major debate: Should we focus on Math content first or Literacy? We chose Literacy. Sticking to it.",
+        "narrativeHook": "No turning back now.",
+        "primaryDevice": "moment_of_doubt",
+        "secondaryDevice": "cliffhanger",
+        "foreshadowsFloor": 11,
+        "emotionalArc": "determined_to_tired",
+        "stakes": "Your entire product direction"
+      },
+      "enemies": [
+        {
+          "id": "scope_creep",
+          "name": "Scope Creep"
+        }
+      ],
+      "meso": {
+        "approachTweet": "Everyone has a perfect feature idea. My inbox is a traffic jam of great advice. We picked one direction. Deep breath. Time to build that path.",
+        "victoryTweet": "We shipped the Literacy focus today. It feels solid. Watching users interact with the thing we chose to build is the best feeling.",
+        "enemyTweets": {
+          "scope_creep": {
+            "attack": [
+              "If you aren't building ten features at once, are you even trying? Focus is for small projects.",
+              "Wait, but what about the essential tool that does X, Y, and Z? You need that immediately."
+            ],
+            "buff": [
+              "Great founders always listen to the market. If 60% of people ask for something, you build it. Data talks."
+            ],
+            "debuff": [
+              "Another one of those apps. Let's see if they stick to the plan past Tuesday. Most pivot within a month.",
+              "They are going to drown trying to do everything poorly instead of one thing right."
+            ],
+            "defeat": "We cut the noise. We made the call. The list is shorter now. Focus is clean."
+          }
+        },
+        "cardPlayTweets": {
+          "attack": [
+            "Ship this piece. Commit made. Let's see it run.",
+            "It's live. Moving fast. Deploy successful."
+          ],
+          "skill": [
+            "That chunk of code was confusing. Rewrote it completely. Much easier to read now.",
+            "Cleaned up the guts of that feature. Running smooth. Happy engineer."
+          ],
+          "power": [
+            "The early users are already showing friends. This sharing is how things grow.",
+            "Got three people signing up because a friend told them to. The magic is starting."
+          ]
+        }
+      }
+    },
+    {
+      "floor": 9,
+      "floorBeat": {
+        "floor": 9,
+        "storyPhase": "PHASE 3 - THE DOUBT",
+        "setup": "You check the bank account.",
+        "conflict": "The numbers are worse than you remembered.",
+        "resolution": "You have weeks, not months.",
+        "storyBeat": "The bank account balance is getting way too low. We're burning cash faster than I can write secure auth layers.",
+        "narrativeHook": "Runway anxiety is real.",
+        "primaryDevice": "stakes_raising",
+        "callbackFrom": 1,
+        "secondaryDevice": "tension_escalation",
+        "emotionalArc": "anxious_to_desperate",
+        "stakes": "Your company's survival - literally"
+      },
+      "enemies": [
+        {
+          "id": "burnout",
+          "name": "Burnout"
+        }
+      ],
+      "meso": {
+        "approachTweet": "Just pulled up the numbers. Oof. We need to ship something huge this week. Coffee supply is currently adequate.",
+        "victoryTweet": "We made it through the crunch. That one small step forward feels massive right now. So much more to do, but we are moving.",
+        "enemyTweets": {
+          "burnout": {
+            "attack": [
+              "If you have to check the balance that often, maybe it’s time to get a real job. This pace is unsustainable.",
+              "Most founders run out of runway before they run out of ideas. Just saying."
+            ],
+            "buff": [
+              "Real pressure makes diamonds. This is where the best teams are forged. Time to push."
+            ],
+            "debuff": [
+              "Counting weeks instead of months? That usually means you're planning for failure, not success.",
+              "I’ll believe it when I see users paying for it. Until then, it’s just expensive math homework."
+            ],
+            "defeat": "Sometimes the biggest breakthroughs happen when you absolutely have to deliver. We cleared the hurdle."
+          }
+        },
+        "cardPlayTweets": {
+          "attack": [
+            "New flow pushed. Tested it three times. It's live. Let's see what happens next.",
+            "Ship it. Review later. It works well enough for right now."
+          ],
+          "skill": [
+            "Totally rebuilt that core piece. It's simpler and it handles way more. Big cleanup done.",
+            "That whole section was a hot mess. Took an hour to make it perfect. So much faster now."
+          ],
+          "power": [
+            "Look at the sign-ups growing because of that one change we made yesterday. That's the good stuff.",
+            "The system is starting to connect people automatically. That's the whole point. Magic happening."
+          ]
+        }
+      }
+    },
+    {
+      "floor": 10,
+      "floorBeat": {
+        "floor": 10,
+        "storyPhase": "PHASE 3 - THE DOUBT",
+        "setup": "The team is quiet.",
+        "conflict": "People are burning out. Someone asks about job security.",
+        "resolution": "You give a speech you're not sure you believe.",
+        "storyBeat": "Staring at our zero daily active users. Did we build something only we think is cool? Deep breath.",
+        "narrativeHook": "The silence is deafening.",
+        "primaryDevice": "dark_moment",
+        "secondaryDevice": "moment_of_doubt",
+        "emotionalArc": "anxious_to_desperate",
+        "stakes": "Your team staying together"
+      },
+      "enemies": [
+        {
+          "id": "over_engineer",
+          "name": "Over-Engineer"
+        }
+      ],
+      "meso": {
+        "approachTweet": "The silence in the room is louder than any server error. We have to figure out the next move. Now.",
+        "victoryTweet": "Got the engine running again. The team is looking forward. That's the only metric that matters today.",
+        "enemyTweets": {
+          "over_engineer": {
+            "attack": [
+              "If the foundational logic isn't perfectly modularized for five future use cases, it's not really built.",
+              "Rushing to launch without a comprehensive schema review is just inviting technical debt chaos."
+            ],
+            "buff": [
+              "Startups that prioritize speed over pristine structure always crash when scaling hits."
+            ],
+            "debuff": [
+              "They probably spent six months perfecting a feature nobody asked for.",
+              "Zero users? Shocking. Guess nobody needed that complicated solution."
+            ],
+            "defeat": "Ship it. We can clean the layers later. Done is better than perfect theory."
+          }
+        },
+        "cardPlayTweets": {
+          "attack": [
+            "New build pushed. Let's see how it feels now.",
+            "Everything is live. Fingers crossed this time."
+          ],
+          "skill": [
+            "Refactored that tricky part. Much easier to read now.",
+            "Rolled back the last change. Lesson learned fast."
+          ],
+          "power": [
+            "Our first real share happened. That ripple is starting.",
+            "Seeing users connect dots we built. This is why we keep going."
+          ]
+        }
+      }
+    },
+    {
+      "floor": 11,
+      "floorBeat": {
+        "floor": 11,
+        "storyPhase": "PHASE 3 - THE DOUBT",
+        "setup": "You wake up at 4am with a pit in your stomach.",
+        "conflict": "Maybe the doubters were right. Maybe this won't work.",
+        "resolution": "But then... a notification. Someone new signed up.",
+        "storyBeat": "The co-founder and I are running on fumes. Had to step in and do some non-tech ops just to keep spirits up.",
+        "narrativeHook": "Team morale is the hardest dependency.",
+        "primaryDevice": "turning_point",
+        "callbackFrom": 8,
+        "foreshadowsFloor": 12,
+        "emotionalArc": "anxious_to_desperate",
+        "stakes": "Your belief in yourself"
+      },
+      "enemies": [
+        {
+          "id": "pivot_master",
+          "name": "Pivot Master"
+        }
+      ],
+      "meso": {
+        "approachTweet": "4 AM alarm, but my stomach beat it. Just staring at the ceiling. Wondering if we have enough fuel left in the tank for today.",
+        "victoryTweet": "The screen just lit up. One more person found us. That's it. That’s the moment.",
+        "enemyTweets": {
+          "pivot_master": {
+            "attack": [
+              "If you aren't changing direction every Tuesday, you aren't innovating fast enough.",
+              "This version is fine, but have you considered rebuilding the entire core logic based on an unrelated concept you read this morning?"
+            ],
+            "buff": [
+              "It's good when a team shows flexibility. Shows they aren't too attached to a failing first idea."
+            ],
+            "debuff": [
+              "When they start swinging wildly, it usually means the first plan was terrible. Big red flag.",
+              "Watch them burn through cash chasing shiny new concepts. Happens every time."
+            ],
+            "defeat": "We locked the path. Moving forward with conviction. Less talking, more building."
+          }
+        },
+        "cardPlayTweets": {
+          "attack": [
+            "Pushed the small correction. Let's see it run.",
+            "It’s out there. Working version two is live."
+          ],
+          "skill": [
+            "Scrubbed that messy section. Feels much better under the hood now.",
+            "Fixed the loop that wouldn't end. Clean change made."
+          ],
+          "power": [
+            "The way people are finding each other here is starting to click. Momentum feels real.",
+            "Seeing organic connections form in the platform. This is the good stuff."
+          ]
+        }
+      }
+    },
+    {
+      "floor": 12,
+      "floorBeat": {
+        "floor": 12,
+        "storyPhase": "PHASE 3 - THE DOUBT",
+        "setup": "That new user? They LOVE it.",
+        "conflict": "They want to pay. You don't even have a payment system.",
+        "resolution": "You stay up all night to build one.",
+        "storyBeat": "A random email from a teacher. 'My students actually asked for more screen time today.' I almost cried.",
+        "narrativeHook": "A glimmer of hope just landed.",
+        "primaryDevice": "payoff",
+        "callbackFrom": 3,
+        "secondaryDevice": "ally_appears",
+        "emotionalArc": "desperate_to_hopeful",
+        "stakes": "Your first paying customer"
+      },
+      "enemies": [
+        {
+          "id": "headhunter",
+          "name": "The Poacher"
+        },
+        {
+          "id": "bad_merge",
+          "name": "The Gossip"
+        }
+      ],
+      "meso": {
+        "approachTweet": "Someone actually uses the thing we built. And they want to pay for it. I don't have a way for them to pay yet. This is wild.",
+        "victoryTweet": "The button finally works. It's done. We can take money now. Amazing feeling.",
+        "enemyTweets": {
+          "headhunter": {
+            "attack": [],
+            "buff": [],
+            "debuff": [],
+            "defeat": ""
+          },
+          "bad_merge": {
+            "attack": [],
+            "buff": [],
+            "debuff": [],
+            "defeat": ""
+          }
+        },
+        "cardPlayTweets": {
+          "attack": [
+            "Pushed the first rough draft of the money mechanism. Fingers crossed.",
+            "Ship it. Testing the flow now. It actually clicks through."
+          ],
+          "skill": [
+            "Refactored that whole payment handler. So much cleaner than the 3 AM version.",
+            "Made one small change and immediately saw an issue. Quick rollback was the right call."
+          ],
+          "power": [
+            "When users start telling their friends, that’s when you know the work matters.",
+            "Getting traction feels like every tiny feature is suddenly working together."
+          ]
+        }
+      }
+    },
+    {
+      "floor": 13,
+      "floorBeat": {
+        "floor": 13,
+        "storyPhase": "PHASE 4 - THE BREAKTHROUGH",
+        "setup": "That customer told a friend.",
+        "conflict": "Now there are 10 users. Then 50. You're not ready for this.",
+        "resolution": "It's chaotic, but you're growing.",
+        "storyBeat": "A parent paid the tiny subscription fee we set up. First dollar earned from a complete stranger! I framed the receipt.",
+        "narrativeHook": "Someone sees the value.",
+        "primaryDevice": "small_victory",
+        "secondaryDevice": "tension_escalation",
+        "emotionalArc": "desperate_to_hopeful",
+        "stakes": "Managing growth without breaking everything"
+      },
+      "enemies": [
+        {
+          "id": "merge_conflict",
+          "name": "The Politician"
+        }
+      ],
+      "meso": {
+        "approachTweet": "Someone shared the link. Now the little number next to 'users' ticked up. I need coffee. And maybe a vacation.",
+        "victoryTweet": "The first dollar came in from a stranger. I actually framed the receipt. It's working. It's loud, but it's moving.",
+        "enemyTweets": {
+          "merge_conflict": {
+            "attack": [
+              "Another parenting app? I bet they didn't think about scale at all.",
+              "Founders always celebrate $1. Wait until they have real overhead. That's when the fun starts."
+            ],
+            "buff": [
+              "My kid loves this! I told three friends already. Keep going!",
+              "Small early traction suggests product-market fit might be forming. Interesting data point."
+            ],
+            "debuff": [
+              "Easy to look good when you only have ten users. Try handling a thousand next week.",
+              "That small rush always leads to a hard crash later. Hope they built it to last."
+            ],
+            "defeat": "They wanted chaos. They got a path forward. Building for today and tomorrow."
+          }
+        },
+        "cardPlayTweets": {
+          "attack": [
+            "Pushed a small update. It went through. Solid deploy this time.",
+            "Shipping the quick fix now. Hope it lands right."
+          ],
+          "skill": [
+            "Cleaned up that section of code we wrote last week. So much better now.",
+            "Reorganized that tricky part. Feels much stronger under pressure."
+          ],
+          "power": [
+            "Watching the new users bring in others. It's actually starting to pull itself along.",
+            "The word is getting out faster than I can type. Good problem."
+          ]
+        }
+      }
+    },
+    {
+      "floor": 14,
+      "floorBeat": {
+        "floor": 14,
+        "storyPhase": "PHASE 4 - THE BREAKTHROUGH",
+        "setup": "You look at the graphs.",
+        "conflict": "The curve is going up. Not linear. Exponential.",
+        "resolution": "This might actually work. You allow yourself to believe.",
+        "storyBeat": "We hit 50 active users who used the product three times this week. They are coming back without prompting.",
+        "narrativeHook": "The usage curve bent upwards!",
+        "primaryDevice": "revelation",
+        "secondaryDevice": "payoff",
+        "callbackFrom": 7,
+        "emotionalArc": "desperate_to_hopeful",
+        "stakes": "Proving you have product-market fit"
+      },
+      "enemies": [
+        {
+          "id": "hotfix",
+          "name": "The Gambler"
+        },
+        {
+          "id": "feature_pusher",
+          "name": "The Yes-Man"
+        }
+      ],
+      "meso": {
+        "approachTweet": "Staring at these numbers again. Just need one more person to show up tomorrow. Just one.",
+        "victoryTweet": "Fifty people used this thing three times this week. They just opened it. They came back. Wow. This is feeling real.",
+        "enemyTweets": {
+          "hotfix": {
+            "attack": [],
+            "buff": [],
+            "debuff": [],
+            "defeat": ""
+          },
+          "feature_pusher": {
+            "attack": [],
+            "buff": [],
+            "debuff": [],
+            "defeat": ""
+          }
+        },
+        "cardPlayTweets": {
+          "attack": [
+            "Pushed the latest changes. The whole thing is live now. Let's see what happens next.",
+            "Code sent. It’s done. Ship it and forget it until the next task shows up."
+          ],
+          "skill": [
+            "Spent an hour cleaning up that old section. It's so much clearer now. Worth the time.",
+            "Reverted that one small change that felt weird. Back to the working version. No regrets."
+          ],
+          "power": [
+            "We made sharing so easy that people are showing friends without us even asking. That's the magic.",
+            "The way new users are pulling in others naturally is amazing. It's starting to move on its own."
+          ]
+        }
+      }
+    },
+    {
+      "floor": 15,
+      "floorBeat": {
+        "floor": 15,
+        "storyPhase": "PHASE 5 - THE CLIMAX",
+        "setup": "An investor wants to meet.",
+        "conflict": "This is it. The meeting that could change everything.",
+        "resolution": "You prepare the pitch of your life.",
+        "storyBeat": "Today is the big meeting. Pitched the code, the vision, and the sticky kids. Felt like the entire past year was in that slide deck.",
+        "narrativeHook": "Show them the magic.",
+        "primaryDevice": "stakes_raising",
+        "callbackFrom": 9,
+        "foreshadowsFloor": 16,
+        "emotionalArc": "tense_to_triumphant",
+        "stakes": "Getting funded or running out of runway"
+      },
+      "enemies": [
+        {
+          "id": "boss_burn_rate",
+          "name": "Burn Rate"
+        }
+      ],
+      "meso": {
+        "approachTweet": "The pitch deck is loaded. Every line of code we wrote is in there somewhere. Deep breath. Time to show them what we built.",
+        "victoryTweet": "We showed them the vision. We showed them the sticky kids. That felt good. We moved forward today.",
+        "enemyTweets": {
+          "boss_burn_rate": {
+            "attack": [
+              "Another pitch about 'disruption.' Most of these burn through cash before they even ship version one.",
+              "If they aren't talking numbers, they aren't serious. That clock is ticking faster than they think."
+            ],
+            "buff": [
+              "Investors love founders who understand financial reality. It separates the dreamers from the doers."
+            ],
+            "debuff": [
+              "They always think the first meeting solves the money problem. Sweet summer child.",
+              "Hope they have more than just a pretty presentation. Ideas don't pay salaries."
+            ],
+            "defeat": "We showed them the path forward. The runway just got longer. Next steps locked in."
+          }
+        },
+        "cardPlayTweets": {
+          "attack": [
+            "Pushed that big demo update. It's live. See how fast it loads now.",
+            "Final check before the pitch. Everything is running smooth. Shipped it."
+          ],
+          "skill": [
+            "Refactored that tricky section we talked about last week. It's so much cleaner now. Feels right.",
+            "Quick rollback on that small tweak. Saved us a headache later. Smart move."
+          ],
+          "power": [
+            "One new partner signed up. Watching the connections happen is the best feeling.",
+            "The way users are sharing this thing organically is exactly what we hoped for. It’s catching."
+          ]
+        }
+      }
+    },
+    {
+      "floor": 16,
+      "floorBeat": {
+        "floor": 16,
+        "storyPhase": "PHASE 5 - THE CLIMAX",
+        "setup": "You walk into the room.",
+        "conflict": "The investors are skeptical. They've heard a thousand pitches.",
+        "resolution": "But you have something they don't: proof.",
+        "storyBeat": "We got the commitment. Seed round closed! Time to hire engineers and scale this whole thing. Thank you, world.",
+        "narrativeHook": "We're funded. Let's build!",
+        "primaryDevice": "payoff",
+        "secondaryDevice": "turning_point",
+        "callbackFrom": 1,
+        "emotionalArc": "tense_to_triumphant",
+        "stakes": "Your startup's future"
+      },
+      "enemies": [
+        {
+          "id": "investor_meeting",
+          "name": "The VC Gauntlet"
+        }
+      ],
+      "meso": {
+        "approachTweet": "Deep breath. Walked in. The room feels cold. We have the numbers. Show them the reality.",
+        "victoryTweet": "We got the commitment. The seed round is officially closed. Time to hire the best people and build this thing huge. Unreal feeling.",
+        "enemyTweets": {
+          "investor_meeting": {
+            "attack": [],
+            "buff": [],
+            "debuff": [],
+            "defeat": ""
+          }
+        },
+        "cardPlayTweets": {
+          "attack": [
+            "New list of people joining the mission. Time to commit the onboarding flow. Let's go.",
+            "Shipped the first big update since funding. Everything is live. Clean deploy."
+          ],
+          "skill": [
+            "That part of the code base was a mess from the early days. Refactored it all morning. So much cleaner now.",
+            "Had to pull back a small change that wasn't right for the new scale. Smart to rollback fast. Lesson learned."
+          ],
+          "power": [
+            "The way users are connecting features together is wild. That organic growth is the best signal.",
+            "Seeing usage spread itself. It's like the product is telling people to bring their friends. Love this."
+          ]
+        }
+      }
+    }
+  ],
+  "summary": {
+    "totalTweets": 224,
+    "totalFloors": 16,
+    "storyPhases": [
+      "PHASE 1 - THE SPARK",
+      "PHASE 2 - THE GRIND",
+      "PHASE 3 - THE DOUBT",
+      "PHASE 4 - THE BREAKTHROUGH",
+      "PHASE 5 - THE CLIMAX"
+    ]
+  }
+}

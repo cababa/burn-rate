@@ -4,7 +4,7 @@
  * Verifies: damage, block, effect activation, execution order, buffs, debuffs
  * 
  * Categories:
- * - Starter (3): Commit, Rollback, Hotfix  
+ * - Starter (3): Commit, Stay Focused, Hotfix
  * - Common Attacks (14): Quick Fix, Brute Force, Sprint Plan, Risk Mitigation, Ship It!, 
  *                        Batch Deploy, Cherry Pick, Dual Track, Compounding, YOLO Deploy, 
  *                        Shotgun Debug, Pair Prog, Tech Shortcut, Leverage
@@ -147,19 +147,19 @@ function testStarterCards() {
             `Card not in discard pile`);
     }
 
-    // Test Rollback (Defend equivalent)
+    // Test Stay Focused (Defend equivalent)
     {
         let state = createTestState();
         state.enemies = [createTestEnemy(50)];
-        const card = { ...GAME_DATA.cards.cto_rollback, id: 'test_rollback' };
+        const card = { ...GAME_DATA.cards.cto_stay_focused, id: 'test_stay_focused' };
         state.hand = [card];
         state.playerStats.bandwidth = 3;
 
         state = resolveCardEffect(state, card, 'enemy', state.enemies[0].id);
 
-        test('Rollback grants 5 block', state.playerStats.mitigation === 5,
+        test('Stay Focused grants 5 block', state.playerStats.mitigation === 5,
             `Expected 5, got ${state.playerStats.mitigation}`);
-        test('Rollback costs 1 bandwidth', state.playerStats.bandwidth === 2,
+        test('Stay Focused costs 1 bandwidth', state.playerStats.bandwidth === 2,
             `Expected 2, got ${state.playerStats.bandwidth}`);
     }
 
@@ -889,7 +889,7 @@ function testStatusInteractions() {
     {
         let state = createTestState();
         state.enemies = [createTestEnemy(50)];
-        const card = { ...GAME_DATA.cards.cto_rollback, id: 'test_frail' };
+        const card = { ...GAME_DATA.cards.cto_stay_focused, id: 'test_frail' };
         state.hand = [card];
         state.playerStats.bandwidth = 3;
         state.playerStats.statuses = { ...state.playerStats.statuses, frail: 2 };
@@ -1248,7 +1248,7 @@ function testIroncladMechanics() {
         let state = createTestState();
         state.enemies = [createTestEnemy(40)];
         const fillerA = { ...GAME_DATA.cards.cto_commit, id: 'filler_a' };
-        const fillerB = { ...GAME_DATA.cards.cto_rollback, id: 'filler_b' };
+        const fillerB = { ...GAME_DATA.cards.cto_stay_focused, id: 'filler_b' };
         const fiendFire = { ...GAME_DATA.cards.cto_all_in_pivot, id: 'test_fiend_fire' };
         state.hand = [fiendFire, fillerA, fillerB];
         state.playerStats.bandwidth = 2;

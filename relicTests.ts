@@ -7,7 +7,7 @@
  * - Common (9): sticky_note, opening_move, safety_net, fresh_eyes, fresh_start, 
  *               fallback_position, thick_skin, smart_money, crunch_mode
  * - Uncommon (8): momentum, quick_learner, second_wind, force_multiplier, 
- *                 focus_mode, secret_weapon, growth_mindset, antifragile, market_dominance
+ *                 ship_cadence, secret_weapon, growth_mindset, antifragile, market_dominance
  * - Rare (3): coffee_drip, pressure_cooker, phoenix_protocol, wellness_program
  * - Boss (8): pivoting_power, memory_bank, rate_limiter, cutting_corners, 
  *             no_rest_for_the_bold, aggressive_growth, unicorn_status, data_driven
@@ -385,10 +385,10 @@ function testUncommonRelics() {
             `Expected 1, got ${state.playerStats.statuses.dexterity}`);
     }
 
-    // Test Focus Mode (+4 Block every 3 attacks) - Ornamental Fan equivalent
+    // Test Ship Cadence (+4 Block every 3 attacks) - Ornamental Fan equivalent
     {
         let state = createTestState();
-        state.relics = [{ ...GAME_DATA.relics.focus_mode }];
+        state.relics = [{ ...GAME_DATA.relics.ship_cadence }];
         state.playerStats.mitigation = 0;
 
         // 3 attacks to trigger
@@ -399,7 +399,7 @@ function testUncommonRelics() {
         result = applyOnAttackRelics(state.relics, state.playerStats);
         state.playerStats = result.stats;
 
-        test('Focus Mode grants +4 Mitigation after 3 attacks', state.playerStats.mitigation === 4,
+        test('Ship Cadence grants +4 Mitigation after 3 attacks', state.playerStats.mitigation === 4,
             `Expected 4, got ${state.playerStats.mitigation}`);
     }
 
@@ -768,7 +768,7 @@ function testRelicStacking() {
         state.relics = [
             { ...GAME_DATA.relics.momentum },
             { ...GAME_DATA.relics.quick_learner },
-            { ...GAME_DATA.relics.focus_mode }
+            { ...GAME_DATA.relics.ship_cadence }
         ];
         state.playerStats.statuses = { ...state.playerStats.statuses, strength: 0, dexterity: 0 };
         state.playerStats.mitigation = 0;

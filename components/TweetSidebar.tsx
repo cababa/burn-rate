@@ -25,24 +25,7 @@ export const TweetSidebar: React.FC<TweetSidebarProps> = ({
     startupName
 }) => {
     const [isExpanded, setIsExpanded] = useState(false); // Default collapsed
-    const [autoDismissTimer, setAutoDismissTimer] = useState<number | null>(null);
-
-    // Auto-dismiss current tweet after 4 seconds
-    useEffect(() => {
-        if (currentTweet) {
-            // Clear any existing timer
-            if (autoDismissTimer) {
-                clearTimeout(autoDismissTimer);
-            }
-            // Set new timer
-            const timer = window.setTimeout(() => {
-                onDismissCurrent();
-            }, 4000);
-            setAutoDismissTimer(timer);
-
-            return () => clearTimeout(timer);
-        }
-    }, [currentTweet?.id]);
+    // Tweets no longer auto-dismiss - they update when new tweets are generated
 
     // No tweets yet - show collapsed minimal state
     if (tweets.length === 0 && !currentTweet) {

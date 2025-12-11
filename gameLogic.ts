@@ -40,7 +40,7 @@ export const countCardsMatches = (cards: CardData[], matchString: string): numbe
 export const generateStarterDeck = (): CardData[] => {
     const deck: CardData[] = [];
     for (let i = 0; i < 5; i++) deck.push({ ...GAME_DATA.cards.cto_commit, id: `commit_${i}_${Math.random().toString(36).substr(2, 9)}` });
-    for (let i = 0; i < 4; i++) deck.push({ ...GAME_DATA.cards.cto_rollback, id: `rollback_${i}_${Math.random().toString(36).substr(2, 9)}` });
+    for (let i = 0; i < 4; i++) deck.push({ ...GAME_DATA.cards.cto_stay_focused, id: `stay_focused_${i}_${Math.random().toString(36).substr(2, 9)}` });
     deck.push({ ...GAME_DATA.cards.cto_hotfix, id: `hotfix_${Math.random().toString(36).substr(2, 9)}` });
     return deck;
 };
@@ -291,14 +291,14 @@ export const getSecretWeaponCard = (relics: RelicData[], deck: CardData[]): Card
     if (!secretWeapon) return null;
 
     // If player chose a specific card, use the base card ID to find a matching card in deck
-    // (card.id changes each run, but the base ID like 'cto_rollback' stays the same)
+    // (card.id changes each run, but the base ID like 'cto_stay_focused' stays the same)
     if (secretWeapon.chosenCardId) {
         // First try exact match
         let chosen = deck.find(c => c.id === secretWeapon.chosenCardId);
 
         // If not found, try to find by base card name (same card type)
         if (!chosen) {
-            // Extract base card type from ID (e.g., 'rollback_2_abc123' -> 'rollback')
+            // Extract base card type from ID (e.g., 'stay_focused_2_abc123' -> 'stay_focused')
             const chosenBase = secretWeapon.chosenCardId.split('_')[0];
             chosen = deck.find(c => c.id.startsWith(chosenBase) && c.type === 'skill');
         }
@@ -424,7 +424,7 @@ export const applyOnAttackRelics = (relics: RelicData[], stats: CharacterStats):
                     getGlobalLogger().log('RELIC_EFFECT', `${relic.name} granted ${relic.effect.value} Execution Power.`);
                 }
 
-                // Focus Mode: +4 Block every 3 attacks
+                // Ship Cadence: +4 Block every 3 attacks
                 if (relic.effect.type === 'block_per_attacks') {
                     newStats.mitigation += relic.effect.value || 4;
                     messages.push(`${relic.name}: +${relic.effect.value} Mitigation!`);
