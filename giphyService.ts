@@ -9,6 +9,7 @@
  */
 
 import { CARD_GIF_STATIC_CACHE, getStaticCardGif } from './cardGifCache';
+import CURATED_CARD_GIFS from './curatedCardGifs.json';
 
 const GIPHY_API_KEY = (import.meta as any).env?.VITE_GIPHY_API_KEY || process.env.GIPHY_API_KEY || '';
 const GIPHY_SEARCH_URL = 'https://api.giphy.com/v1/gifs/search';
@@ -47,106 +48,107 @@ const EMOJI_SEARCH_TERMS: Record<string, string> = {
 };
 
 // Card GIF search terms - maps card ID to Giphy search query
+// Strategy: [action] + [emotion] + [style] for dynamic, impactful results
 export const CARD_GIF_SEARCH_TERMS: Record<string, string> = {
     // === STARTER CARDS ===
-    'cto_commit': 'git push deploy code',
-    'cto_stay_focused': 'laser focus concentration',
-    'cto_hotfix': 'firefighter emergency fix',
+    'cto_commit': 'push button epic launch dramatic',
+    'cto_stay_focused': 'laser focus intense concentration zone',
+    'cto_hotfix': 'emergency rush panic typing fast',
 
     // === COMMON ATTACKS ===
-    'cto_quick_fix': 'bandaid quick fix tape',
-    'cto_brute_force': 'hulk smash brute force',
-    'cto_sprint_planning': 'running sprint race fast',
-    'cto_risk_mitigation': 'safety net fall protection',
-    'cto_ship_it': 'rocket launch ship',
-    'cto_leverage': 'leverage lifting heavy',
-    'cto_batch_deploy': 'assembly line mass production',
-    'cto_cherry_pick': 'cherry picking selection',
-    'cto_dual_track': 'multitasking two things',
-    'cto_compounding_commits': 'snowball growing bigger',
-    'cto_yolo_deploy': 'cowboy reckless yolo',
-    'cto_shotgun_debug': 'shotgun spray scatter',
-    'cto_pair_programming': 'teamwork collaboration duo',
-    'cto_tech_shortcut': 'shortcut cutting corners cheat',
-    'cto_all_hands': 'team meeting all hands',
-    'cto_caffeine_boost': 'coffee energy boost caffeine',
-    'cto_ship_and_pray': 'praying fingers crossed hope',
-    'cto_pivot_ready': 'yoga flexible pivot stretch',
-    'cto_standup_notes': 'sticky notes planning board',
+    'cto_quick_fix': 'duct tape slap fix urgent',
+    'cto_brute_force': 'smash power hammer destroy',
+    'cto_sprint_planning': 'race start sprint running fast',
+    'cto_risk_mitigation': 'catch save safety net falling',
+    'cto_ship_it': 'rocket launch liftoff celebration',
+    'cto_leverage': 'lifting heavy power leverage strength',
+    'cto_batch_deploy': 'rapid fire multiple launch automation',
+    'cto_cherry_pick': 'selecting best choosing carefully',
+    'cto_dual_track': 'multitasking juggling two things',
+    'cto_compounding_commits': 'snowball rolling growing bigger momentum',
+    'cto_yolo_deploy': 'yolo diving risky jump crazy',
+    'cto_shotgun_debug': 'spray scatter chaos random firing',
+    'cto_pair_programming': 'high five teamwork duo fist bump',
+    'cto_tech_shortcut': 'cutting corners sneaky shortcut cheat',
+    'cto_all_hands': 'team meeting hands up together',
+    'cto_caffeine_boost': 'coffee power up energy jolt wired',
+    'cto_ship_and_pray': 'crossed fingers hope praying nervous',
+    'cto_pivot_ready': 'flexible twist turning agile pivot',
+    'cto_standup_notes': 'sticky notes board planning organized',
 
     // === COMMON SKILLS ===
-    'cto_refactor': 'cleaning organizing tidy',
-    'cto_tooling': 'tools wrench upgrade equipment',
+    'cto_refactor': 'organizing cleaning satisfying tidy order',
+    'cto_tooling': 'upgrade tools new equipment power up',
 
     // === UNCOMMON ATTACKS ===
-    'cto_root_cause': 'detective magnifying glass investigate',
-    'cto_market_window': 'window opportunity closing time',
-    'cto_viral_loop': 'viral spreading contagious loop',
-    'cto_hackathon': 'hackathon coding marathon pizza',
-    'cto_blitzscaling': 'lightning blitz fast attack',
-    'cto_equity_dilution': 'water dilution pouring mixing',
-    'cto_clean_slate': 'eraser clean slate fresh start',
-    'cto_bootstrapped': 'pulling bootstrap struggle lifting',
-    'cto_viral_growth': 'exponential growth chart rocket',
-    'cto_core_product': 'diamond polishing gem perfect',
+    'cto_root_cause': 'detective eureka discover magnifying glass',
+    'cto_market_window': 'door closing hurry opportunity rush',
+    'cto_viral_loop': 'spreading viral domino effect chain',
+    'cto_hackathon': 'coding pizza marathon intense hacking',
+    'cto_blitzscaling': 'lightning strike fast attack blitz',
+    'cto_equity_dilution': 'water pouring dilution mixing drops',
+    'cto_clean_slate': 'wiping clean fresh start reset',
+    'cto_bootstrapped': 'pulling up struggle lifting bootstrap',
+    'cto_viral_growth': 'exponential rocket chart spike growth',
+    'cto_core_product': 'diamond polishing perfect shiny gem',
 
     // === UNCOMMON SKILLS ===
-    'cto_flow_state': 'meditation zen flow state peaceful',
-    'cto_talent_poach': 'fishing poaching stealing talent',
-    'cto_firewall': 'firewall security protection shield',
-    'cto_bridge_round': 'bridge crossing gap temporary',
-    'cto_market_disruption': 'explosion disruption bomb shockwave',
-    'cto_salary_cut': 'scissors cutting money budget',
-    'cto_technical_bankruptcy': 'bankruptcy papers reset clear',
-    'cto_restructuring': 'reorganizing restructure corporate',
-    'cto_failsafe': 'parachute failsafe backup safety',
-    'cto_double_down': 'double chips betting all in',
-    'cto_paper_valuation': 'money stack paper bills illusion',
-    'cto_push_through': 'pushing heavy struggle effort',
-    'cto_founder_mode': 'founder CEO boss intense working',
-    'cto_ab_test': 'split test comparison ab testing',
-    'cto_wild_pitch': 'wild pitch baseball chaos random',
-    'cto_market_fud': 'scared fear panic fud terror',
+    'cto_flow_state': 'zen meditation peaceful flow calm',
+    'cto_talent_poach': 'recruiting stealing talent headhunting',
+    'cto_firewall': 'shield protection barrier security force field',
+    'cto_bridge_round': 'bridge crossing gap jumping temporary',
+    'cto_market_disruption': 'explosion boom disruption shockwave impact',
+    'cto_salary_cut': 'cutting scissors money budget slash',
+    'cto_technical_bankruptcy': 'reset clear bankruptcy wipe start over',
+    'cto_restructuring': 'reorganizing reshuffling restructure building',
+    'cto_failsafe': 'parachute deploying safety backup landing',
+    'cto_double_down': 'chips pushing betting double down all in',
+    'cto_paper_valuation': 'money stack fake illusion paper wealth',
+    'cto_push_through': 'pushing hard struggle effort breakthrough',
+    'cto_founder_mode': 'boss mode intense ceo working determined',
+    'cto_ab_test': 'split comparison testing science experiment',
+    'cto_wild_pitch': 'wild crazy throwing random chaos pitch',
+    'cto_market_fud': 'scared panic fear terror fud nervous',
 
     // === UNCOMMON POWERS ===
-    'cto_troubleshooting': 'lightbulb idea eureka solving',
-    'cto_lean_ops': 'minimalist lean efficient simple',
-    'cto_caching': 'saving storing cache memory',
-    'cto_code_review': 'reviewing checking inspection approval',
-    'cto_resource_allocation': 'chess strategy planning tactical',
-    'cto_antifragile': 'phoenix rising stronger rebirth',
-    'cto_startup_grind': 'grinding hustle working hard exhausted',
-    'cto_dark_pattern': 'dark shadows sneaky manipulation',
-    'cto_bug_bounty': 'bug catching hunter bounty reward',
+    'cto_troubleshooting': 'lightbulb eureka idea solving aha moment',
+    'cto_lean_ops': 'minimalist efficient lean simple clean',
+    'cto_caching': 'saving storing memory cache data efficient',
+    'cto_code_review': 'approval checkmark thumbs up reviewing',
+    'cto_resource_allocation': 'chess strategy tactical planning smart',
+    'cto_antifragile': 'phoenix rising stronger rebirth level up',
+    'cto_startup_grind': 'hustle grind working late night coffee',
+    'cto_dark_pattern': 'sneaky dark manipulation shadowy trick',
+    'cto_bug_bounty': 'catching hunting bounty reward capturing',
 
     // === RARE ATTACKS ===
-    'cto_acquihire': 'acquisition handshake deal merger',
-    'cto_hostile_takeover': 'hostile takeover corporate aggressive',
-    'cto_crushing_it': 'crushing destroying domination power',
-    'cto_burn_the_boats': 'burning boats fire commitment',
-    'cto_all_in_pivot': 'all in poker chips betting everything',
+    'cto_acquihire': 'handshake deal acquisition power merger',
+    'cto_hostile_takeover': 'takeover aggressive corporate hostile conquest',
+    'cto_crushing_it': 'dominating crushing victory winning power',
+    'cto_burn_the_boats': 'burning fire commitment no retreat',
+    'cto_all_in_pivot': 'all in poker chips pushing dramatic bet',
 
     // === RARE SKILLS ===
-    'cto_10x_engineer': 'superhero programmer 10x engineer genius',
-    'cto_blood_equity': 'blood sacrifice giving everything',
-    'cto_runway_extension': 'airplane runway extension landing',
-    'cto_copy_paste': 'copy paste duplicate clone',
-    'cto_zombie_feature': 'zombie rising undead comeback',
+    'cto_10x_engineer': 'superhero genius coding wizard power',
+    'cto_blood_equity': 'sacrifice giving everything blood sweat',
+    'cto_runway_extension': 'runway landing airplane extending stretch',
+    'cto_copy_paste': 'copy paste duplicate clone copying',
+    'cto_zombie_feature': 'zombie rising undead comeback alive',
 
     // === RARE POWERS ===
-    'cto_network_effects': 'network connections web spreading',
-    'cto_tech_debt': 'credit card debt borrowing interest',
-    'cto_war_chest': 'treasure chest money vault savings',
-    'cto_hypergrowth': 'rocket hypergrowth explosion fast',
-    'cto_crunch_culture': 'exhausted tired crunch overwork burnout',
-    'cto_flywheel': 'flywheel momentum spinning perpetual',
+    'cto_network_effects': 'network spreading connections web viral growth',
+    'cto_tech_debt': 'debt credit card borrowing piling interest',
+    'cto_war_chest': 'treasure chest money vault gold stacking',
+    'cto_hypergrowth': 'rocket explosion hypergrowth fast scaling',
+    'cto_crunch_culture': 'exhausted burnout crunch overwork tired dying',
+    'cto_flywheel': 'spinning momentum flywheel perpetual motion',
 
     // === STATUS CARDS ===
-    'status_legacy_code': 'old dusty ancient computer vintage',
-    'status_bug': 'bug insect crawling software glitch',
-    'status_burnout': 'burnout exhausted fire tired dying',
-    'status_scope_creep': 'octopus tentacles reaching grabbing',
-    'status_context_switch': 'switch changing confusion distraction'
+    'status_legacy_code': 'old dusty vintage ancient computer retro',
+    'status_bug': 'bug glitch error broken computer crash',
+    'status_burnout': 'burnout exhausted fire dying tired drained',
+    'status_scope_creep': 'tentacles grabbing spreading creeping expanding',
+    'status_context_switch': 'confused switching dizzy distracted chaos'
 };
 
 // === CACHE INTERFACES ===
@@ -527,8 +529,15 @@ export async function searchGifByCardId(cardId: string): Promise<string | null> 
 
 /**
  * Get cached card GIF URL (synchronous)
+ * Prioritizes curated GIFs over auto-fetched ones
  */
 export function getCardGif(cardId: string): string | null {
+    // Check curated cache first
+    const curated = getCuratedCardGif(cardId);
+    if (curated) {
+        return curated;
+    }
+    // Fall back to regular cache
     return getStoredCardGifUrl(cardId);
 }
 
@@ -631,4 +640,197 @@ export function getGifCacheStats(): {
         cardMemoryCount: cardMemoryCache.size,
         cardStoredCount: Object.keys(cardStored).length
     };
+}
+
+// === GIF CURATION SYSTEM ===
+
+const CURATED_STORAGE_KEY = 'giphy_curated_cards';
+
+interface CuratedGifCache {
+    [cardId: string]: {
+        url: string;
+        timestamp: number;
+    };
+}
+
+function loadCuratedCache(): CuratedGifCache {
+    try {
+        const stored = localStorage.getItem(CURATED_STORAGE_KEY);
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch (error) {
+        console.warn('[GiphyService] Error loading curated cache:', error);
+    }
+    return {};
+}
+
+function saveCuratedCache(cache: CuratedGifCache): void {
+    try {
+        localStorage.setItem(CURATED_STORAGE_KEY, JSON.stringify(cache));
+    } catch (error) {
+        console.warn('[GiphyService] Error saving curated cache:', error);
+    }
+}
+
+/**
+ * Search for multiple GIFs for a card (for curation UI)
+ * Returns array of GIF URLs
+ */
+export async function searchMultipleGifsForCard(cardId: string, limit: number = 12): Promise<string[]> {
+    const searchTerm = CARD_GIF_SEARCH_TERMS[cardId];
+    if (!searchTerm) {
+        console.warn(`[GiphyService] No search term for card: ${cardId}`);
+        return [];
+    }
+
+    if (!GIPHY_API_KEY) {
+        console.warn('[GiphyService] No API key available for curation search');
+        return [];
+    }
+
+    try {
+        const params = new URLSearchParams({
+            api_key: GIPHY_API_KEY,
+            q: searchTerm,
+            limit: String(limit),
+            rating: 'pg-13',
+            lang: 'en'
+        });
+
+        const response = await fetch(`${GIPHY_SEARCH_URL}?${params}`);
+        if (!response.ok) {
+            throw new Error(`Giphy API error: ${response.status}`);
+        }
+
+        const data: GiphySearchResponse = await response.json();
+        const urls = data.data.map(gif => gif.images.fixed_width.url);
+        console.log(`[GiphyService] Found ${urls.length} GIFs for curation of "${cardId}"`);
+        return urls;
+    } catch (error) {
+        console.error('[GiphyService] Curation search failed:', error);
+        return [];
+    }
+}
+
+/**
+ * Search GIFs by custom term (for user-defined searches in curation UI)
+ */
+export async function searchGifsByCustomTerm(searchTerm: string, limit: number = 12): Promise<string[]> {
+    if (!searchTerm.trim()) {
+        return [];
+    }
+
+    if (!GIPHY_API_KEY) {
+        console.warn('[GiphyService] No API key available for custom search');
+        return [];
+    }
+
+    try {
+        const params = new URLSearchParams({
+            api_key: GIPHY_API_KEY,
+            q: searchTerm,
+            limit: String(limit),
+            rating: 'pg-13',
+            lang: 'en'
+        });
+
+        const response = await fetch(`${GIPHY_SEARCH_URL}?${params}`);
+        if (!response.ok) {
+            throw new Error(`Giphy API error: ${response.status}`);
+        }
+
+        const data: GiphySearchResponse = await response.json();
+        const urls = data.data.map(gif => gif.images.fixed_width.url);
+        console.log(`[GiphyService] Custom search found ${urls.length} GIFs for "${searchTerm}"`);
+        return urls;
+    } catch (error) {
+        console.error('[GiphyService] Custom search failed:', error);
+        return [];
+    }
+}
+
+/**
+ * Set a curated GIF for a card (user's choice)
+ */
+export function setCuratedCardGif(cardId: string, url: string): void {
+    const cache = loadCuratedCache();
+    cache[cardId] = {
+        url,
+        timestamp: Date.now()
+    };
+    saveCuratedCache(cache);
+    // Also update the regular card cache so it's used immediately
+    cardMemoryCache.set(cardId, url);
+    console.log(`[GiphyService] Curated GIF set for "${cardId}"`);
+}
+
+/**
+ * Get curated GIF for a card (returns null if not curated)
+ * Checks localStorage first, then falls back to persistent JSON file
+ */
+export function getCuratedCardGif(cardId: string): string | null {
+    // Check localStorage first (user's session overrides)
+    const cache = loadCuratedCache();
+    if (cache[cardId]?.url) {
+        return cache[cardId].url;
+    }
+    // Fall back to persistent JSON file (committed to git)
+    return (CURATED_CARD_GIFS as Record<string, string>)[cardId] || null;
+}
+
+/**
+ * Check if a card has a curated GIF
+ */
+export function isCardCurated(cardId: string): boolean {
+    const cache = loadCuratedCache();
+    return !!cache[cardId] || !!(CURATED_CARD_GIFS as Record<string, string>)[cardId];
+}
+
+/**
+ * Get all curated card GIFs (for export)
+ */
+export function getAllCuratedGifs(): Record<string, string> {
+    const cache = loadCuratedCache();
+    const result: Record<string, string> = {};
+    for (const [cardId, data] of Object.entries(cache)) {
+        result[cardId] = data.url;
+    }
+    return result;
+}
+
+/**
+ * Import curated GIFs from JSON
+ */
+export function importCuratedGifs(gifs: Record<string, string>): number {
+    const cache = loadCuratedCache();
+    let count = 0;
+    for (const [cardId, url] of Object.entries(gifs)) {
+        cache[cardId] = { url, timestamp: Date.now() };
+        cardMemoryCache.set(cardId, url);
+        count++;
+    }
+    saveCuratedCache(cache);
+    console.log(`[GiphyService] Imported ${count} curated GIFs`);
+    return count;
+}
+
+/**
+ * Clear all curated GIFs
+ */
+export function clearCuratedGifs(): void {
+    try {
+        localStorage.removeItem(CURATED_STORAGE_KEY);
+        console.log('[GiphyService] Curated cache cleared');
+    } catch (error) {
+        console.warn('[GiphyService] Error clearing curated cache:', error);
+    }
+}
+
+/**
+ * Get curated count
+ */
+export function getCuratedCount(): number {
+    const cache = loadCuratedCache();
+    return Object.keys(cache).length;
 }

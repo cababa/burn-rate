@@ -5,7 +5,7 @@ import { MapScreen } from './components/MapScreen';
 import { DeckViewer } from './components/DeckViewer';
 import { GAME_DATA, MAX_HAND_SIZE, ACT1_EVENTS, generateBlessingOptions } from './constants';
 import { CardData, GameState, EnemyIntent, MapLayer, MapNode, CharacterStats, RelicData, EntityStatus, EnemyData, CardEffect, EventData, EventChoice, EventEffect, PotionData, NeowBlessing } from './types';
-import { Battery, DollarSign, CheckCircle2, AlertOctagon, RefreshCw, Play, Layers, Archive, Gift, ArrowRight, Coffee, Hammer, Store, Trash2, Gem, Wrench, FastForward, Heart, Plus, Bug, Ghost, Rocket, Lock, User, Briefcase, ChevronRight, Zap, X, HelpCircle, Shuffle, Hash } from 'lucide-react';
+import { Battery, DollarSign, CheckCircle2, AlertOctagon, RefreshCw, Play, Layers, Archive, Gift, ArrowRight, Coffee, Hammer, Store, Trash2, Gem, Wrench, FastForward, Heart, Plus, Bug, Ghost, Rocket, Lock, User, Briefcase, ChevronRight, Zap, X, HelpCircle, Shuffle, Hash, BookOpen } from 'lucide-react';
 import {
     calculateDamage, countCardsMatches, generateStarterDeck, getRandomRewardCards, shuffle, drawCards, drawCardsWithInnate, upgradeCard,
     applyCombatStartRelics, applyCombatEndRelics, getTurnStartBandwidth, generateMap, resolveCardEffect, resolveEnemyTurn, resolveEndTurn, processDrawnCards,
@@ -66,7 +66,7 @@ import {
 } from './progressiveNarrativeService';
 import { useEnemyGifs } from './useEnemyGifs';
 import { useCardGifs } from './useCardGifs';
-import { prefetchCardGifs } from './giphyService';
+import { prefetchCardGifs, searchMultipleGifsForCard, searchGifsByCustomTerm, setCuratedCardGif, isCardCurated, getCuratedCount, CARD_GIF_SEARCH_TERMS } from './giphyService';
 
 const App: React.FC = () => {
     // --- Game State Initialization ---
@@ -102,6 +102,10 @@ const App: React.FC = () => {
 
     const [viewingDeckForUpgrade, setViewingDeckForUpgrade] = useState(false);
     const [showDevPanel, setShowDevPanel] = useState(false);
+    const [showCardCompendium, setShowCardCompendium] = useState(false);
+    const [curateMode, setCurateMode] = useState(false);
+    const [curatingCard, setCuratingCard] = useState<{ cardId: string; options: string[]; loading: boolean } | null>(null);
+    const [curatedGifs, setCuratedGifs] = useState<Record<string, string>>({});
 
     // Deck/pile viewer modal state
     const [viewingPile, setViewingPile] = useState<'deck' | 'draw' | 'discard' | 'exhaust' | 'remove' | null>(null);
@@ -1918,14 +1922,233 @@ const App: React.FC = () => {
                         A roguelite deckbuilder where your health is your runway. Survive the market, defeat technical debt, and reach the IPO.
                     </p>
 
-                    <button
-                        onClick={() => setGameState(prev => ({ ...prev, status: 'CHARACTER_SELECT' }))}
-                        className="group relative px-8 py-4 bg-primary text-black font-bold font-mono text-lg uppercase tracking-wider rounded-sm hover:bg-white hover:scale-105 transition-all duration-200 shadow-[0_0_20px_rgba(0,255,136,0.4)]"
-                    >
-                        Initialize Startup
-                        <div className="absolute inset-0 border-2 border-white/20 rounded-sm scale-105 opacity-0 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300"></div>
-                    </button>
+                    <div className="flex flex-col gap-4">
+                        <button
+                            onClick={() => setGameState(prev => ({ ...prev, status: 'CHARACTER_SELECT' }))}
+                            className="group relative px-8 py-4 bg-primary text-black font-bold font-mono text-lg uppercase tracking-wider rounded-sm hover:bg-white hover:scale-105 transition-all duration-200 shadow-[0_0_20px_rgba(0,255,136,0.4)]"
+                        >
+                            Initialize Startup
+                            <div className="absolute inset-0 border-2 border-white/20 rounded-sm scale-105 opacity-0 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300"></div>
+                        </button>
+                        <button
+                            onClick={() => setShowCardCompendium(true)}
+                            className="group relative px-6 py-3 bg-gray-800 border border-gray-600 text-gray-300 font-mono text-sm uppercase tracking-wider rounded-sm hover:bg-gray-700 hover:text-white hover:border-primary/50 transition-all duration-200 flex items-center justify-center gap-2"
+                        >
+                            <BookOpen size={18} />
+                            Card Compendium
+                        </button>
+                    </div>
                 </div>
+
+                {/* Card Compendium Modal - rendered inside MENU so it shows */}
+                {showCardCompendium && (
+                    <div className="fixed inset-0 z-[100] bg-black/98 flex flex-col">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-6 border-b border-gray-700">
+                            <div className="flex items-center gap-3">
+                                <BookOpen size={28} className="text-primary" />
+                                <h2 className="text-2xl font-display font-bold text-white">Card Compendium</h2>
+                                <span className="text-gray-500 font-mono text-sm">
+                                    ({Object.keys(GAME_DATA.cards).length} cards)
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                {/* Curate Mode Toggle */}
+                                <button
+                                    onClick={() => setCurateMode(!curateMode)}
+                                    className={`px-4 py-2 rounded-lg font-mono text-sm transition-all flex items-center gap-2 ${curateMode
+                                        ? 'bg-primary text-black'
+                                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                        }`}
+                                >
+                                    🎨 Curate Mode {curateMode ? 'ON' : 'OFF'}
+                                    {getCuratedCount() > 0 && (
+                                        <span className="bg-black/30 px-2 py-0.5 rounded text-xs">
+                                            {getCuratedCount()} curated
+                                        </span>
+                                    )}
+                                </button>
+                                <button
+                                    onClick={() => setShowCardCompendium(false)}
+                                    className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                                >
+                                    <X size={24} className="text-gray-400 hover:text-white" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Curate Mode Instructions */}
+                        {curateMode && (
+                            <div className="bg-primary/10 border-b border-primary/30 px-6 py-3 text-center text-primary font-mono text-sm">
+                                🎨 Click any card to choose from 12 GIF alternatives
+                            </div>
+                        )}
+
+                        {/* Scrollable Card Grid */}
+                        <div className="flex-1 overflow-auto p-6">
+                            {/* Group cards by rarity */}
+                            {(['starter', 'common', 'uncommon', 'rare', 'status'] as const).map(rarity => {
+                                const cardsOfRarity = Object.values(GAME_DATA.cards).filter(
+                                    (c: CardData) => c.rarity === rarity || (rarity === 'status' && c.type === 'status')
+                                );
+                                if (cardsOfRarity.length === 0) return null;
+
+                                const rarityColors: Record<string, string> = {
+                                    starter: 'text-gray-400 border-gray-600',
+                                    common: 'text-gray-300 border-gray-500',
+                                    uncommon: 'text-blue-400 border-blue-500/50',
+                                    rare: 'text-yellow-400 border-yellow-500/50',
+                                    status: 'text-red-400 border-red-500/50'
+                                };
+
+                                const rarityLabels: Record<string, string> = {
+                                    starter: '🎯 Starter Cards',
+                                    common: '📦 Common Cards',
+                                    uncommon: '💎 Uncommon Cards',
+                                    rare: '⭐ Rare Cards',
+                                    status: '🐛 Status Cards'
+                                };
+
+                                return (
+                                    <div key={rarity} className="mb-10">
+                                        <h3 className={`text-lg font-display font-bold mb-4 pb-2 border-b ${rarityColors[rarity]}`}>
+                                            {rarityLabels[rarity]}
+                                            <span className="ml-2 text-sm font-mono text-gray-500">
+                                                ({cardsOfRarity.length})
+                                            </span>
+                                        </h3>
+                                        <div className="flex flex-wrap gap-4">
+                                            {cardsOfRarity.map((card: CardData) => (
+                                                <div
+                                                    key={card.id}
+                                                    className={`relative transform hover:scale-105 transition-transform ${curateMode ? 'cursor-pointer' : ''
+                                                        }`}
+                                                    onClick={async () => {
+                                                        if (curateMode) {
+                                                            setCuratingCard({ cardId: card.id, options: [], loading: true });
+                                                            const options = await searchMultipleGifsForCard(card.id, 12);
+                                                            setCuratingCard({ cardId: card.id, options, loading: false });
+                                                        }
+                                                    }}
+                                                >
+                                                    {/* Curated indicator */}
+                                                    {isCardCurated(card.id) && (
+                                                        <div className="absolute -top-2 -right-2 z-10 bg-primary text-black rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+                                                            ✓
+                                                        </div>
+                                                    )}
+                                                    <Card
+                                                        card={card}
+                                                        onDragStart={() => { }}
+                                                        disabled={false}
+                                                        gifUrl={curatedGifs[card.id] || getCardGifUrl(card.id)}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-gray-700 text-center text-gray-500 text-sm font-mono">
+                            {curateMode
+                                ? '🎨 Click cards to curate • Selections are saved automatically'
+                                : 'Hover over cards to see tooltips • GIFs are fetched from Giphy'
+                            }
+                        </div>
+
+                        {/* GIF Picker Modal */}
+                        {curatingCard && (
+                            <div className="fixed inset-0 z-[110] bg-black/90 flex items-center justify-center p-8">
+                                <div className="bg-gray-900 rounded-xl max-w-4xl w-full max-h-[80vh] flex flex-col border border-gray-700">
+                                    <div className="p-4 border-b border-gray-700 flex flex-col gap-3">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-lg font-display font-bold text-white">
+                                                Choose GIF for: {GAME_DATA.cards[curatingCard.cardId as keyof typeof GAME_DATA.cards]?.name || curatingCard.cardId}
+                                            </h3>
+                                            <button
+                                                onClick={() => setCuratingCard(null)}
+                                                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                                            >
+                                                <X size={20} className="text-gray-400 hover:text-white" />
+                                            </button>
+                                        </div>
+                                        {/* Search Bar */}
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                placeholder={`Search Giphy... (default: ${CARD_GIF_SEARCH_TERMS[curatingCard.cardId] || 'no default'})`}
+                                                className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white font-mono text-sm placeholder-gray-500 focus:outline-none focus:border-primary"
+                                                onKeyDown={async (e) => {
+                                                    if (e.key === 'Enter') {
+                                                        const input = e.currentTarget;
+                                                        const term = input.value.trim();
+                                                        if (term) {
+                                                            setCuratingCard(prev => prev ? { ...prev, loading: true } : null);
+                                                            const options = await searchGifsByCustomTerm(term, 12);
+                                                            setCuratingCard(prev => prev ? { ...prev, options, loading: false } : null);
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                            <button
+                                                onClick={async () => {
+                                                    const input = document.querySelector('input[placeholder^="Search Giphy"]') as HTMLInputElement;
+                                                    const term = input?.value.trim();
+                                                    if (term) {
+                                                        setCuratingCard(prev => prev ? { ...prev, loading: true } : null);
+                                                        const options = await searchGifsByCustomTerm(term, 12);
+                                                        setCuratingCard(prev => prev ? { ...prev, options, loading: false } : null);
+                                                    }
+                                                }}
+                                                className="px-4 py-2 bg-primary text-black rounded-lg font-mono text-sm hover:bg-primary/80 transition-colors"
+                                            >
+                                                Search
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 overflow-auto p-4">
+                                        {curatingCard.loading ? (
+                                            <div className="flex items-center justify-center h-40 text-gray-400">
+                                                <RefreshCw className="animate-spin mr-2" size={20} />
+                                                Loading GIF options...
+                                            </div>
+                                        ) : curatingCard.options.length === 0 ? (
+                                            <div className="flex items-center justify-center h-40 text-gray-400">
+                                                No GIFs found for this card
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
+                                                {curatingCard.options.map((url, idx) => (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => {
+                                                            setCuratedCardGif(curatingCard.cardId, url);
+                                                            setCuratedGifs(prev => ({ ...prev, [curatingCard.cardId]: url }));
+                                                            setCuratingCard(null);
+                                                        }}
+                                                        className="relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-all hover:scale-105 bg-gray-800"
+                                                    >
+                                                        <img
+                                                            src={url}
+                                                            alt={`Option ${idx + 1}`}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                        <div className="absolute inset-0 bg-primary/0 hover:bg-primary/20 transition-colors flex items-center justify-center">
+                                                            <span className="opacity-0 hover:opacity-100 text-white font-bold text-2xl drop-shadow-lg">✓</span>
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         );
     }
@@ -3671,6 +3894,83 @@ const App: React.FC = () => {
                     onDismissCurrent={() => setCurrentTweet(null)}
                     startupName={gameState.startupName}
                 />
+            )}
+
+            {/* === CARD COMPENDIUM MODAL === */}
+            {showCardCompendium && (
+                <div className="fixed inset-0 z-[100] bg-black/95 flex flex-col">
+                    {/* Header */}
+                    <div className="flex items-center justify-between p-6 border-b border-gray-700">
+                        <div className="flex items-center gap-3">
+                            <BookOpen size={28} className="text-primary" />
+                            <h2 className="text-2xl font-display font-bold text-white">Card Compendium</h2>
+                            <span className="text-gray-500 font-mono text-sm">
+                                ({Object.keys(GAME_DATA.cards).length} cards)
+                            </span>
+                        </div>
+                        <button
+                            onClick={() => setShowCardCompendium(false)}
+                            className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                        >
+                            <X size={24} className="text-gray-400 hover:text-white" />
+                        </button>
+                    </div>
+
+                    {/* Scrollable Card Grid */}
+                    <div className="flex-1 overflow-auto p-6">
+                        {/* Group cards by rarity */}
+                        {(['starter', 'common', 'uncommon', 'rare', 'status'] as const).map(rarity => {
+                            const cardsOfRarity = Object.values(GAME_DATA.cards).filter(
+                                (c: CardData) => c.rarity === rarity || (rarity === 'status' && c.type === 'status')
+                            );
+                            if (cardsOfRarity.length === 0) return null;
+
+                            const rarityColors: Record<string, string> = {
+                                starter: 'text-gray-400 border-gray-600',
+                                common: 'text-gray-300 border-gray-500',
+                                uncommon: 'text-blue-400 border-blue-500/50',
+                                rare: 'text-yellow-400 border-yellow-500/50',
+                                status: 'text-red-400 border-red-500/50'
+                            };
+
+                            const rarityLabels: Record<string, string> = {
+                                starter: '🎯 Starter Cards',
+                                common: '📦 Common Cards',
+                                uncommon: '💎 Uncommon Cards',
+                                rare: '⭐ Rare Cards',
+                                status: '🐛 Status Cards'
+                            };
+
+                            return (
+                                <div key={rarity} className="mb-10">
+                                    <h3 className={`text-lg font-display font-bold mb-4 pb-2 border-b ${rarityColors[rarity]}`}>
+                                        {rarityLabels[rarity]}
+                                        <span className="ml-2 text-sm font-mono text-gray-500">
+                                            ({cardsOfRarity.length})
+                                        </span>
+                                    </h3>
+                                    <div className="flex flex-wrap gap-4">
+                                        {cardsOfRarity.map((card: CardData) => (
+                                            <div key={card.id} className="transform hover:scale-105 transition-transform">
+                                                <Card
+                                                    card={card}
+                                                    onDragStart={() => { }}
+                                                    disabled={false}
+                                                    gifUrl={getCardGifUrl(card.id)}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="p-4 border-t border-gray-700 text-center text-gray-500 text-sm font-mono">
+                        Hover over cards to see tooltips • GIFs are fetched from Giphy
+                    </div>
+                </div>
             )}
 
             <DevConsole />
