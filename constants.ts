@@ -12,6 +12,7 @@ export const KEYWORD_GLOSSARY: Record<string, { icon: string; color: string; des
     Bandwidth: { icon: "⚡", color: "text-primary", description: "Energy to play cards each turn" },
     Runway: { icon: "💰", color: "text-primary", description: "Your health - reach $0 and you fail" },
     Complexity: { icon: "🎯", color: "text-danger", description: "Enemy health - reduce to 0 to defeat" },
+    Perk: { icon: "🎁", color: "text-purple-400", description: "Permanent bonus that helps throughout your run" },
 
     // Status effects (debuffs)
     Exposed: { icon: "🎯", color: "text-danger", description: "Takes 50% more Execute damage" },
@@ -2774,7 +2775,7 @@ export const FRIENDS_AND_FAMILY_BLESSINGS: NeowBlessing[] = [
         id: 'cousin_hustle',
         category: 'sacrifice',
         giver: 'Hustler Cousin',
-        description: '"This fell off a truck." Gain a random relic, lose 10% max Runway.',
+        description: '"This fell off a truck." Gain a random perk, lose 10% max Runway.',
         icon: '😎',
         effects: [{ type: 'random_relic' }],
         downside: { type: 'max_hp', percent: -10 }
@@ -2812,7 +2813,7 @@ export const FRIENDS_AND_FAMILY_BLESSINGS: NeowBlessing[] = [
         id: 'poker_buddy',
         category: 'gamble',
         giver: 'Poker Buddy',
-        description: '"All in." Swap your starter relic for a random boss relic.',
+        description: '"All in." Swap your starter perk for a random boss perk.',
         icon: '🃏',
         effects: [{ type: 'boss_relic' }]
     },
@@ -2828,7 +2829,7 @@ export const FRIENDS_AND_FAMILY_BLESSINGS: NeowBlessing[] = [
         id: 'neighbor',
         category: 'gamble',
         giver: 'Nosy Neighbor',
-        description: '"What\'s all that racket?" Lose 10 Runway, gain random rare relic.',
+        description: '"What\'s all that racket?" Lose 10 Runway, gain random rare perk.',
         icon: '🏠',
         effects: [{ type: 'random_relic' }],
         downside: { type: 'heal', value: -10 }

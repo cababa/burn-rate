@@ -1,52 +1,37 @@
 // ============================================
-// ENEMY TWEET BUBBLE - Speech Bubble Component
+// FOUNDER TWEET BUBBLE - Speech Bubble Component
 // ============================================
-// Displays a tweet bubble above/near an enemy unit
+// Displays a tweet bubble near the player unit during enemy turn
 
 import React from 'react';
 import { NarrativeTweet } from '../narrativeTypes.ts';
 import { Heart, Repeat2, MessageCircle, X } from 'lucide-react';
 
-interface EnemyTweetBubbleProps {
+interface FounderTweetBubbleProps {
     tweet: NarrativeTweet | null;
     onDismiss?: () => void;
-    position?: 'above' | 'below';
 }
 
 /**
- * Compact tweet bubble that appears above enemies during combat
- * Shows what the enemy is "saying" about your startup
+ * Compact tweet bubble that appears near the player during enemy turn
+ * Shows what the startup is "tweeting" while facing challenges
  */
-export const EnemyTweetBubble: React.FC<EnemyTweetBubbleProps> = ({
+export const FounderTweetBubble: React.FC<FounderTweetBubbleProps> = ({
     tweet,
-    onDismiss,
-    position = 'above'
+    onDismiss
 }) => {
     if (!tweet) return null;
 
-    const borderColor = tweet.isVictory
-        ? 'border-green-500'
-        : tweet.isDefeat
-            ? 'border-red-500'
-            : 'border-orange-500';
-
-    const bgColor = tweet.isVictory
-        ? 'bg-green-950/95'
-        : tweet.isDefeat
-            ? 'bg-red-950/95'
-            : 'bg-gray-900/98';
-
-    const glowColor = tweet.isVictory
-        ? 'shadow-[0_0_20px_rgba(34,197,94,0.3)]'
-        : tweet.isDefeat
-            ? 'shadow-[0_0_20px_rgba(239,68,68,0.3)]'
-            : 'shadow-[0_0_25px_rgba(249,115,22,0.25)]';
+    // Blue color scheme for startup tweets (vs orange for enemies)
+    const borderColor = 'border-blue-500';
+    const bgColor = 'bg-gray-900/98';
+    const glowColor = 'shadow-[0_0_25px_rgba(59,130,246,0.25)]';
 
     return (
         <div
             className={`
                 z-40 w-64
-                animate-tweetBounceIn
+                animate-founderBounceIn
                 flex-shrink-0
             `}
         >
@@ -66,7 +51,7 @@ export const EnemyTweetBubble: React.FC<EnemyTweetBubbleProps> = ({
             >
                 {/* Header */}
                 <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-lg border border-gray-700">
+                    <div className="w-8 h-8 rounded-full bg-blue-900/50 flex items-center justify-center text-lg border border-blue-700">
                         {tweet.avatarEmoji}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -102,15 +87,12 @@ export const EnemyTweetBubble: React.FC<EnemyTweetBubbleProps> = ({
                     <span className="flex items-center gap-1 hover:text-pink-400 transition-colors cursor-pointer">
                         <Heart size={10} /> {tweet.likes}
                     </span>
-                    <span className="ml-auto text-gray-600 text-[9px]">
-                        Click to dismiss
-                    </span>
                 </div>
             </div>
 
             {/* CSS Animation */}
             <style>{`
-                @keyframes tweetBounceIn {
+                @keyframes founderBounceIn {
                     0% {
                         opacity: 0;
                         transform: translateY(10px) scale(0.95);
@@ -123,12 +105,12 @@ export const EnemyTweetBubble: React.FC<EnemyTweetBubbleProps> = ({
                         transform: translateY(0) scale(1);
                     }
                 }
-                .animate-tweetBounceIn {
-                    animation: tweetBounceIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                .animate-founderBounceIn {
+                    animation: founderBounceIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
                 }
             `}</style>
         </div>
     );
 };
 
-export default EnemyTweetBubble;
+export default FounderTweetBubble;

@@ -2972,10 +2972,11 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                     newMessage += ` Upgraded hand.`;
                 }
             } else if (effect.type === 'retrieve_discard') {
+                const selectionCount = effect.value || 1;
                 if (newDiscardPile.length > 0) {
-                    newStatus = 'DISCARD_SELECTION';
-                    newPendingSelection = { context: 'discard_pile', action: 'move_to_draw_pile', count: 1 };
-                    newMessage += ` Select a card from discard.`;
+                    newStatus = 'CARD_SELECTION';
+                    newPendingSelection = { context: 'discard_pile', action: 'move_to_draw_pile', count: selectionCount };
+                    newMessage += ` Select ${selectionCount} card(s) from discard to place on top of your draw pile.`;
                 } else {
                     newMessage += ` Discard is empty.`;
                 }

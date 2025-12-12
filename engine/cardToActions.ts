@@ -318,12 +318,13 @@ function effectToActions(
       }
 
       case 'retrieve_discard': {
+        const count = effect.value || 1;
         const payload: SelectCardsPayload = {
           zone: 'discardPile',
-          count: effect.value || 1,
+          count,
           kind: 'retrieve',
           filterType: 'any',
-          message: `Choose ${effect.value || 1} card(s) to return to hand`,
+          message: `Choose ${count} card(s) to place on top of your draw pile`,
         };
         actions.push({ type: 'SELECT_CARDS', payload, source });
         break;

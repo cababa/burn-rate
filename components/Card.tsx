@@ -10,9 +10,10 @@ interface CardProps {
   onDragStart: (e: React.DragEvent, card: CardData) => void;
   disabled?: boolean;
   selectable?: boolean;
+  gifUrl?: string | null;  // Optional GIF URL for card art
 }
 
-export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selectable }) => {
+export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selectable, gifUrl }) => {
 
   // If selectable, treat as interactive even if unplayable (e.g. for discard selection)
   const isPlayable = (!card.unplayable || selectable) && !disabled;
@@ -147,9 +148,18 @@ export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selecta
         flex-1 flex items-center justify-center rounded border mb-3 overflow-hidden shadow-inner transition-colors duration-150 relative
         ${!isPlayable ? 'bg-black/10 border-white/5' : 'bg-black/20 border-white/5 group-hover:bg-black/30'}
       `}>
-        <div className={`text-5xl transform transition-transform duration-150 drop-shadow-lg ${isPlayable && 'group-hover:scale-110'}`}>
-          {card.icon}
-        </div>
+        {gifUrl ? (
+          <img
+            src={gifUrl}
+            alt={card.name}
+            className={`w-full h-full object-cover transform transition-transform duration-150 ${isPlayable && 'group-hover:scale-110'}`}
+            loading="lazy"
+          />
+        ) : (
+          <div className={`text-5xl transform transition-transform duration-150 drop-shadow-lg ${isPlayable && 'group-hover:scale-110'}`}>
+            {card.icon}
+          </div>
+        )}
         {card.exhaust && (
           <div className="absolute bottom-0 right-0 bg-black/80 text-[8px] uppercase font-bold text-gray-400 px-1 py-0.5 rounded-tl border-t border-l border-white/10">
             Archive

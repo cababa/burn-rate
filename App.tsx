@@ -24,6 +24,7 @@ import { TimelineModal } from './components/TimelineModal';
 import { TweetSidebar } from './components/TweetSidebar';
 import { ApproachTweetOverlay } from './components/ApproachTweetOverlay';
 import { EnemyTweetBubble } from './components/EnemyTweetBubble';
+import { FounderTweetBubble } from './components/FounderTweetBubble';
 import {
     NarrativeTweet,
     ActNarrative,
@@ -54,6 +55,7 @@ import {
     getEnemyIntentTweet,
     getEnemyDefeatTweetProgressive,
     getCardPlayTweet,
+    getFounderTurnEndTweet,
     getCachedMeso,
     setCachedMeso,
     createFallbackMacro,
@@ -63,6 +65,8 @@ import {
     setGeminiApiKey as setProgressiveApiKey
 } from './progressiveNarrativeService';
 import { useEnemyGifs } from './useEnemyGifs';
+import { useCardGifs } from './useCardGifs';
+import { prefetchCardGifs } from './giphyService';
 
 const App: React.FC = () => {
     // --- Game State Initialization ---
@@ -125,12 +129,21 @@ const App: React.FC = () => {
     const [useProgressiveNarrative, setUseProgressiveNarrative] = useState(true); // Feature flag
     const [showApproachOverlay, setShowApproachOverlay] = useState(false); // Combat start overlay
     const [victoryPhase, setVictoryPhase] = useState<'tweet' | 'rewards'>('tweet'); // Victory screen phase
+    const [founderTweet, setFounderTweet] = useState<NarrativeTweet | null>(null); // Founder tweet on turn end
 
     // === GIPHY GIF SYSTEM ===
     const { gifUrls: enemyGifUrls, isLoading: gifsLoading } = useEnemyGifs({
         enemies: gameState.enemies.map(e => ({ id: e.id, emoji: e.emoji })),
         enabled: gameState.status === 'PLAYING' || gameState.status === 'ENEMY_TURN' || gameState.status === 'VICTORY'
     });
+
+    // Card GIFs - pre-fetched on game start, 1:1 static mapping
+    const { getGifUrl: getCardGifUrl, isReady: cardGifsReady } = useCardGifs({ enabled: true });
+
+    // Pre-fetch card GIFs on app mount
+    useEffect(() => {
+        prefetchCardGifs();
+    }, []);
 
     // Startup input form state
     const [startupNameInput, setStartupNameInput] = useState('');
@@ -387,6 +400,23 @@ const App: React.FC = () => {
         }
     }, [gameState.status]);
 
+    // === FOUNDER TURN-END TWEET ===
+    // Display a founder tweet when player ends turn and status becomes ENEMY_TURN
+    useEffect(() => {
+        if (gameState.status === 'ENEMY_TURN' && currentMeso) {
+            const tweet = getFounderTurnEndTweet(currentMeso);
+            if (tweet) {
+                console.log('[Progressive] 💬 Founder turn-end tweet:', tweet.content);
+                setFounderTweet(tweet);
+                setTweetHistory(hist => {
+                    const isDup = hist.some(t => t.content === tweet.content);
+                    return isDup ? hist : [...hist, tweet];
+                });
+            }
+        }
+        // Note: We don't clear on PLAYING - tweet persists until dismissed or next turn end
+    }, [gameState.status, currentMeso]);
+
     // === PRE-GENERATE MESO FOR NEXT NODES ===
     // Triggered during player "idle" states: VICTORY, EVENT, VENDOR
     // This ensures narratives are cached and ready before the player enters the next node
@@ -457,12 +487,14 @@ const App: React.FC = () => {
 
         console.log('[Progressive] 🔮 Pre-generating MESO for', nodesWithFloor.length, 'next nodes during', gameState.status);
 
-        // Prepare deck cards for contextual tweet generation
-        const deckCards = (gameState.deck || []).map(c => ({
-            name: c.name,
-            type: c.type,
-            description: c.description
-        }));
+        // Prepare deck cards for contextual tweet generation (filter out starter cards to reduce noise)
+        const deckCards = (gameState.deck || [])
+            .filter(c => c.rarity !== 'starter')
+            .map(c => ({
+                name: c.name,
+                type: c.type,
+                description: c.description
+            }));
 
         generateNextPathNarratives(context, macroNarrative, nodesWithFloor, gameState.map, getEnemiesForNode, deckCards)
             .then(mesos => console.log('[Progressive] ✅ Pre-generated', mesos.length, 'MESO narratives'))
@@ -522,6 +554,13 @@ const App: React.FC = () => {
         const nodesToPregen = firstFloorNodes.slice(0, 2);
         let completedCount = 0;
 
+        // Prepare deck cards for contextual tweet generation (full starter deck for first battle)
+        const deckCards = (gameState.deck || []).map(c => ({
+            name: c.name,
+            type: c.type,
+            description: c.description
+        }));
+
         for (const node of nodesToPregen) {
             const nodeStartTime = Date.now();
             console.log(`[Progressive] 🎯 BLESSING PREGEN: Starting for node ${node.id} (${node.type})`);
@@ -530,7 +569,7 @@ const App: React.FC = () => {
             const nextNodes = getConnectedNodes(gameState.map, { floor: 1, nodeId: node.id })
                 .map(n => ({ id: n.id, type: n.type }));
 
-            generateMesoNarrative(context, macroNarrative, node.id, 1, node.type, enemies, nextNodes)
+            generateMesoNarrative(context, macroNarrative, node.id, 1, node.type, enemies, nextNodes, deckCards)
                 .then(() => {
                     completedCount++;
                     const nodeElapsed = Date.now() - nodeStartTime;
@@ -545,7 +584,7 @@ const App: React.FC = () => {
                     console.error(`[Progressive] ❌ BLESSING PREGEN FAILED for ${node.id}:`, err);
                 });
         }
-    }, [gameState.status, macroNarrative, gameState.map, gameState.startupName, gameState.startupOneLiner]);
+    }, [gameState.status, macroNarrative, gameState.map, gameState.startupName, gameState.startupOneLiner, gameState.deck]);
 
     // --- START GAME LOGIC ---
 
@@ -676,6 +715,17 @@ const App: React.FC = () => {
         }));
     };
 
+    // Clone cards before combat so per-combat fields (e.g., rampage stacks) don't leak across fights
+    const sanitizeCardForCombat = (card: CardData): CardData => {
+        const clone: CardData = { ...card };
+        delete (clone as any).rampageBonus;
+        return clone;
+    };
+
+    const buildCombatDeck = (deck: CardData[], extras: CardData[] = []) => {
+        return [...deck, ...extras].map(sanitizeCardForCombat);
+    };
+
     const devSpawnLegacy = () => {
         setGameState(prev => {
             const floorScaling = (prev.floor - 1) * 10;
@@ -690,7 +740,8 @@ const App: React.FC = () => {
             const patch = { ...GAME_DATA.enemies.legacy_patch, id: `legacy_patch_${Date.now()}`, hp: GAME_DATA.enemies.legacy_patch.hp + floorScaling, maxHp: GAME_DATA.enemies.legacy_patch.maxHp + floorScaling, statuses: { ...GAME_DATA.enemies.legacy_patch.statuses }, currentIntent: { type: 'attack', value: 9, icon: 'attack', description: "Beam" } };
 
             // Draw Initial Hand
-            const combatDeck = shuffle([...prev.deck]);
+            const cleanDeck = buildCombatDeck(prev.deck);
+            const combatDeck = shuffle([...cleanDeck]);
             const { drawn, newDraw, newDiscard } = drawCards(combatDeck, [], 5);
 
             const startStatsWithRelics = {
@@ -709,7 +760,8 @@ const App: React.FC = () => {
                 drawPile: processed.drawPile,
                 hand: processed.hand,
                 discardPile: processed.discard,
-                exhaustPile: []
+                exhaustPile: [],
+                deck: cleanDeck
             };
         });
     };
@@ -1113,7 +1165,7 @@ const App: React.FC = () => {
                 ...prev,
                 relics: [...prev.relics, relic],
                 lastVictoryReward: { ...prev.lastVictoryReward, relicCollected: true },
-                message: `Acquired ${relic.name}!`
+                message: `Perk unlocked: ${relic.name}!`
             };
         });
     };
@@ -1298,7 +1350,7 @@ const App: React.FC = () => {
                     map: newMap,
                     relics: [...prev.relics, relic],
                     status: 'MAP',
-                    message: `Funding Round! Found ${relic.name}.`
+                    message: `Funding Round! Unlocked ${relic.name} perk.`
                 };
             }
             if (node.type === 'opportunity') {
@@ -1373,7 +1425,8 @@ const App: React.FC = () => {
         const woundCards = getRelicWoundsToAdd(newState.relics);
 
         // Reset Deck for Combat (including any wound cards from relics)
-        const combatDeck = [...prev.deck, ...woundCards];
+        const cleanDeck = buildCombatDeck(prev.deck);
+        const combatDeck = [...cleanDeck, ...woundCards.map(sanitizeCardForCombat)];
 
         // Draw Initial Hand (using Innate-aware drawing to prioritize innate cards)
         const drawCount = 5;
@@ -1411,7 +1464,8 @@ const App: React.FC = () => {
             drawPile: processed.drawPile,
             hand: processed.hand,
             discardPile: processed.discard,
-            exhaustPile: []
+            exhaustPile: [],
+            deck: cleanDeck
         };
     };
 
@@ -2525,7 +2579,7 @@ const App: React.FC = () => {
                     <div className="flex flex-wrap gap-4 justify-center">
                         {gameState.deck.map((card, index) => (
                             <div key={card.id} onClick={() => !card.upgraded && handleConfirmUpgrade(card)} className={`cursor-pointer ${card.upgraded ? 'opacity-50' : 'hover:scale-105 transition'}`}>
-                                <Card card={card} onDragStart={() => { }} disabled={card.upgraded} />
+                                <Card card={card} onDragStart={() => { }} disabled={card.upgraded} gifUrl={getCardGifUrl(card.id)} />
                             </div>
                         ))}
                     </div>
@@ -2600,7 +2654,7 @@ const App: React.FC = () => {
                                     const canAfford = gameState.playerStats.capital >= cardPrice;
                                     return (
                                         <div key={card.id} className="flex flex-col items-center gap-3">
-                                            <Card card={card} onDragStart={() => { }} disabled={!canAfford} />
+                                            <Card card={card} onDragStart={() => { }} disabled={!canAfford} gifUrl={getCardGifUrl(card.id)} />
                                             <button
                                                 onClick={() => handleBuyCard(card, cardPrice)}
                                                 disabled={!canAfford}
@@ -2827,7 +2881,7 @@ const App: React.FC = () => {
                         <span className="text-gray-400">TURN {gameState.turn}</span>
                     </div>
 
-                    {/* Relic Bar */}
+                    {/* Perk Bar */}
                     <div className="h-6 w-px bg-white/10 mx-2" />
                     <div className="flex items-center gap-2">
                         {gameState.relics.map(relic => (
@@ -2837,6 +2891,7 @@ const App: React.FC = () => {
                                 <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 p-3 bg-gray-900 border border-warning rounded shadow-xl hidden group-hover:block z-50">
                                     <div className="font-bold text-warning mb-1 flex items-center gap-2">
                                         <span>{relic.name}</span>
+                                        <span className="text-[10px] uppercase bg-purple-500/20 px-1 rounded text-purple-300">Perk</span>
                                         <span className="text-[10px] uppercase bg-white/10 px-1 rounded text-gray-400">{relic.rarity}</span>
                                     </div>
                                     <div className="text-xs text-white mb-2">{relic.description}</div>
@@ -2910,32 +2965,45 @@ const App: React.FC = () => {
 
             <main className="flex-1 relative flex flex-col items-center justify-end pt-32 pb-8 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1a1a1a] via-[#0a0a0a] to-[#000000]">
 
-                <div className="w-full max-w-7xl flex justify-between items-center px-4 mt-auto">
+                <div className="w-full max-w-7xl flex justify-between items-end px-4 mt-auto">
 
                     {/* Player Column */}
-                    <div className="flex flex-col gap-4">
-                        <Unit
-                            name={GAME_DATA.character.name}
-                            currentHp={gameState.playerStats.hp}
-                            maxHp={gameState.playerStats.maxHp}
-                            emoji={GAME_DATA.character.emoji}
-                            description={GAME_DATA.character.role}
-                            onDrop={handlePlayerDrop}
-                            isTargetable={gameState.status === 'PLAYING' || gameState.status === 'DISCARD_SELECTION' || gameState.status === 'CARD_SELECTION'}
-                            mitigation={gameState.playerStats.mitigation}
-                            statuses={gameState.playerStats.statuses}
-                        />
+                    <div className="flex flex-col items-center">
+                        {/* Founder Tweet Bubble - rendered above player */}
+                        {founderTweet && gameState.status !== 'GAME_OVER' && (
+                            <div className="flex flex-row justify-center mb-4">
+                                <FounderTweetBubble
+                                    tweet={founderTweet}
+                                    onDismiss={() => setFounderTweet(null)}
+                                />
+                            </div>
+                        )}
 
-                        {/* Terminal Log moved here */}
-                        <div className={`
-                    w-full min-w-[280px] px-4 py-3 rounded-md font-mono text-xs border backdrop-blur-sm transition-all duration-300
-                    ${gameState.status === 'VICTORY' ? 'bg-primary/10 border-primary text-primary' :
-                                gameState.status === 'GAME_OVER' ? 'bg-danger/10 border-danger text-danger' :
-                                    gameState.status === 'ENEMY_TURN' ? 'bg-warning/10 border-warning text-warning' :
-                                        'bg-black/50 border-white/10 text-gray-400'}
-                `}>
-                            <span className="opacity-50 mr-2">{`>_`}</span>
-                            {gameState.message}
+                        {/* Player Unit */}
+                        <div className="flex flex-col gap-4">
+                            <Unit
+                                name={GAME_DATA.character.name}
+                                currentHp={gameState.playerStats.hp}
+                                maxHp={gameState.playerStats.maxHp}
+                                emoji={GAME_DATA.character.emoji}
+                                description={GAME_DATA.character.role}
+                                onDrop={handlePlayerDrop}
+                                isTargetable={gameState.status === 'PLAYING' || gameState.status === 'DISCARD_SELECTION' || gameState.status === 'CARD_SELECTION'}
+                                mitigation={gameState.playerStats.mitigation}
+                                statuses={gameState.playerStats.statuses}
+                            />
+
+                            {/* Terminal Log */}
+                            <div className={`
+                                w-full min-w-[280px] px-4 py-3 rounded-md font-mono text-xs border backdrop-blur-sm transition-all duration-300
+                                ${gameState.status === 'VICTORY' ? 'bg-primary/10 border-primary text-primary' :
+                                    gameState.status === 'GAME_OVER' ? 'bg-danger/10 border-danger text-danger' :
+                                        gameState.status === 'ENEMY_TURN' ? 'bg-warning/10 border-warning text-warning' :
+                                            'bg-black/50 border-white/10 text-gray-400'}
+                            `}>
+                                <span className="opacity-50 mr-2">{`>_`}</span>
+                                {gameState.message}
+                            </div>
                         </div>
                     </div>
 
@@ -2945,49 +3013,68 @@ const App: React.FC = () => {
                         <div className="w-px h-12 bg-white"></div>
                     </div>
 
-                    <div className={`
-                        flex flex-row flex-nowrap justify-center items-end gap-2 w-full transition-all duration-300
-                        ${gameState.enemies.length > 3 ? 'scale-90' : ''}
-                        ${gameState.enemies.length > 4 ? 'scale-75' : ''}
-                    `}>
-                        {gameState.enemies.map((enemy, index) => (
-                            <div key={enemy.id} className="relative">
-                                {/* Tweet Bubble above enemy - only for alive enemies */}
-                                {enemy.hp > 0 && (
-                                    <EnemyTweetBubble
-                                        tweet={enemyTweets[enemy.id] || null}
-                                        onDismiss={() => setEnemyTweets(prev => {
-                                            const next = { ...prev };
-                                            delete next[enemy.id];
-                                            return next;
-                                        })}
-                                        position="above"
+                    {/* Enemies Container with Stacked Tweets */}
+                    <div className="flex flex-col items-center">
+                        {/* Stacked Tweet Bubbles - rendered above all enemies */}
+                        {(() => {
+                            const activeTweets = gameState.enemies
+                                .filter(enemy => enemy.hp > 0 && gameState.status !== 'GAME_OVER' && enemyTweets[enemy.id])
+                                .map(enemy => ({ enemyId: enemy.id, tweet: enemyTweets[enemy.id] }));
+
+                            if (activeTweets.length === 0) return null;
+
+                            return (
+                                <div className="flex flex-row flex-wrap justify-center gap-3 mb-4 max-w-[700px]">
+                                    {activeTweets.map(({ enemyId, tweet }) => (
+                                        <div key={enemyId} className="relative" style={{ position: 'relative' }}>
+                                            <EnemyTweetBubble
+                                                tweet={tweet}
+                                                onDismiss={() => setEnemyTweets(prev => {
+                                                    const next = { ...prev };
+                                                    delete next[enemyId];
+                                                    return next;
+                                                })}
+                                                position="above"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            );
+                        })()}
+
+                        {/* Enemies Row */}
+                        <div className={`
+                            flex flex-row flex-nowrap justify-center items-end gap-2 w-full transition-all duration-300
+                            ${gameState.enemies.length > 3 ? 'scale-90' : ''}
+                            ${gameState.enemies.length > 4 ? 'scale-75' : ''}
+                        `}>
+                            {gameState.enemies.map((enemy, index) => (
+                                <div key={enemy.id} className="relative">
+                                    <Unit
+                                        name={enemy.name}
+                                        currentHp={enemy.hp}
+                                        maxHp={enemy.maxHp}
+                                        emoji={enemy.emoji}
+                                        gifUrl={enemyGifUrls[enemy.id]}
+                                        isEnemy
+                                        intent={enemy.currentIntent}
+                                        statuses={enemy.statuses}
+                                        description={enemy.description}
+                                        onDrop={(card) => handleEnemyDrop(card, enemy.id)}
+                                        isTargetable={gameState.status === 'PLAYING' || !!pendingPotionUse}
+                                        isSelected={gameState.selectedEnemyId === enemy.id || (pendingPotionUse !== null)}
+                                        onClick={() => {
+                                            if (pendingPotionUse) {
+                                                // Using potion targeting mode
+                                                handlePotionTargetEnemy(enemy.id);
+                                            } else {
+                                                setGameState(prev => ({ ...prev, selectedEnemyId: enemy.id }));
+                                            }
+                                        }}
                                     />
-                                )}
-                                <Unit
-                                    name={enemy.name}
-                                    currentHp={enemy.hp}
-                                    maxHp={enemy.maxHp}
-                                    emoji={enemy.emoji}
-                                    gifUrl={enemyGifUrls[enemy.id]}
-                                    isEnemy
-                                    intent={enemy.currentIntent}
-                                    statuses={enemy.statuses}
-                                    description={enemy.description}
-                                    onDrop={(card) => handleEnemyDrop(card, enemy.id)}
-                                    isTargetable={gameState.status === 'PLAYING' || !!pendingPotionUse}
-                                    isSelected={gameState.selectedEnemyId === enemy.id || (pendingPotionUse !== null)}
-                                    onClick={() => {
-                                        if (pendingPotionUse) {
-                                            // Using potion targeting mode
-                                            handlePotionTargetEnemy(enemy.id);
-                                        } else {
-                                            setGameState(prev => ({ ...prev, selectedEnemyId: enemy.id }));
-                                        }
-                                    }}
-                                />
-                            </div>
-                        ))}
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
@@ -3026,7 +3113,7 @@ const App: React.FC = () => {
                                     onClick={() => handleCardSelection(card)}
                                     className="cursor-pointer hover:scale-105 transition-transform duration-150"
                                 >
-                                    <Card card={card} onDragStart={() => { }} disabled={false} selectable />
+                                    <Card card={card} onDragStart={() => { }} disabled={false} selectable gifUrl={getCardGifUrl(card.id)} />
                                 </div>
                             ))}
                             {gameState.discardPile.length === 0 && (
@@ -3067,7 +3154,7 @@ const App: React.FC = () => {
                                     onClick={() => handleCardSelection(card)}
                                     className="cursor-pointer hover:scale-105 transition-transform duration-150"
                                 >
-                                    <Card card={card} onDragStart={() => { }} disabled={false} selectable />
+                                    <Card card={card} onDragStart={() => { }} disabled={false} selectable gifUrl={getCardGifUrl(card.id)} />
                                 </div>
                             ))}
                             {gameState.deck.length === 0 && (
@@ -3219,7 +3306,7 @@ const App: React.FC = () => {
                                                                         onClick={() => handleTakeCard(card)}
                                                                         className="cursor-pointer hover:scale-105 transition-transform duration-150"
                                                                     >
-                                                                        <Card card={card} onDragStart={() => { }} disabled={false} />
+                                                                        <Card card={card} onDragStart={() => { }} disabled={false} gifUrl={getCardGifUrl(card.id)} />
                                                                     </div>
                                                                 ))}
                                                             </div>
@@ -3236,7 +3323,7 @@ const App: React.FC = () => {
                                                 </div>
                                             )}
 
-                                            {/* Relic Reward */}
+                                            {/* Perk Reward */}
                                             {gameState.lastVictoryReward.relic && (
                                                 <div
                                                     onClick={!gameState.lastVictoryReward.relicCollected ? handleTakeRelic : undefined}
@@ -3250,13 +3337,16 @@ const App: React.FC = () => {
                                                             {gameState.lastVictoryReward.relic.icon}
                                                         </div>
                                                         <div className="flex-1 text-left">
-                                                            <div className="text-purple-200 font-bold">{gameState.lastVictoryReward.relic.name}</div>
+                                                            <div className="text-purple-200 font-bold flex items-center gap-2">
+                                                                {gameState.lastVictoryReward.relic.name}
+                                                                <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">Perk</span>
+                                                            </div>
                                                             <div className="text-sm text-gray-400">{gameState.lastVictoryReward.relic.description}</div>
                                                         </div>
                                                         {gameState.lastVictoryReward.relicCollected ? (
-                                                            <span className="text-primary font-mono text-sm">✓ Acquired</span>
+                                                            <span className="text-primary font-mono text-sm">✓ Unlocked</span>
                                                         ) : (
-                                                            <span className="text-purple-400 text-sm font-mono">Click to take</span>
+                                                            <span className="text-purple-400 text-sm font-mono">Click to unlock</span>
                                                         )}
                                                     </div>
                                                 </div>
@@ -3332,7 +3422,7 @@ const App: React.FC = () => {
                                     onClick={() => handleSelectReward(card)}
                                     className="cursor-pointer hover:scale-105 transition-transform duration-150"
                                 >
-                                    <Card card={card} onDragStart={() => { }} disabled={false} />
+                                    <Card card={card} onDragStart={() => { }} disabled={false} gifUrl={getCardGifUrl(card.id)} />
                                 </div>
                             ))}
                         </div>
@@ -3459,6 +3549,7 @@ const App: React.FC = () => {
                                         onDragStart={handleDragStart}
                                         disabled={isDisabled && !isSelectionMode}
                                         selectable={gameState.status === 'DISCARD_SELECTION' || isSelectionMode}
+                                        gifUrl={getCardGifUrl(card.id)}
                                     />
                                 </div>
                             )
@@ -3572,13 +3663,15 @@ const App: React.FC = () => {
             )}
 
             {/* === NARRATIVE SYSTEM UI === */}
-            {/* Tweet Sidebar - collapsible timeline on the right */}
-            <TweetSidebar
-                tweets={tweetHistory}
-                currentTweet={currentTweet}
-                onDismissCurrent={() => setCurrentTweet(null)}
-                startupName={gameState.startupName}
-            />
+            {/* Tweet Sidebar - collapsible timeline on the right (hidden during VICTORY and GAME_OVER) */}
+            {gameState.status !== 'VICTORY' && gameState.status !== 'GAME_OVER' && (
+                <TweetSidebar
+                    tweets={tweetHistory}
+                    currentTweet={currentTweet}
+                    onDismissCurrent={() => setCurrentTweet(null)}
+                    startupName={gameState.startupName}
+                />
+            )}
 
             <DevConsole />
         </div>

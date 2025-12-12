@@ -171,15 +171,12 @@ export interface EnemyIntentTweets {
 
 /**
  * Card type reactions for MICRO layer (included in MESO)
+ * Single tweet per card type - displayed immediately like a Pokemon move
  */
 export interface CardPlayTweets {
-    attack: NarrativeTweet[];         // 2-3 attack card reactions
-    skill: NarrativeTweet[];          // 2-3 skill card reactions
-    power: NarrativeTweet[];          // 2-3 power card reactions
-    // Cycling indices
-    attackIndex: number;
-    skillIndex: number;
-    powerIndex: number;
+    attack: NarrativeTweet;           // Single attack card tweet
+    skill: NarrativeTweet;            // Single skill card tweet
+    power: NarrativeTweet;            // Single power card tweet
 }
 
 /**
@@ -203,6 +200,10 @@ export interface MesoNarrative {
     // Story tweets for this node
     approachTweet: NarrativeTweet;    // Sets up the challenge
     victoryTweet: NarrativeTweet;     // Celebration after winning
+
+    // Founder turn-end tweets (displayed when player ends turn)
+    turnEndTweets: NarrativeTweet[];  // 2-3 tweets for turn end
+    turnEndIndex: number;             // Cycling index
 
     // Per-enemy tweets by enemy ID
     enemyIntentTweets: Record<string, EnemyIntentTweets>;
@@ -326,6 +327,10 @@ export const MESO_SCHEMA = {
     properties: {
         approachTweet: TWEET_SCHEMA,
         victoryTweet: TWEET_SCHEMA,
+        turnEndTweets: {
+            type: "array",
+            items: TWEET_SCHEMA
+        },
         enemyIntentTweets: {
             type: "array",
             items: ENEMY_INTENT_TWEETS_SCHEMA
@@ -333,18 +338,18 @@ export const MESO_SCHEMA = {
         cardPlayTweets: {
             type: "object",
             properties: {
-                attackTweets: { type: "array", items: TWEET_SCHEMA },
-                skillTweets: { type: "array", items: TWEET_SCHEMA },
-                powerTweets: { type: "array", items: TWEET_SCHEMA }
+                attackTweet: TWEET_SCHEMA,
+                skillTweet: TWEET_SCHEMA,
+                powerTweet: TWEET_SCHEMA
             },
-            required: ["attackTweets", "skillTweets", "powerTweets"]
+            required: ["attackTweet", "skillTweet", "powerTweet"]
         },
         pathPreviews: {
             type: "array",
             items: PATH_PREVIEW_SCHEMA
         }
     },
-    required: ["approachTweet", "victoryTweet", "enemyIntentTweets", "cardPlayTweets", "pathPreviews"]
+    required: ["approachTweet", "victoryTweet", "turnEndTweets", "enemyIntentTweets", "cardPlayTweets", "pathPreviews"]
 };
 
 // ============================================

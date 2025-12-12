@@ -82,6 +82,8 @@ const buildMeso = (): MesoNarrative => ({
     nodeType: 'problem',
     approachTweet: makeTweet('Approach'),
     victoryTweet: makeTweet('Victory'),
+    turnEndTweets: [makeTweet('Turn end 1'), makeTweet('Turn end 2')],
+    turnEndIndex: 0,
     enemyIntentTweets: {
         critical_bug: {
             attack: [makeTweet('attack A', 'enemy'), makeTweet('attack B', 'enemy')],
@@ -94,12 +96,9 @@ const buildMeso = (): MesoNarrative => ({
         }
     },
     cardPlayTweets: {
-        attack: [makeTweet('card attack')],
-        skill: [makeTweet('card skill')],
-        power: [makeTweet('card power')],
-        attackIndex: 0,
-        skillIndex: 0,
-        powerIndex: 0
+        attack: makeTweet('card attack'),
+        skill: makeTweet('card skill'),
+        power: makeTweet('card power')
     },
     pathPreviews: [
         { nodeId: 'next_1', teaser: 'Next node teaser', decisionHint: 'Choose carefully' }
@@ -166,6 +165,7 @@ const testMesoCacheDuringPregen = async () => {
     const mesoPayload = {
         approachTweet: makeTweet('approach'),
         victoryTweet: makeTweet('victory'),
+        turnEndTweets: [makeTweet('turn end 1'), makeTweet('turn end 2')],
         enemyIntentTweets: [{
             enemyId: 'minor_bug',
             attackTweets: [makeTweet('attack', 'enemy')],
@@ -174,9 +174,9 @@ const testMesoCacheDuringPregen = async () => {
             defeatTweet: makeTweet('defeat', 'enemy')
         }],
         cardPlayTweets: {
-            attackTweets: [makeTweet('card attack')],
-            skillTweets: [makeTweet('card skill')],
-            powerTweets: [makeTweet('card power')]
+            attackTweet: makeTweet('card attack'),
+            skillTweet: makeTweet('card skill'),
+            powerTweet: makeTweet('card power')
         },
         pathPreviews: [{ nodeId: 'next', teaser: 't', decisionHint: 'h' }]
     };

@@ -101,9 +101,12 @@ export function clearNarrativeCache(): void {
 
 function buildMacroSystemPrompt(role: PlayerRole): string {
     const roleCtx = ROLE_CONTEXT[role];
-    return `You generate authentic Twitter/X content for a startup founder's journey.
+    return `You generate authentic Twitter/X content for a startup's company account.
 
-You're creating tweets for a ${roleCtx.title} building their startup through ACT 1: from naming the startup to closing Seed funding.
+You're creating tweets for a startup run by a ${roleCtx.title} through ACT 1: from naming the startup to closing Seed funding.
+
+IMPORTANT: All tweets come from the STARTUP'S COMPANY ACCOUNT (e.g., @CompanyName), NOT a founder's personal account.
+The founder's voice and personality come through, but it's the COMPANY tweeting.
 
 ═══════════════════════════════════════════════
 ACT 1: THE BEGINNING (Idea → MVP → PMF → Seed)
@@ -112,7 +115,7 @@ ACT 1: THE BEGINNING (Idea → MVP → PMF → Seed)
 THE JOURNEY (16 story moments):
 
 PHASE 1 - THE SPARK (Moments 1-4):
-- You just quit your job and named the startup
+- Just named the startup and started building
 - Writing the first lines of code
 - Building the ugly first prototype
 - Showing it to friends & family
@@ -153,11 +156,12 @@ LANGUAGE RULES:
 - Insider energy without insider words
 
 CRITICAL RULES:
-1. Write like a REAL FOUNDER tweets - casual, authentic, messy
-2. NO hashtags, NO game references, NO jargon
-3. Anyone should understand every word
-4. Celebrate wins - shipping, milestones, traction
-5. Never reference "enemies" or "battles" - just the founder journey`;
+1. Tweets come from @StartupName account - NOT a personal founder account
+2. Voice is authentic and casual - sounds like a founder tweeting from company account
+3. NO hashtags, NO game references, NO jargon
+4. Anyone should understand every word
+5. Celebrate wins - shipping, milestones, traction
+6. Never reference "enemies" or "battles" - just the startup journey`;
 }
 
 function buildMacroUserPrompt(context: StartupContext, role: PlayerRole): string {
@@ -174,18 +178,24 @@ ACT 1: From naming the startup to closing Seed
 
 Generate:
 1. THEME: A catchy phrase for their Act 1 journey
-2. TWITTER HANDLE: Using the startup name
-3. EMOJI: One emoji that represents them
+2. TWITTER HANDLE: @${context.name.toLowerCase().replace(/\s+/g, '')} (company account, NOT founder personal)
+3. EMOJI: One emoji that represents the startup
 4. TONE: One of: scrappy, professional, quirky, serious
-5. INTRO TWEET: The day they named the startup and started building
-6. DEFEAT TWEET: If they ran out of runway before Seed (sad but dignified)
-7. VICTORY TWEET: Seed round closed! MVP works, PMF found, funded!
+5. INTRO TWEET: Day 1 tweet from the company account announcing the startup
+6. DEFEAT TWEET: If they ran out of runway (sad but dignified, from company account)
+7. VICTORY TWEET: Seed round closed! (celebrating, from company account)
 8. STORY BEATS: 16 moments (one-liners for each)
+
+IMPORTANT FOR ALL TWEETS:
+- author field should be "startup" (the company)
+- handle should be @${context.name.toLowerCase().replace(/\s+/g, '')} or similar
+- displayName should be "${context.name}" (the company name)
+- These are COMPANY tweets, not personal founder tweets
 
 STORY BEATS MUST follow the Act 1 journey:
 
 THE SPARK (Moments 1-4) - Naming & First Prototype:
-- "We finally have a name", "Quit the job", "First line of code"
+- "We finally have a name", "Started building", "First line of code"
 - Milestone: ugly prototype exists
 
 THE GRIND (Moments 5-8) - Building MVP:
@@ -565,44 +575,64 @@ function getEmotionalArcDescription(arc: EmotionalArc): string {
 
 function buildMesoSystemPrompt(role: PlayerRole): string {
     const roleCtx = ROLE_CONTEXT[role];
-    return `You generate tweets for a specific MOMENT in a startup founder's journey.
+    return `You generate tweets for a SPECIFIC MOMENT in a startup's story.
 
-THE FOUNDER is a ${roleCtx.title} - but write for EVERYONE to understand.
+Your tweets are NOT generic startup content. They are NARRATIVE MOMENTS that:
+1. A 12-year-old can understand (simple words, clear emotions)
+2. A startup founder will say "that's so real" (authentic, not corporate)
+3. Reference SPECIFIC features, bugs, or milestones for THIS startup
 
-LANGUAGE RULES (CRITICAL):
-- Write so a 12-year-old AND a real CTO both enjoy it
-- NO technical jargon: "the system works" not "the architecture holds"
-- NO infrastructure terms: "it's running" not "the infra is stable"  
-- The ${role.toUpperCase()} flavor comes through ATTITUDE, not vocabulary
-- Insider energy without insider words
+═══════════════════════════════════════════════
+THE GOLDEN RULE:
+═══════════════════════════════════════════════
+If a tweet could work for ANY startup, it's too generic. REWRITE IT.
 
-GOOD EXAMPLES:
-✅ "Pushed the fix. It works. That feeling never gets old."
-✅ "3 AM and we finally figured it out. Sleep can wait."
-✅ "First user said they love it. Best bug report ever."
+❌ GENERIC (reject these):
+- "Commit made. Moving on to the next piece."
+- "Found that weird behavior. Scrubbed it out." 
+- "Ship it anyway."
+- "The grind continues."
 
-BAD EXAMPLES (too technical):
-❌ "Stabilized the DB cluster" → say "Fixed the crash"
-❌ "The architecture is holding" → say "It's working"
-❌ "Deployed to prod" → say "Shipped it"
-❌ "Load balancer screaming" → say "Getting popular fast"
+✅ SPECIFIC (what we want):
+- "The matching algorithm now finds pets based on apartment size. Genius or overkill?"
+- "Users wanted dark mode. Spent 6 hours. It's beautiful. Nobody will notice."
+- "First user signed up. Refreshed 47 times to make sure it wasn't a bot."
+- "The thing where photos wouldn't load? Fixed. The thing where they load sideways? Still broken."
 
-FOR THE FOUNDER'S TWEETS:
-- Authentic, sometimes messy, always real
-- Celebrate shipping and progress - never "defeating" anything
-- Short punchy sentences like texting a friend
+═══════════════════════════════════════════════
+VOICE RULES:
+═══════════════════════════════════════════════
+
+FOR STARTUP TWEETS:
+- Come from the COMPANY ACCOUNT (@CompanyName), not a personal founder handle
+- Voice of a ${roleCtx.title}: ${roleCtx.voice}
+- Short, punchy, like texting a friend or posting at 2 AM
+- Celebrate shipping and building, never "defeating" or "fighting"
+- Show real emotions: exhaustion, excitement, doubt, joy
 
 FOR DOUBTER TWEETS:
 - General skepticism, not personal attacks
-- Sound like random Twitter voices, not supervillains
-- Never @mention the startup
+- NEVER mention the startup by name
+- Sound like random pessimistic Twitter voices commenting on startups generally
+- Simple, kid-friendly language
 
-CRITICAL RULES:
-1. NO hashtags, NO game language, NO jargon
-2. Under 180 characters - punchy and real
-3. A 12-year-old should understand every word
-4. A CTO should nod and think "been there"
-5. Victory = pure celebration, no battle references`;
+═══════════════════════════════════════════════
+STORY CONNECTION:
+═══════════════════════════════════════════════
+Each tweet must tie to the current story beat. You'll be given:
+- SETUP: What's happening right now
+- CONFLICT: What challenge they're facing  
+- RESOLUTION: How it gets resolved
+- STAKES: What's at risk
+
+Your tweets should reflect THIS specific moment, not generic startup vibes.
+
+HARD RULES:
+1. Under 180 characters - punchy
+2. NO hashtags
+3. NO jargon ("deployed to prod" → "it's live")
+4. A smart 12-year-old should get every word
+5. Victory = celebrating what they built, NEVER battle language`;
 }
 
 function buildMesoUserPrompt(
@@ -643,77 +673,132 @@ function buildMesoUserPrompt(
         'climax': 'The big moment, everything on the line'
     }[floorBeat.storyPhase] || 'On the journey';
 
-    return `Generate tweets for this MOMENT in ${context.name}'s journey:
+    // Infer specific features from the startup's one-liner
+    // E.g., "Netflix for serials" -> streaming, episodes, binge-watching
+    const productHint = context.oneLiner.toLowerCase();
+
+    return `Generate tweets for this SPECIFIC MOMENT in ${context.name}'s story:
 
 ═══════════════════════════════════════════════
-THE MOMENT: ${floorBeat.storyBeat}
+THE STARTUP: ${context.name}
+WHAT THEY DO: "${context.oneLiner}"
+═══════════════════════════════════════════════
+
+THIS IS THE STORY RIGHT NOW:
+• SETUP: "${floorBeat.setup}"  
+• CONFLICT: "${floorBeat.conflict}"
+• RESOLUTION: "${floorBeat.resolution}"
+• STAKES: ${floorBeat.stakes}
+
 PHASE: ${phaseLabel}
-MOOD: ${floorBeat.emotionalArc.split('_')[0]} → ${floorBeat.emotionalArc.split('_').pop()}
+MOOD SHIFT: ${floorBeat.emotionalArc.replace(/_/g, ' ')}
+
+═══════════════════════════════════════════════
+THE SECRET SAUCE FOR GREAT TWEETS:
 ═══════════════════════════════════════════════
 
-THE SITUATION:
-📖 What's happening: "${floorBeat.setup}"
-⚡ The challenge: "${floorBeat.conflict}"
-✨ The win: "${floorBeat.resolution}"
+Every tweet must pass these tests:
+1. A 12-YEAR-OLD gets it (no jargon, simple words)
+2. A FOUNDER says "omg that's so real" (authentic emotion)
+3. It mentions something SPECIFIC about building "${context.oneLiner}"
 
-WHAT'S AT STAKE: ${floorBeat.stakes}
+BAD (too generic - could be ANY startup):
+❌ "Commit made. Moving on to the next piece."
+❌ "Found that weird behavior. Fixed it."  
+❌ "Shipping is life."
 
-STARTUP: ${context.name} (${macro.startupHandle})
-FOUNDER ROLE: ${roleCtx.title}
-TOOLS THEY USE: ${uniqueAttacks}, ${uniqueSkills}, ${uniquePowers}
+GOOD (specific to ${context.name} building "${context.oneLiner}"):
+✅ "The matching algorithm finally works. Two rescue dogs just got paired with families." (PetMatch)
+✅ "Payment button exists. Someone please click it." (Any startup)
+✅ "3 AM. The app crashes every time you swipe right. WHY." (Dating app)
+✅ "First user said the search is 'actually useful.' I cried a little."
 
-OBSTACLES/DOUBTERS IN THIS MOMENT:
+═══════════════════════════════════════════════
+GENERATE THESE TWEETS (use ${macro.startupHandle}):
+═══════════════════════════════════════════════
+
+1. APPROACH TWEET - Startup entering this moment
+   Context: "${floorBeat.setup}"
+   
+   REQUIREMENTS:
+   - Mention a SPECIFIC feature related to "${context.oneLiner}"
+   - Match the "${floorBeat.emotionalArc.split('_')[0]}" mood
+   - Under 180 chars
+   
+   Examples for inspiration:
+   - "Login page done. Now I need to build the part where something actually happens."
+   - "The demo looks terrible but it WORKS. Showing investors tomorrow 😬"
+   - "Spent 4 hours making the button the right shade of blue. Worth it."
+
+2. VICTORY TWEET - Celebrating what they shipped
+   Context: "${floorBeat.resolution}"
+   
+   REQUIREMENTS:
+   - Celebrate a SPECIFIC win tied to "${context.oneLiner}"
+   - No "defeated the enemy" language - just pure builder joy
+   - Show what they MADE, not what they "beat"
+   
+   Examples:
+   - "THE NOTIFICATION WORKS. Someone just got matched with a rescue pup! 🐕"
+   - "First real order processed. Money in the bank. We're a real business??"
+   - "Load times under 2 seconds. Users will never know how hard that was."
+
+3. TURN END TWEETS (3 tweets for between-turn moments)
+   Context: While ${context.name} is working through "${floorBeat.conflict}"
+   
+   These show the GRIND of building "${context.oneLiner}":
+   - Reference specific bugs, features, or decisions
+   - Show exhaustion, small wins, or determination
+   - Feel like texts to a friend at 2 AM
+   
+   Examples:
+   - "This database migration is taking forever. Pizza ordered."
+   - "Okay the thing that broke is now un-broken. I think."  
+   - "Users want feature X. I want sleep. Feature X wins."
+   - "Wrote 50 lines. Deleted 49. Progress."
+
+4. OBSTACLE/DOUBTER TWEETS
+   For each obstacle below, generate their "trash talk":
+
 ${obstacleDetails}
-
-═══════════════════════════════════════════════
-GENERATE THESE TWEETS:
-═══════════════════════════════════════════════
-
-1. APPROACH TWEET (founder entering this moment):
-   - Reflects: "${floorBeat.setup}"
-   - Mood: ${floorBeat.emotionalArc.split('_')[0]}
-   - Authentic ${role.toUpperCase()} voice
    
-   ⚠️ MUST mention something CONCRETE they just shipped or are working on:
-   ✅ "Just got the signup flow working. Now for the hard part."
-   ✅ "Payment integration is live. Time to see if anyone actually pays."
-   ✅ "The recommendation engine is finally not terrible. Let's ship it."
-   ❌ NOT vague like "Time to face the challenge" or "Here we go"
-
-2. VICTORY TWEET (founder celebrating the win):
-   - Reflects: "${floorBeat.resolution}"
-   - CELEBRATE a specific feature or milestone shipped
-   - Pure positive energy, no mention of obstacles overcome
-   ✅ "The thing works! First user just completed the whole flow."
-   ✅ "Shipped. It's ugly but it's live."
-   ❌ NOT "Defeated the challenge" or abstract victory language
-
-3. OBSTACLE TWEETS (for each obstacle above):
-   Use the internal ref in your response for matching, but write tweets as GENERAL SKEPTICISM:
-   - 2-3 skeptical tweets (their voice, about startups/founders in general)
-   - 1-2 escalation tweets (doubt growing)
-   - 1-2 undermining tweets (mocking the struggle)
-   - 1 resolution tweet (what the FOUNDER tweets after pushing past this)
+   RULES FOR DOUBTER VOICES:
+   - They can call out ${context.name} or what you're building directly
+   - Sound like sharp, skeptical Twitter voices (specific jabs, not generic)
+   - Simple language a kid would understand
    
-   ⚠️ DOUBTER TWEETS:
-   - Never @mention or name ${context.name} directly
-   - Sound like random skeptical Twitter voices
-   - Examples: "Another app? Sure that'll work", "Founders always underestimate"
-
-4. ACTION TWEETS (when founder uses their tools):
-   - 2 "${uniqueAttacks}" tweets: Celebrating shipping (${roleCtx.cardFlavor})
-   - 2 "${uniqueSkills}" tweets: Celebrating smart moves
-   - 2 "${uniquePowers}" tweets: Celebrating strategic wins
+   Good doubter examples:
+   - "Another app? Sure, because THAT always works out 🙄"
+   - "Founders never think about the boring stuff. Watch."
+   - "I've seen this exact idea fail 12 times. But sure, go off."
    
-   These should feel like BUILD LOG UPDATES:
-   ✅ "Pushed the fix. Clean deploy. 🚀"
-   ✅ "Refactored that mess. So much cleaner now."
-   ❌ NOT "Take that!" or battle language
+   GENERATE PER OBSTACLE:
+   - 3 skeptical tweets (their voice)
+   - 2 escalation tweets (doubt growing)  
+   - 2 undermining tweets (mocking progress)
+   - 1 defeat tweet: what ${macro.startupHandle} tweets when overcoming them
 
-5. TEASERS for what's next (just internal use):
-   - One-liner hints about upcoming challenges
+5. ACTION TWEETS - ONE per card type (shown like a Pokemon move!)
+   These appear IMMEDIATELY when a card is played.
+   Frame as build log updates, NOT battle moves.
+   Keep them SHORT and punchy (under 80 chars ideal).
+   
+   ATTACK tweet (for cards like ${uniqueAttacks}):
+   Example: "Shipped it. 🚀" or "Deploy complete. It works!"
+   
+   SKILL tweet (for cards like ${uniqueSkills}):
+   Example: "Refactored the mess. Tomorrow me will thank today me."
+   
+   POWER tweet (for cards like ${uniquePowers}):
+   Example: "This architecture will save us 100 hours later."
 
-REMEMBER: This is ${phaseLabel.toLowerCase()}. Match the energy!`;
+6. PATH TEASERS (brief hints for next challenges)
+
+CRITICAL REMINDER:
+- EVERY tweet must connect to "${context.oneLiner}"
+- If a tweet could work for any startup, it's too generic - REWRITE IT
+- The story is: ${floorBeat.storyBeat}
+- Stakes: ${floorBeat.stakes}`;
 }
 
 
@@ -981,12 +1066,35 @@ export async function generateMacroNarrative(context: StartupContext, role: Play
 // MESO GENERATION
 // ============================================
 
+const ENEMY_ID_ALIASES: Record<string, string> = {
+    feature_creep: 'fanboy',
+    copycat: 'spaghetti_code',
+    doubter: 'critical_bug',
+    naysayer: 'minor_bug',
+    shortcut: 'quick_hack',
+    shortcut_taker: 'quick_hack',
+    procrastinator: 'tech_debt',
+    old_guard: 'legacy_module',
+    gambler: 'hotfix',
+    firefighter: 'bad_merge',
+    energy_vampire: 'memory_leak',
+    poacher: 'headhunter',
+    gossip: 'bad_merge',
+    politician: 'merge_conflict',
+    yes_man: 'feature_pusher'
+};
+
+function normalizeEnemyId(rawId: string): string {
+    return rawId.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
 function transformMesoResponse(
     raw: any,
     nodeId: string,
     floor: number,
     nodeType: string,
-    enemies: { id: string }[]
+    enemies: { id: string; name?: string }[],
+    context: StartupContext
 ): MesoNarrative {
     // Transform enemy intent tweets
     const enemyIntentTweets: Record<string, EnemyIntentTweets> = {};
@@ -1010,16 +1118,99 @@ function transformMesoResponse(
         };
     }
 
-    console.log('[Progressive] MESO enemy IDs stored:', Object.keys(enemyIntentTweets));
+    // Remap returned pools onto the actual runtime enemy IDs to guarantee a pool per enemy
+    const poolsByNormalized: Record<string, EnemyIntentTweets> = {};
+    for (const [poolId, pool] of Object.entries(enemyIntentTweets)) {
+        const norm = normalizeEnemyId(poolId);
+        const canonical = ENEMY_ID_ALIASES[norm] || norm;
+        poolsByNormalized[canonical] = pool;
+    }
 
-    // Transform card play tweets
+    const startupHandle = `@${context.name.toLowerCase().replace(/\s+/g, '_')}`;
+    const createFallbackEnemyPool = (enemy: { id: string; name?: string }): EnemyIntentTweets => {
+        const personality = getEnemyPersonality(enemy.id);
+        const shortProduct = (context.oneLiner || 'the product').split(' ')[0] || 'the product';
+        const createEnemyTweet = (content: string, likes = 5): NarrativeTweet =>
+            addTweetId({
+                author: 'enemy',
+                handle: personality.handle,
+                displayName: enemy.name || personality.handle.replace('@', ''),
+                avatarEmoji: personality.emoji,
+                content,
+                timestamp: 'just now',
+                likes,
+                retweets: Math.floor(likes / 5),
+                replies: Math.floor(likes / 10)
+            });
+
+        return {
+            attack: [createEnemyTweet(`Still talking about ${shortProduct}? Show me one user.`)],
+            buff: [createEnemyTweet(`Every delay proves me right about ${context.name}.`)],
+            debuff: [createEnemyTweet(`Looks brittle. Rush it and watch it crack.`)],
+            defeat: addTweetId({
+                author: 'startup',
+                handle: startupHandle,
+                displayName: context.name,
+                avatarEmoji: '🚀',
+                content: `Handled that distraction. Back to building ${shortProduct}.`,
+                timestamp: 'just now',
+                likes: 18,
+                retweets: 4,
+                replies: 2
+            }),
+            attackIndex: 0,
+            buffIndex: 0,
+            debuffIndex: 0
+        };
+    };
+
+    const mappedEnemyIntentTweets: Record<string, EnemyIntentTweets> = {};
+    for (const enemy of enemies) {
+        const normId = normalizeEnemyId(enemy.id);
+        const normName = normalizeEnemyId(enemy.name || '');
+        const canonicalId = ENEMY_ID_ALIASES[normId] || normId;
+        const canonicalName = ENEMY_ID_ALIASES[normName] || normName;
+
+        let pool = poolsByNormalized[canonicalId] || poolsByNormalized[canonicalName];
+        if (!pool) {
+            const fuzzyMatch = Object.keys(poolsByNormalized).find(k => k.includes(canonicalId) || canonicalId.includes(k));
+            if (fuzzyMatch) pool = poolsByNormalized[fuzzyMatch];
+        }
+        if (!pool) {
+            console.warn('[Progressive] No tweet pool for enemy:', enemy.id, '| Using fallback pool');
+            pool = createFallbackEnemyPool(enemy);
+        }
+        mappedEnemyIntentTweets[enemy.id] = pool;
+    }
+
+    console.log('[Progressive] MESO enemy IDs stored:', Object.keys(mappedEnemyIntentTweets));
+
+    // Transform card play tweets - single tweet per type (Pokemon move style)
+    // Create fallback tweet helper for when LLM doesn't provide a tweet
+    const fallbackHandle = `@${context.name.toLowerCase().replace(/\s+/g, '_')}`;
+    const createFallbackTweet = (content: string, likes = 8): NarrativeTweet =>
+        addTweetId({
+            author: 'startup',
+            handle: fallbackHandle,
+            displayName: context.name,
+            avatarEmoji: '🚀',
+            content,
+            timestamp: 'just now',
+            likes,
+            retweets: Math.floor(likes / 5),
+            replies: Math.floor(likes / 10)
+        });
+
     const cardPlayTweets: CardPlayTweets = {
-        attack: (raw.cardPlayTweets?.attackTweets || []).map((t: any) => addTweetId({ ...t, timestamp: 'just now' })),
-        skill: (raw.cardPlayTweets?.skillTweets || []).map((t: any) => addTweetId({ ...t, timestamp: 'just now' })),
-        power: (raw.cardPlayTweets?.powerTweets || []).map((t: any) => addTweetId({ ...t, timestamp: 'just now' })),
-        attackIndex: 0,
-        skillIndex: 0,
-        powerIndex: 0
+        attack: raw.cardPlayTweets?.attackTweet
+            ? addTweetId({ ...raw.cardPlayTweets.attackTweet, timestamp: 'just now' })
+            : createFallbackTweet(`Shipped! It's live! 🚀`),
+        skill: raw.cardPlayTweets?.skillTweet
+            ? addTweetId({ ...raw.cardPlayTweets.skillTweet, timestamp: 'just now' })
+            : createFallbackTweet(`Cleaned up the mess. Tomorrow-me will be grateful. 🧹`),
+        power: raw.cardPlayTweets?.powerTweet
+            ? addTweetId({ ...raw.cardPlayTweets.powerTweet, timestamp: 'just now' })
+            : createFallbackTweet(`Built something that'll save us weeks later. Rare W.`)
     };
 
     // Transform path previews
@@ -1028,6 +1219,8 @@ function transformMesoResponse(
         teaser: p.teaser,
         decisionHint: p.decisionHint
     }));
+    // Transform turn-end tweets
+    const turnEndTweets = (raw.turnEndTweets || []).map((t: any) => addTweetId({ ...t, timestamp: 'just now' }));
 
     return {
         nodeId,
@@ -1035,7 +1228,9 @@ function transformMesoResponse(
         nodeType,
         approachTweet: addTweetId({ ...raw.approachTweet, timestamp: 'just now' }),
         victoryTweet: addTweetId({ ...raw.victoryTweet, timestamp: 'just now', isVictory: true }),
-        enemyIntentTweets,
+        turnEndTweets,
+        turnEndIndex: 0,
+        enemyIntentTweets: mappedEnemyIntentTweets,
         cardPlayTweets,
         pathPreviews
     };
@@ -1085,7 +1280,7 @@ export async function generateMesoNarrative(
             MESO_SCHEMA,
             apiKey
         );
-        const meso = transformMesoResponse(raw, nodeId, floor, nodeType, enemies);
+        const meso = transformMesoResponse(raw, nodeId, floor, nodeType, enemies, context);
         setCachedMeso(nodeId, meso);
         console.log('[Progressive] ✅ MESO generated for floor:', floor);
         return meso;
@@ -1270,36 +1465,74 @@ export function createFallbackMeso(
             attack: attackTweets.map(t => createEnemyTweet(t, 5)),
             buff: buffTweets.map(t => createEnemyTweet(t, 6)),
             debuff: debuffTweets.map(t => createEnemyTweet(t, 4)),
-            defeat: createTweet('startup', `Shut down ${enemy.name}! ${context.name} keeps shipping! 💪`, 25),
+            defeat: createTweet('startup', `That's handled. Back to building ${context.oneLiner.split(' ')[0]}... 💪`, 25),
             attackIndex: 0,
             buffIndex: 0,
             debuffIndex: 0
         };
     }
 
+    // Generate phase-specific approach and victory tweets
+    const phaseApproach: Record<string, string> = {
+        'hope': `${floorBeat.setup} Time to see if this actually works.`,
+        'grind': `Deep in the build today. ${floorBeat.conflict.split('.')[0]}.`,
+        'doubt': `${floorBeat.setup} Trying not to panic.`,
+        'breakthrough': `Something's clicking. ${floorBeat.setup}`,
+        'climax': `This is it. ${floorBeat.setup}`
+    };
+
+    const phaseVictory: Record<string, string> = {
+        'hope': `${floorBeat.resolution} First of many! 🚀`,
+        'grind': `${floorBeat.resolution} The grind pays off.`,
+        'doubt': `${floorBeat.resolution} We might actually survive this.`,
+        'breakthrough': `${floorBeat.resolution} It's really happening! 🎉`,
+        'climax': `${floorBeat.resolution} We made it! 🦄`
+    };
+
+    // Generate context-aware turn end tweets
+    const turnEndOptions: Record<string, string[]> = {
+        'hope': [
+            `First version of the ${context.oneLiner.split(' ')[0]} feature is taking shape.`,
+            `Talked to a potential user today. They said "this could be useful." 🎉`,
+            `100 lines of code. Not sure if it's good code. It's code.`
+        ],
+        'grind': [
+            `${floorBeat.conflict.split('.')[0]}. Still at it.`,
+            `Three coffees deep. The bug is still winning.`,
+            `Users want more. Sleep wants more. Building anyway.`
+        ],
+        'doubt': [
+            `Checked the bank account. Didn't help my mood.`,
+            `Is anyone even going to use this? Back to work.`,
+            `${floorBeat.stakes}. No pressure.`
+        ],
+        'breakthrough': [
+            `New users today! Real ones! Not bots!`,
+            `Someone shared us. Organic growth? Is this legal?`,
+            `The graph is going up. Wait, which way is good?`
+        ],
+        'climax': [
+            `Everything's on the line. This is what we built for.`,
+            `Rehearsed the pitch 50 times. Nervous anyway.`,
+            `${floorBeat.stakes}. Let's do this.`
+        ]
+    };
+
+    const phase = floorBeat.storyPhase || 'grind';
+
     return {
         nodeId,
         floor,
         nodeType,
-        approachTweet: createTweet('startup', `${floorBeat.storyBeat}. Time to face this challenge. 💪`, 15),
-        victoryTweet: createTweet('startup', `Another obstacle overcome! ${context.name} is unstoppable! 🚀`, 45),
+        approachTweet: createTweet('startup', phaseApproach[phase] || `Building ${context.oneLiner}. Let's see what today brings.`, 15),
+        victoryTweet: createTweet('startup', phaseVictory[phase] || `Progress! ${context.name} keeps shipping! 🚀`, 45),
+        turnEndTweets: (turnEndOptions[phase] || turnEndOptions['grind']).map(t => createTweet('startup', t, 8)),
+        turnEndIndex: 0,
         enemyIntentTweets,
         cardPlayTweets: {
-            attack: [
-                createTweet('startup', `Take THAT! 💥`, 8),
-                createTweet('startup', `Shipping fast and breaking things! 🚀`, 12),
-            ],
-            skill: [
-                createTweet('startup', `Building up our defenses... 🛡️`, 6),
-                createTweet('startup', `Strategy time. Let's think this through. 🧠`, 9),
-            ],
-            power: [
-                createTweet('startup', `This architecture will pay off! 🏗️`, 11),
-                createTweet('startup', `Long-term plays FTW! 📈`, 14),
-            ],
-            attackIndex: 0,
-            skillIndex: 0,
-            powerIndex: 0
+            attack: createTweet('startup', `Shipped! It's live! 🚀`, 8),
+            skill: createTweet('startup', `Cleaned up the mess. Tomorrow-me will be grateful. 🧹`, 6),
+            power: createTweet('startup', `Built something that'll save us weeks later. Rare W.`, 11)
         },
         pathPreviews: []
     };
@@ -1379,21 +1612,33 @@ export function getEnemyDefeatTweetProgressive(
 }
 
 /**
- * Get card play reaction tweet (cycles)
+ * Get card play reaction tweet - returns the single pre-generated tweet (Pokemon move style)
  */
 export function getCardPlayTweet(
     meso: MesoNarrative,
     cardType: 'attack' | 'skill' | 'power'
 ): NarrativeTweet | null {
-    const pool = meso.cardPlayTweets;
-    const tweets = pool[cardType];
+    const tweet = meso.cardPlayTweets[cardType];
+    if (!tweet) return null;
+
+    // Generate a fresh ID for uniqueness on each call
+    return { ...tweet, id: generateTweetId(), timestamp: 'just now' };
+}
+
+/**
+ * Get founder turn-end tweet (cycles)
+ * Called when player ends their turn, before enemy attacks
+ */
+export function getFounderTurnEndTweet(
+    meso: MesoNarrative
+): NarrativeTweet | null {
+    const tweets = meso.turnEndTweets;
 
     if (!tweets || tweets.length === 0) return null;
 
-    const indexKey = `${cardType}Index` as 'attackIndex' | 'skillIndex' | 'powerIndex';
-    const currentIndex = pool[indexKey];
+    const currentIndex = meso.turnEndIndex;
     const tweet = tweets[currentIndex];
-    pool[indexKey] = (currentIndex + 1) % tweets.length;
+    meso.turnEndIndex = (currentIndex + 1) % tweets.length;
 
     // Generate a fresh ID for uniqueness
     return { ...tweet, id: generateTweetId(), timestamp: 'just now' };

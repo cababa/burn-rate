@@ -1545,7 +1545,7 @@ export class ActionReducer {
         followUpAction = { type: 'DISCARD_SELECTED', payload: { selectedCardIds: [] }, source: action.source };
         break;
       case 'retrieve':
-        followUpAction = { type: 'RETRIEVE_TO_HAND', payload: { selectedCardIds: [], from: zone }, source: action.source };
+        followUpAction = { type: 'PUT_ON_DECK', payload: { selectedCardIds: [], from: zone }, source: action.source };
         break;
       case 'putOnDeck':
         followUpAction = { type: 'PUT_ON_DECK', payload: { selectedCardIds: [], from: zone }, source: action.source };
@@ -1576,9 +1576,7 @@ export class ActionReducer {
     };
 
     // Set legacy state.status for UI compatibility
-    const legacyStatus = zone === 'discardPile' || zone === 'exhaustPile'
-      ? 'DISCARD_SELECTION'
-      : 'CARD_SELECTION';
+    const legacyStatus: GameState['status'] = 'CARD_SELECTION';
 
     // Map zone to context expected by pendingSelection
     const contextMap: Record<string, 'hand' | 'discard_pile' | 'discard' | 'deck'> = {
@@ -1593,7 +1591,7 @@ export class ActionReducer {
     const actionMap: Record<string, 'upgrade' | 'move_to_draw_pile' | 'exhaust' | 'add_to_hand' | 'remove' | 'transform'> = {
       upgrade: 'upgrade',
       exhaust: 'exhaust',
-      retrieve: 'add_to_hand',
+      retrieve: 'move_to_draw_pile',
       putOnDeck: 'move_to_draw_pile',
       discard: 'exhaust', // Close enough for UI purposes
     };

@@ -57,7 +57,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({ map, currentFloor, current
       case 'vendor': return 'Vendor (Shop)';
       case 'elite': return 'Milestone (Elite)';
       case 'opportunity': return 'Opportunity (?)';
-      case 'treasure': return 'Funding Round (Relic)';
+      case 'treasure': return 'Funding Round (Perk)';
       case 'problem': return 'Problem (Combat)';
       default: return 'Unknown';
     }
