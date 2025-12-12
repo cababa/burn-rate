@@ -10,6 +10,7 @@
 
 import { CARD_GIF_STATIC_CACHE, getStaticCardGif } from './cardGifCache';
 import CURATED_CARD_GIFS from './curatedCardGifs.json';
+import CURATED_ENEMY_GIFS from './curatedEnemyGifs.json';
 
 const GIPHY_API_KEY = (import.meta as any).env?.VITE_GIPHY_API_KEY || process.env.GIPHY_API_KEY || '';
 const GIPHY_SEARCH_URL = 'https://api.giphy.com/v1/gifs/search';
@@ -22,7 +23,7 @@ const enemyMemoryCache: Map<string, string[]> = new Map();
 const cardMemoryCache: Map<string, string> = new Map();
 
 // Fallback mapping for specific emojis that might not search well
-const EMOJI_SEARCH_TERMS: Record<string, string> = {
+export const EMOJI_SEARCH_TERMS: Record<string, string> = {
     '📦': 'boxes piling up',
     '🦜': 'parrot copying',
     '🤨': 'suspicious doubt',
@@ -401,9 +402,16 @@ export async function searchGifsByEmoji(emoji: string, count: number = ENEMY_GIF
 
 /**
  * Get a random GIF URL for an emoji (for enemy variety)
+ * Checks curated first, then falls back to stored cache
  * Returns null if no GIFs available
  */
 export function getRandomEnemyGif(emoji: string): string | null {
+    // Check curated first
+    const curated = getCuratedEnemyGif(emoji);
+    if (curated) {
+        return curated;
+    }
+    // Fall back to stored cache
     const urls = getStoredEnemyGifUrls(emoji);
     if (!urls || urls.length === 0) {
         return null;
@@ -833,4 +841,139 @@ export function clearCuratedGifs(): void {
 export function getCuratedCount(): number {
     const cache = loadCuratedCache();
     return Object.keys(cache).length;
+}
+
+// === ENEMY GIF CURATION SYSTEM ===
+
+const CURATED_ENEMY_STORAGE_KEY = 'giphy_curated_enemies';
+
+interface CuratedEnemyGifCache {
+    [emoji: string]: {
+        url: string;
+        timestamp: number;
+    };
+}
+
+function loadCuratedEnemyCache(): CuratedEnemyGifCache {
+    try {
+        const stored = localStorage.getItem(CURATED_ENEMY_STORAGE_KEY);
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch (error) {
+        console.warn('[GiphyService] Error loading curated enemy cache:', error);
+    }
+    return {};
+}
+
+function saveCuratedEnemyCache(cache: CuratedEnemyGifCache): void {
+    try {
+        localStorage.setItem(CURATED_ENEMY_STORAGE_KEY, JSON.stringify(cache));
+    } catch (error) {
+        console.warn('[GiphyService] Error saving curated enemy cache:', error);
+    }
+}
+
+/**
+ * Search for multiple GIFs for an enemy emoji (for curation UI)
+ */
+export async function searchMultipleGifsForEnemy(emoji: string, limit: number = 12): Promise<string[]> {
+    const searchTerm = EMOJI_SEARCH_TERMS[emoji] || emoji;
+
+    if (!GIPHY_API_KEY) {
+        console.warn('[GiphyService] No API key available for enemy curation search');
+        return [];
+    }
+
+    try {
+        const params = new URLSearchParams({
+            api_key: GIPHY_API_KEY,
+            q: searchTerm,
+            limit: String(limit),
+            rating: 'pg-13',
+            lang: 'en'
+        });
+
+        const response = await fetch(`${GIPHY_SEARCH_URL}?${params}`);
+        if (!response.ok) {
+            throw new Error(`Giphy API error: ${response.status}`);
+        }
+
+        const data: GiphySearchResponse = await response.json();
+        const urls = data.data.map(gif => gif.images.fixed_width.url);
+        console.log(`[GiphyService] Found ${urls.length} GIFs for enemy curation "${emoji}"`);
+        return urls;
+    } catch (error) {
+        console.error('[GiphyService] Enemy curation search failed:', error);
+        return [];
+    }
+}
+
+/**
+ * Set a curated GIF for an enemy emoji
+ */
+export function setCuratedEnemyGif(emoji: string, url: string): void {
+    const cache = loadCuratedEnemyCache();
+    cache[emoji] = {
+        url,
+        timestamp: Date.now()
+    };
+    saveCuratedEnemyCache(cache);
+    // Also update the regular enemy cache so it's used immediately
+    enemyMemoryCache.set(emoji, [url]);
+    console.log(`[GiphyService] Curated GIF set for enemy "${emoji}"`);
+}
+
+/**
+ * Get curated GIF for an enemy (returns null if not curated)
+ * Checks localStorage first, then falls back to persistent JSON file
+ */
+export function getCuratedEnemyGif(emoji: string): string | null {
+    // Check localStorage first (user's session overrides)
+    const cache = loadCuratedEnemyCache();
+    if (cache[emoji]?.url) {
+        return cache[emoji].url;
+    }
+    // Fall back to persistent JSON file (committed to git)
+    return (CURATED_ENEMY_GIFS as Record<string, string>)[emoji] || null;
+}
+
+/**
+ * Check if an enemy has a curated GIF
+ */
+export function isEnemyCurated(emoji: string): boolean {
+    const cache = loadCuratedEnemyCache();
+    return !!cache[emoji] || !!(CURATED_ENEMY_GIFS as Record<string, string>)[emoji];
+}
+
+/**
+ * Get curated enemy count
+ */
+export function getCuratedEnemyCount(): number {
+    const cache = loadCuratedEnemyCache();
+    const persistentCount = Object.keys(CURATED_ENEMY_GIFS as Record<string, string>).length;
+    const localCount = Object.keys(cache).length;
+    // Count unique emojis across both
+    const allEmojis = new Set([
+        ...Object.keys(cache),
+        ...Object.keys(CURATED_ENEMY_GIFS as Record<string, string>)
+    ]);
+    return allEmojis.size;
+}
+
+/**
+ * Get all curated enemy GIFs (for export)
+ */
+export function getAllCuratedEnemyGifs(): Record<string, string> {
+    const cache = loadCuratedEnemyCache();
+    const result: Record<string, string> = {};
+    // Start with persistent file
+    for (const [emoji, url] of Object.entries(CURATED_ENEMY_GIFS as Record<string, string>)) {
+        result[emoji] = url;
+    }
+    // Override with localStorage (user's choices)
+    for (const [emoji, data] of Object.entries(cache)) {
+        result[emoji] = data.url;
+    }
+    return result;
 }

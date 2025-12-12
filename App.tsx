@@ -5,7 +5,7 @@ import { MapScreen } from './components/MapScreen';
 import { DeckViewer } from './components/DeckViewer';
 import { GAME_DATA, MAX_HAND_SIZE, ACT1_EVENTS, generateBlessingOptions } from './constants';
 import { CardData, GameState, EnemyIntent, MapLayer, MapNode, CharacterStats, RelicData, EntityStatus, EnemyData, CardEffect, EventData, EventChoice, EventEffect, PotionData, NeowBlessing } from './types';
-import { Battery, DollarSign, CheckCircle2, AlertOctagon, RefreshCw, Play, Layers, Archive, Gift, ArrowRight, Coffee, Hammer, Store, Trash2, Gem, Wrench, FastForward, Heart, Plus, Bug, Ghost, Rocket, Lock, User, Briefcase, ChevronRight, Zap, X, HelpCircle, Shuffle, Hash, BookOpen } from 'lucide-react';
+import { Battery, DollarSign, CheckCircle2, AlertOctagon, RefreshCw, Play, Layers, Archive, Gift, ArrowRight, Coffee, Hammer, Store, Trash2, Gem, Wrench, FastForward, Heart, Plus, Bug, Ghost, Rocket, Lock, User, Briefcase, ChevronRight, Zap, X, HelpCircle, Shuffle, Hash, BookOpen, Skull } from 'lucide-react';
 import {
     calculateDamage, countCardsMatches, generateStarterDeck, getRandomRewardCards, shuffle, drawCards, drawCardsWithInnate, upgradeCard,
     applyCombatStartRelics, applyCombatEndRelics, getTurnStartBandwidth, generateMap, resolveCardEffect, resolveEnemyTurn, resolveEndTurn, processDrawnCards,
@@ -25,6 +25,7 @@ import { TweetSidebar } from './components/TweetSidebar';
 import { ApproachTweetOverlay } from './components/ApproachTweetOverlay';
 import { EnemyTweetBubble } from './components/EnemyTweetBubble';
 import { FounderTweetBubble } from './components/FounderTweetBubble';
+import { PostMortemModal } from './components/PostMortemModal';
 import {
     NarrativeTweet,
     ActNarrative,
@@ -66,7 +67,9 @@ import {
 } from './progressiveNarrativeService';
 import { useEnemyGifs } from './useEnemyGifs';
 import { useCardGifs } from './useCardGifs';
-import { prefetchCardGifs, searchMultipleGifsForCard, searchGifsByCustomTerm, setCuratedCardGif, isCardCurated, getCuratedCount, CARD_GIF_SEARCH_TERMS } from './giphyService';
+import { prefetchCardGifs, searchMultipleGifsForCard, searchGifsByCustomTerm, setCuratedCardGif, isCardCurated, getCuratedCount, CARD_GIF_SEARCH_TERMS, searchMultipleGifsForEnemy, setCuratedEnemyGif, isEnemyCurated, getCuratedEnemyCount, EMOJI_SEARCH_TERMS } from './giphyService';
+import { PostMortemAnalysis, generatePostMortem } from './postMortemService';
+import { getGlobalLogger } from './logger';
 
 const App: React.FC = () => {
     // --- Game State Initialization ---
@@ -103,9 +106,12 @@ const App: React.FC = () => {
     const [viewingDeckForUpgrade, setViewingDeckForUpgrade] = useState(false);
     const [showDevPanel, setShowDevPanel] = useState(false);
     const [showCardCompendium, setShowCardCompendium] = useState(false);
+    const [showEnemyCompendium, setShowEnemyCompendium] = useState(false);
     const [curateMode, setCurateMode] = useState(false);
     const [curatingCard, setCuratingCard] = useState<{ cardId: string; options: string[]; loading: boolean } | null>(null);
+    const [curatingEnemy, setCuratingEnemy] = useState<{ emoji: string; name: string; options: string[]; loading: boolean } | null>(null);
     const [curatedGifs, setCuratedGifs] = useState<Record<string, string>>({});
+    const [curatedEnemyGifs, setCuratedEnemyGifsState] = useState<Record<string, string>>({});
 
     // Deck/pile viewer modal state
     const [viewingPile, setViewingPile] = useState<'deck' | 'draw' | 'discard' | 'exhaust' | 'remove' | null>(null);
@@ -134,6 +140,10 @@ const App: React.FC = () => {
     const [showApproachOverlay, setShowApproachOverlay] = useState(false); // Combat start overlay
     const [victoryPhase, setVictoryPhase] = useState<'tweet' | 'rewards'>('tweet'); // Victory screen phase
     const [founderTweet, setFounderTweet] = useState<NarrativeTweet | null>(null); // Founder tweet on turn end
+
+    // === POST-MORTEM ANALYSIS STATE ===
+    const [postMortemAnalysis, setPostMortemAnalysis] = useState<PostMortemAnalysis | null>(null);
+    const [postMortemLoading, setPostMortemLoading] = useState(false);
 
     // === GIPHY GIF SYSTEM ===
     const { gifUrls: enemyGifUrls, isLoading: gifsLoading } = useEnemyGifs({
@@ -403,6 +413,39 @@ const App: React.FC = () => {
             setVictoryPhase('tweet'); // Start with tweet phase
         }
     }, [gameState.status]);
+
+    // === POST-MORTEM GENERATION ON GAME OVER ===
+    // Generate AI analysis when player's startup fails
+    useEffect(() => {
+        if (gameState.status === 'GAME_OVER' && !postMortemLoading && !postMortemAnalysis) {
+            console.log('[PostMortem] 💀 Game Over detected - generating analysis...');
+            setPostMortemLoading(true);
+
+            // Get game history from logger
+            const gameHistory = getGlobalLogger().toNarrativeText();
+            const startupName = gameState.startupName || 'Startup';
+            const floor = gameState.floor;
+            const oneLiner = gameState.startupOneLiner || 'Building something amazing';
+
+            generatePostMortem(gameHistory, startupName, floor, oneLiner)
+                .then(analysis => {
+                    console.log('[PostMortem] ✅ Analysis ready:', analysis.headline);
+                    setPostMortemAnalysis(analysis);
+                    setPostMortemLoading(false);
+                })
+                .catch(err => {
+                    console.error('[PostMortem] ❌ Generation failed:', err);
+                    setPostMortemLoading(false);
+                });
+        }
+    }, [gameState.status, gameState.floor, gameState.startupName, gameState.startupOneLiner, postMortemLoading, postMortemAnalysis]);
+
+    // Reset post-mortem state when starting new game
+    const resetPostMortemState = () => {
+        setPostMortemAnalysis(null);
+        setPostMortemLoading(false);
+    };
+
 
     // === FOUNDER TURN-END TWEET ===
     // Display a founder tweet when player ends turn and status becomes ENEMY_TURN
@@ -1835,6 +1878,7 @@ const App: React.FC = () => {
             pendingDiscard: 0
         });
         setViewingDeckForUpgrade(false);
+        resetPostMortemState(); // Clear post-mortem state for new run
     };
 
     const getBandwidthSegments = () => {
@@ -1936,6 +1980,13 @@ const App: React.FC = () => {
                         >
                             <BookOpen size={18} />
                             Card Compendium
+                        </button>
+                        <button
+                            onClick={() => setShowEnemyCompendium(true)}
+                            className="group relative px-6 py-3 bg-gray-800 border border-gray-600 text-gray-300 font-mono text-sm uppercase tracking-wider rounded-sm hover:bg-gray-700 hover:text-white hover:border-red-500/50 transition-all duration-200 flex items-center justify-center gap-2"
+                        >
+                            <Skull size={18} />
+                            Enemy Compendium
                         </button>
                     </div>
                 </div>
@@ -2137,6 +2188,205 @@ const App: React.FC = () => {
                                                             className="w-full h-full object-cover"
                                                         />
                                                         <div className="absolute inset-0 bg-primary/0 hover:bg-primary/20 transition-colors flex items-center justify-center">
+                                                            <span className="opacity-0 hover:opacity-100 text-white font-bold text-2xl drop-shadow-lg">✓</span>
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Enemy Compendium Modal */}
+                {showEnemyCompendium && (
+                    <div className="fixed inset-0 z-[100] bg-black/98 flex flex-col">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-6 border-b border-gray-700">
+                            <div className="flex items-center gap-3">
+                                <Skull size={28} className="text-red-500" />
+                                <h2 className="text-2xl font-display font-bold text-white">Enemy Compendium</h2>
+                                <span className="text-gray-500 font-mono text-sm">
+                                    ({Object.keys(GAME_DATA.enemies).length} enemies)
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                {/* Curate Mode Toggle */}
+                                <button
+                                    onClick={() => setCurateMode(!curateMode)}
+                                    className={`px-4 py-2 rounded-lg font-mono text-sm transition-all flex items-center gap-2 ${curateMode
+                                        ? 'bg-red-500 text-white'
+                                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                        }`}
+                                >
+                                    🎨 Curate Mode {curateMode ? 'ON' : 'OFF'}
+                                    {getCuratedEnemyCount() > 0 && (
+                                        <span className="bg-black/30 px-2 py-0.5 rounded text-xs">
+                                            {getCuratedEnemyCount()} curated
+                                        </span>
+                                    )}
+                                </button>
+                                <button
+                                    onClick={() => setShowEnemyCompendium(false)}
+                                    className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                                >
+                                    <X size={24} className="text-gray-400 hover:text-white" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Curate Mode Instructions */}
+                        {curateMode && (
+                            <div className="bg-red-500/10 border-b border-red-500/30 px-6 py-3 text-center text-red-400 font-mono text-sm">
+                                🎨 Click any enemy to choose from 12 GIF alternatives
+                            </div>
+                        )}
+
+                        {/* Scrollable Enemy Grid */}
+                        <div className="flex-1 overflow-auto p-6">
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                {Object.values(GAME_DATA.enemies).map((enemy: EnemyData) => {
+                                    const gifUrl = curatedEnemyGifs[enemy.emoji] || (isEnemyCurated(enemy.emoji) ? undefined : undefined);
+                                    return (
+                                        <div
+                                            key={enemy.id}
+                                            className={`relative bg-gray-800 rounded-lg p-4 border border-gray-700 hover:border-red-500/50 transition-all ${curateMode ? 'cursor-pointer hover:scale-105' : ''
+                                                }`}
+                                            onClick={async () => {
+                                                if (curateMode) {
+                                                    setCuratingEnemy({ emoji: enemy.emoji, name: enemy.name, options: [], loading: true });
+                                                    const options = await searchMultipleGifsForEnemy(enemy.emoji, 12);
+                                                    setCuratingEnemy({ emoji: enemy.emoji, name: enemy.name, options, loading: false });
+                                                }
+                                            }}
+                                        >
+                                            {/* Curated indicator */}
+                                            {isEnemyCurated(enemy.emoji) && (
+                                                <div className="absolute -top-2 -right-2 z-10 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+                                                    ✓
+                                                </div>
+                                            )}
+
+                                            {/* GIF/Emoji Display */}
+                                            <div className="aspect-square rounded-lg bg-gray-900 mb-3 flex items-center justify-center overflow-hidden">
+                                                {curatedEnemyGifs[enemy.emoji] || isEnemyCurated(enemy.emoji) ? (
+                                                    <img
+                                                        src={curatedEnemyGifs[enemy.emoji] || ''}
+                                                        alt={enemy.name}
+                                                        className="w-full h-full object-cover"
+                                                        onError={(e) => {
+                                                            // Fallback to emoji if GIF fails
+                                                            e.currentTarget.style.display = 'none';
+                                                            e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                                        }}
+                                                    />
+                                                ) : null}
+                                                <span className={`text-4xl ${(curatedEnemyGifs[enemy.emoji] || isEnemyCurated(enemy.emoji)) ? 'hidden' : ''}`}>
+                                                    {enemy.emoji}
+                                                </span>
+                                            </div>
+
+                                            {/* Enemy Info */}
+                                            <div className="text-center">
+                                                <div className="text-sm font-bold text-white">{enemy.name}</div>
+                                                <div className="text-xs text-gray-400 font-mono">{enemy.emoji}</div>
+                                                <div className="text-xs text-gray-500 mt-1">{enemy.type}</div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-gray-700 text-center text-gray-500 text-sm font-mono">
+                            {curateMode
+                                ? '🎨 Click enemies to curate • Selections are saved automatically'
+                                : 'Enemies grouped by type • GIFs fetched from Giphy'
+                            }
+                        </div>
+
+                        {/* GIF Picker Modal for Enemies */}
+                        {curatingEnemy && (
+                            <div className="fixed inset-0 z-[110] bg-black/90 flex items-center justify-center p-8">
+                                <div className="bg-gray-900 rounded-xl max-w-4xl w-full max-h-[80vh] flex flex-col border border-gray-700">
+                                    <div className="p-4 border-b border-gray-700 flex flex-col gap-3">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-lg font-display font-bold text-white">
+                                                Choose GIF for: {curatingEnemy.name} {curatingEnemy.emoji}
+                                            </h3>
+                                            <button
+                                                onClick={() => setCuratingEnemy(null)}
+                                                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                                            >
+                                                <X size={20} className="text-gray-400 hover:text-white" />
+                                            </button>
+                                        </div>
+                                        {/* Search Bar */}
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                placeholder={`Search Giphy... (default: ${EMOJI_SEARCH_TERMS[curatingEnemy.emoji] || curatingEnemy.emoji})`}
+                                                className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white font-mono text-sm placeholder-gray-500 focus:outline-none focus:border-red-500"
+                                                onKeyDown={async (e) => {
+                                                    if (e.key === 'Enter') {
+                                                        const input = e.currentTarget;
+                                                        const term = input.value.trim();
+                                                        if (term) {
+                                                            setCuratingEnemy(prev => prev ? { ...prev, loading: true } : null);
+                                                            const options = await searchGifsByCustomTerm(term, 12);
+                                                            setCuratingEnemy(prev => prev ? { ...prev, options, loading: false } : null);
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                            <button
+                                                onClick={async () => {
+                                                    const input = document.querySelector('input[placeholder^="Search Giphy"]') as HTMLInputElement;
+                                                    const term = input?.value.trim();
+                                                    if (term) {
+                                                        setCuratingEnemy(prev => prev ? { ...prev, loading: true } : null);
+                                                        const options = await searchGifsByCustomTerm(term, 12);
+                                                        setCuratingEnemy(prev => prev ? { ...prev, options, loading: false } : null);
+                                                    }
+                                                }}
+                                                className="px-4 py-2 bg-red-500 text-white rounded-lg font-mono text-sm hover:bg-red-400 transition-colors"
+                                            >
+                                                Search
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 overflow-auto p-4">
+                                        {curatingEnemy.loading ? (
+                                            <div className="flex items-center justify-center h-40 text-gray-400">
+                                                <RefreshCw className="animate-spin mr-2" size={20} />
+                                                Loading GIF options...
+                                            </div>
+                                        ) : curatingEnemy.options.length === 0 ? (
+                                            <div className="flex items-center justify-center h-40 text-gray-400">
+                                                No GIFs found - try a custom search above
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
+                                                {curatingEnemy.options.map((url, idx) => (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => {
+                                                            setCuratedEnemyGif(curatingEnemy.emoji, url);
+                                                            setCuratedEnemyGifsState(prev => ({ ...prev, [curatingEnemy.emoji]: url }));
+                                                            setCuratingEnemy(null);
+                                                        }}
+                                                        className="relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-red-500 transition-all hover:scale-105 bg-gray-800"
+                                                    >
+                                                        <img
+                                                            src={url}
+                                                            alt={`Option ${idx + 1}`}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                        <div className="absolute inset-0 bg-red-500/0 hover:bg-red-500/20 transition-colors flex items-center justify-center">
                                                             <span className="opacity-0 hover:opacity-100 text-white font-bold text-2xl drop-shadow-lg">✓</span>
                                                         </div>
                                                     </button>
@@ -3660,27 +3910,13 @@ const App: React.FC = () => {
                 )}
 
                 {gameState.status === 'GAME_OVER' && (
-                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-                        <div className="bg-[#1a0a0a] border border-danger p-8 rounded-2xl flex flex-col items-center text-center max-w-md shadow-[0_0_50px_rgba(255,68,68,0.15)]">
-                            <AlertOctagon size={48} className="text-danger mb-4" />
-                            <h2 className="text-3xl font-display font-bold text-white mb-1">Startup Failed</h2>
-                            <p className="text-danger/80 font-mono text-sm mb-6 uppercase tracking-widest">Runway Depleted</p>
-
-                            <div className="bg-black/40 p-4 rounded w-full mb-6 border border-white/5 text-left space-y-2">
-                                <div className="text-xs text-gray-500 font-mono">POSTMORTEM</div>
-                                <div className="text-sm text-gray-300">You ran out of cash before finding Product-Market Fit.</div>
-                                <div className="text-sm text-gray-400">Reached Sprint: {gameState.floor}</div>
-                            </div>
-
-                            <button
-                                onClick={handleRestart}
-                                className="bg-danger text-white font-bold py-3 px-8 rounded hover:bg-red-400 transition-colors font-mono text-sm uppercase tracking-wider flex items-center gap-2"
-                            >
-                                <RefreshCw size={16} />
-                                Start New Run
-                            </button>
-                        </div>
-                    </div>
+                    <PostMortemModal
+                        analysis={postMortemAnalysis}
+                        isLoading={postMortemLoading}
+                        startupName={gameState.startupName || 'Startup'}
+                        floor={gameState.floor}
+                        onRestart={handleRestart}
+                    />
                 )}
 
             </main>
