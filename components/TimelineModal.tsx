@@ -27,33 +27,36 @@ export const TimelineModal: React.FC<TimelineModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             {/* Modal Container */}
-            <div className="w-full max-w-xl max-h-[80vh] mx-4 bg-gray-900 rounded-xl shadow-2xl overflow-hidden flex flex-col">
+            <div
+                className="w-full max-w-xl max-h-[80vh] mx-4 bg-white rounded-2xl overflow-hidden flex flex-col"
+                style={{ boxShadow: '12px 12px 24px #C8CED3, -12px -12px 24px #FFFFFF' }}
+            >
 
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-700">
+                <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
                     <div>
-                        <h2 className="text-lg font-bold text-white">Timeline</h2>
-                        <p className="text-sm text-gray-400">{startupName}'s Journey</p>
+                        <h2 className="text-lg font-bold text-gray-800">Timeline</h2>
+                        <p className="text-sm text-gray-500">{startupName}'s Journey</p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 rounded-full hover:bg-gray-700 transition-colors"
+                        className="p-2 rounded-full hover:bg-gray-200 transition-colors"
                     >
-                        <X size={20} className="text-gray-400" />
+                        <X size={20} className="text-gray-500" />
                     </button>
                 </div>
 
                 {/* Tweet List */}
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto bg-white">
                     {tweets.length === 0 ? (
-                        <div className="p-8 text-center text-gray-500">
+                        <div className="p-8 text-center text-gray-400">
                             <p>No tweets yet...</p>
                             <p className="text-sm mt-2">Your story will unfold as you progress!</p>
                         </div>
                     ) : (
-                        <div className="divide-y divide-gray-800">
+                        <div className="divide-y divide-gray-100">
                             {tweets.map((tweet, index) => (
                                 <TweetRow key={tweet.id || index} tweet={tweet} />
                             ))}
@@ -62,7 +65,7 @@ export const TimelineModal: React.FC<TimelineModalProps> = ({
                 </div>
 
                 {/* Footer */}
-                <div className="p-3 border-t border-gray-700 text-center text-xs text-gray-500">
+                <div className="p-3 border-t border-gray-200 text-center text-xs text-gray-400 bg-gray-50">
                     {tweets.length} tweet{tweets.length !== 1 ? 's' : ''} in your journey
                 </div>
             </div>
@@ -83,10 +86,10 @@ const TweetRow: React.FC<{ tweet: NarrativeTweet }> = ({ tweet }) => {
                 : 'border-l-transparent';
 
     return (
-        <div className={`p-4 hover:bg-gray-800/50 transition-colors border-l-2 ${borderClass}`}>
+        <div className={`p-4 hover:bg-gray-50 transition-colors border-l-2 ${borderClass}`}>
             <div className="flex gap-3">
                 {/* Avatar */}
-                <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-xl flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-xl flex-shrink-0">
                     {tweet.avatarEmoji}
                 </div>
 
@@ -94,25 +97,25 @@ const TweetRow: React.FC<{ tweet: NarrativeTweet }> = ({ tweet }) => {
                 <div className="flex-1 min-w-0">
                     {/* Header */}
                     <div className="flex items-center gap-1 text-sm">
-                        <span className="font-bold text-white truncate">
+                        <span className="font-bold text-gray-800 truncate">
                             {tweet.displayName}
                         </span>
-                        <span className="text-gray-500 truncate">
+                        <span className="text-gray-400 truncate">
                             {tweet.handle}
                         </span>
-                        <span className="text-gray-600">·</span>
-                        <span className="text-gray-500">
+                        <span className="text-gray-300">·</span>
+                        <span className="text-gray-400">
                             {tweet.timestamp}
                         </span>
                     </div>
 
                     {/* Content */}
-                    <p className="mt-1 text-gray-200 text-sm whitespace-pre-wrap">
+                    <p className="mt-1 text-gray-700 text-sm whitespace-pre-wrap">
                         {tweet.content}
                     </p>
 
                     {/* Engagement */}
-                    <div className="flex items-center gap-4 mt-2 text-gray-500 text-xs">
+                    <div className="flex items-center gap-4 mt-2 text-gray-400 text-xs">
                         <span className="flex items-center gap-1">
                             <MessageCircle size={12} />
                             {tweet.replies}

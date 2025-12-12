@@ -4,47 +4,47 @@
     "oneLiner": "Netflix for educational kids content - learning that feels like play"
   },
   "macro": {
-    "theme": "Building Magic That Actually Teaches",
-    "startupHandle": "GiggleLearn",
-    "startupEmoji": "🧠",
+    "theme": "From Naptime Napkin to Full-Time Feature",
+    "startupHandle": "@GiggleLearn",
+    "startupEmoji": "🥳",
     "startupTone": "quirky",
     "introTweet": {
-      "author": "Alex Chen",
-      "handle": "@AlexCTO_GL",
-      "displayName": "Alex Chen (CTO)",
-      "avatarEmoji": "👨‍💻",
-      "content": "Goodbye stable salary. Hello GiggleLearn. Trading my office chair for a beanbag and writing the first line of code that makes learning fun. Wish me luck. This is happening.",
-      "likes": 155,
-      "retweets": 32,
-      "replies": 18,
+      "author": "startup",
+      "handle": "@GiggleLearn",
+      "displayName": "GiggleLearn",
+      "avatarEmoji": "🥳",
+      "content": "We decided learning shouldn't feel like homework. So we built a place where kids giggle while they learn. Day one starts now. Let's make education fun. 🚀",
+      "likes": 452,
+      "retweets": 68,
+      "replies": 31,
       "timestamp": "just now",
-      "id": "tweet_1_1765476180850"
+      "id": "tweet_1_1765552681351"
     },
     "defeatTweet": {
-      "author": "Alex Chen",
-      "handle": "@AlexCTO_GL",
-      "displayName": "Alex Chen (CTO)",
-      "avatarEmoji": "😔",
-      "content": "We got so close. The tech was solid, the vision was clear, but we ran out of runway before the market confirmed our hunch. Thanks to everyone who believed. Time to recharge and rethink the architecture for V2. We built something cool, promise.",
-      "likes": 88,
+      "author": "startup",
+      "handle": "@GiggleLearn",
+      "displayName": "GiggleLearn",
+      "avatarEmoji": "🥳",
+      "content": "The numbers just weren't there. We got close, but it seems the world wasn't ready for this specific kind of fun yet. We tried everything. Time to pack up the lab equipment. Thanks for watching the experiment. 😢",
+      "likes": 109,
       "retweets": 15,
-      "replies": 25,
+      "replies": 55,
       "timestamp": "just now",
       "isDefeat": true,
-      "id": "tweet_2_1765476180850"
+      "id": "tweet_2_1765552681351"
     },
     "bossVictoryTweet": {
-      "author": "Alex Chen",
-      "handle": "@AlexCTO_GL",
-      "displayName": "Alex Chen (CTO)",
-      "avatarEmoji": "🚀",
-      "content": "We just closed our Seed round! 🤯 Months of zero sleep, coffee fumes, and proving the engine works paid off. Now we can finally build the *real* GiggleLearn. To the future of play-based learning! 🎉",
-      "likes": 1290,
-      "retweets": 280,
-      "replies": 110,
+      "author": "startup",
+      "handle": "@GiggleLearn",
+      "displayName": "GiggleLearn",
+      "avatarEmoji": "🥳",
+      "content": "We just closed our Seed funding! 🎉 All those late nights writing weird code paid off. Huge thanks to everyone who believed in making learning feel like play. Now the real work begins. Let's grow this thing! 🚀",
+      "likes": 2105,
+      "retweets": 412,
+      "replies": 189,
       "timestamp": "just now",
       "isVictory": true,
-      "id": "tweet_3_1765476180850"
+      "id": "tweet_3_1765552681351"
     },
     "floorBeats": [
       {
@@ -53,8 +53,8 @@
         "setup": "You quit your job. The idea burns bright.",
         "conflict": "But the first day alone feels terrifying.",
         "resolution": "You write the first line of code anyway.",
-        "storyBeat": "We finally have a name: GiggleLearn. I quit my job today.",
-        "narrativeHook": "The freedom feels insane.",
+        "storyBeat": "The name GiggleLearn is officially registered.",
+        "narrativeHook": "We needed a name that didn't sound like a textbook. We got it.",
         "primaryDevice": "foreshadowing",
         "foreshadowsFloor": 9,
         "emotionalArc": "hopeful_to_challenged",
@@ -66,8 +66,8 @@
         "setup": "The prototype is taking shape.",
         "conflict": "Nothing works the way you imagined.",
         "resolution": "But you see a glimmer of what it could be.",
-        "storyBeat": "The first lines of code are typing. It's just a placeholder database connection, but it's mine.",
-        "narrativeHook": "My fingers hurt already.",
+        "storyBeat": "The first character drawing script is written.",
+        "narrativeHook": "The first lines of actual code are running. It's messy, but it runs.",
         "primaryDevice": "small_victory",
         "emotionalArc": "hopeful_to_challenged",
         "stakes": "Proving the concept is even possible"
@@ -78,8 +78,8 @@
         "setup": "You have something to show.",
         "conflict": "It's ugly. Really ugly.",
         "resolution": "But... it works. Kind of.",
-        "storyBeat": "The ugly first prototype exists. It looks like a 1998 GeoCities site, but the core logic is there.",
-        "narrativeHook": "Function over form, always.",
+        "storyBeat": "The first prototype looks like a six-year-old drew it.",
+        "narrativeHook": "Our first version is hideous. But the core idea flashes through the ugly interface.",
         "primaryDevice": "revelation",
         "foreshadowsFloor": 12,
         "emotionalArc": "hopeful_to_challenged",
@@ -91,8 +91,8 @@
         "setup": "You show it to friends and family.",
         "conflict": "Their feedback is... polite. Too polite.",
         "resolution": "Someone actually signs up. For real.",
-        "storyBeat": "Showed the prototype to my niece. She didn't complain or ask for YouTube. Milestone: Prototype exists!",
-        "narrativeHook": "That's the first 'Yes'.",
+        "storyBeat": "Showed the prototype to my cousin's kids.",
+        "narrativeHook": "They actually stayed on the screen for five minutes without asking for cartoons. That was the signal.",
         "primaryDevice": "ally_appears",
         "secondaryDevice": "comic_relief",
         "emotionalArc": "hopeful_to_challenged",
@@ -104,8 +104,8 @@
         "setup": "The initial excitement fades.",
         "conflict": "The work is harder than you thought.",
         "resolution": "You find a rhythm, but it's exhausting.",
-        "storyBeat": "It's 3 AM again. Fixing a rendering bug that only shows up on one specific Android tablet.",
-        "narrativeHook": "This bug is personal.",
+        "storyBeat": "Spent 48 hours straight fixing a single rendering glitch.",
+        "narrativeHook": "Sleep is optional when you know you are this close to making something work right.",
         "primaryDevice": "tension_escalation",
         "callbackFrom": 1,
         "emotionalArc": "determined_to_tired",
@@ -117,8 +117,8 @@
         "setup": "You ship a big update.",
         "conflict": "Everything breaks. Users are angry.",
         "resolution": "You fix it. Barely. At 3am.",
-        "storyBeat": "User testing feedback is harsh but fair. We pivoted the entire navigation flow based on one 7-year-old's tantrum.",
-        "narrativeHook": "The user always knows best.",
+        "storyBeat": "Received feedback from five parents. Three completely different ideas.",
+        "narrativeHook": "We had to decide: stick to the plan or follow the noise? We picked a path.",
         "primaryDevice": "setback",
         "secondaryDevice": "tension_escalation",
         "emotionalArc": "determined_to_tired",
@@ -130,8 +130,8 @@
         "setup": "You're making progress.",
         "conflict": "Then you see THEM. A well-funded competitor.",
         "resolution": "You decide speed is your advantage.",
-        "storyBeat": "Someone else just launched a 'fun learning app'. They look slicker than us. Time to sharpen our edge.",
-        "narrativeHook": "The world is moving fast.",
+        "storyBeat": "Noticed a big company launched something similar last week.",
+        "narrativeHook": "Great. Someone else thought this was a good idea too. Back to the drawing board, faster.",
         "primaryDevice": "stakes_raising",
         "foreshadowsFloor": 16,
         "emotionalArc": "determined_to_tired",
@@ -143,8 +143,8 @@
         "setup": "User feedback is confusing.",
         "conflict": "Half want feature A, half want B. Neither aligns with your vision.",
         "resolution": "You make a choice. Time will tell if it's right.",
-        "storyBeat": "Major debate: Should we focus on Math content first or Literacy? We chose Literacy. Sticking to it.",
-        "narrativeHook": "No turning back now.",
+        "storyBeat": "Decided to cut half the planned features just to ship something stable.",
+        "narrativeHook": "We chose simplicity over stuffing it with everything. The core thing finally feels right.",
         "primaryDevice": "moment_of_doubt",
         "secondaryDevice": "cliffhanger",
         "foreshadowsFloor": 11,
@@ -157,8 +157,8 @@
         "setup": "You check the bank account.",
         "conflict": "The numbers are worse than you remembered.",
         "resolution": "You have weeks, not months.",
-        "storyBeat": "The bank account balance is getting way too low. We're burning cash faster than I can write secure auth layers.",
-        "narrativeHook": "Runway anxiety is real.",
+        "storyBeat": "We have enough money for three more months if we skip paying ourselves.",
+        "narrativeHook": "The bank account is looking thin. We need users yesterday.",
         "primaryDevice": "stakes_raising",
         "callbackFrom": 1,
         "secondaryDevice": "tension_escalation",
@@ -171,8 +171,8 @@
         "setup": "The team is quiet.",
         "conflict": "People are burning out. Someone asks about job security.",
         "resolution": "You give a speech you're not sure you believe.",
-        "storyBeat": "Staring at our zero daily active users. Did we build something only we think is cool? Deep breath.",
-        "narrativeHook": "The silence is deafening.",
+        "storyBeat": "Spent a week staring at zero sign-ups after launching a private test.",
+        "narrativeHook": "Did we build a solution for a problem that doesn't exist? It happens.",
         "primaryDevice": "dark_moment",
         "secondaryDevice": "moment_of_doubt",
         "emotionalArc": "anxious_to_desperate",
@@ -184,8 +184,8 @@
         "setup": "You wake up at 4am with a pit in your stomach.",
         "conflict": "Maybe the doubters were right. Maybe this won't work.",
         "resolution": "But then... a notification. Someone new signed up.",
-        "storyBeat": "The co-founder and I are running on fumes. Had to step in and do some non-tech ops just to keep spirits up.",
-        "narrativeHook": "Team morale is the hardest dependency.",
+        "storyBeat": "Team morale hit rock bottom after the latest testing failure.",
+        "narrativeHook": "Had to buy the entire team pizza and just talk about why we started this in the first place.",
         "primaryDevice": "turning_point",
         "callbackFrom": 8,
         "foreshadowsFloor": 12,
@@ -194,12 +194,12 @@
       },
       {
         "floor": 12,
-        "storyPhase": "PHASE 3 - THE DOUBT",
+        "storyPhase": "PHASE 4 - THE BREAKTHROUGH",
         "setup": "That new user? They LOVE it.",
         "conflict": "They want to pay. You don't even have a payment system.",
         "resolution": "You stay up all night to build one.",
-        "storyBeat": "A random email from a teacher. 'My students actually asked for more screen time today.' I almost cried.",
-        "narrativeHook": "A glimmer of hope just landed.",
+        "storyBeat": "A random teacher found our test link and emailed us saying her class was begging for more.",
+        "narrativeHook": "One person *loved* it enough to take time to tell us. That's fuel.",
         "primaryDevice": "payoff",
         "callbackFrom": 3,
         "secondaryDevice": "ally_appears",
@@ -212,8 +212,8 @@
         "setup": "That customer told a friend.",
         "conflict": "Now there are 10 users. Then 50. You're not ready for this.",
         "resolution": "It's chaotic, but you're growing.",
-        "storyBeat": "A parent paid the tiny subscription fee we set up. First dollar earned from a complete stranger! I framed the receipt.",
-        "narrativeHook": "Someone sees the value.",
+        "storyBeat": "The first person outside our network actually paid the subscription fee.",
+        "narrativeHook": "Not for a test. Real money for the real thing. We almost crashed the payment system from excitement.",
         "primaryDevice": "small_victory",
         "secondaryDevice": "tension_escalation",
         "emotionalArc": "desperate_to_hopeful",
@@ -225,8 +225,8 @@
         "setup": "You look at the graphs.",
         "conflict": "The curve is going up. Not linear. Exponential.",
         "resolution": "This might actually work. You allow yourself to believe.",
-        "storyBeat": "We hit 50 active users who used the product three times this week. They are coming back without prompting.",
-        "narrativeHook": "The usage curve bent upwards!",
+        "storyBeat": "Sign-ups started happening overnight, faster than we could onboard them.",
+        "narrativeHook": "People are finding us without us saying a word. This feeling is wild.",
         "primaryDevice": "revelation",
         "secondaryDevice": "payoff",
         "callbackFrom": 7,
@@ -239,8 +239,8 @@
         "setup": "An investor wants to meet.",
         "conflict": "This is it. The meeting that could change everything.",
         "resolution": "You prepare the pitch of your life.",
-        "storyBeat": "Today is the big meeting. Pitched the code, the vision, and the sticky kids. Felt like the entire past year was in that slide deck.",
-        "narrativeHook": "Show them the magic.",
+        "storyBeat": "Secured the first meeting with the lead investor we targeted.",
+        "narrativeHook": "We cleaned the whiteboard. Put on actual shoes. Time to show them what we broke and fixed.",
         "primaryDevice": "stakes_raising",
         "callbackFrom": 9,
         "foreshadowsFloor": 16,
@@ -253,8 +253,8 @@
         "setup": "You walk into the room.",
         "conflict": "The investors are skeptical. They've heard a thousand pitches.",
         "resolution": "But you have something they don't: proof.",
-        "storyBeat": "We got the commitment. Seed round closed! Time to hire engineers and scale this whole thing. Thank you, world.",
-        "narrativeHook": "We're funded. Let's build!",
+        "storyBeat": "The term sheet arrived. We signed it.",
+        "narrativeHook": "The journey from napkin sketch to funded company is done. Now, let's go build the real thing.",
         "primaryDevice": "payoff",
         "secondaryDevice": "turning_point",
         "callbackFrom": 1,
@@ -272,8 +272,8 @@
         "setup": "You quit your job. The idea burns bright.",
         "conflict": "But the first day alone feels terrifying.",
         "resolution": "You write the first line of code anyway.",
-        "storyBeat": "We finally have a name: GiggleLearn. I quit my job today.",
-        "narrativeHook": "The freedom feels insane.",
+        "storyBeat": "The name GiggleLearn is officially registered.",
+        "narrativeHook": "We needed a name that didn't sound like a textbook. We got it.",
         "primaryDevice": "foreshadowing",
         "foreshadowsFloor": 9,
         "emotionalArc": "hopeful_to_challenged",
@@ -286,36 +286,35 @@
         }
       ],
       "meso": {
-        "approachTweet": "The office is empty now. Just the idea and me. Time to build GiggleLearn. Deep breath. Here we go.",
-        "victoryTweet": "First line written. It's on the screen. The work starts now. This is real.",
+        "approachTweet": "Name is real. Idea burns. Today I build the 'Giggle Engine' that pairs toddler moods with cartoon lessons. Let's see if kids actually laugh.",
+        "victoryTweet": "Wrote the first line of code. The placeholder for the video player loaded. It’s ugly, but it’s a start to making learning feel like cartoons.",
         "enemyTweets": {
           "minor_bug": {
             "attack": [
-              "Another educational app? The world needed this precisely.",
-              "Founders always overestimate how much effort it takes to get the first ten users."
+              "Another 'educational' app? They all look the same. No one wants a subscription for ABCs.",
+              "The content quality is impossible to maintain. They’ll run out of good cartoons by Tuesday.",
+              "Parents don't trust new stuff for their kids. Good luck getting anyone to try your video player."
             ],
             "buff": [
-              "Starting solo is the only way to be sure of the vision. Good move."
+              "The market for paid kids content is surprisingly sticky if the initial hook is strong. Hope they nailed the hook.",
+              "Parents are tired of the noise. If this 'Giggle' thing delivers, it could be big on word of mouth."
             ],
             "debuff": [
-              "That initial excitement fades fast when the real work hits. Wait till you see the first crash.",
-              "Hope they have a big savings account. Ideas don't pay the rent."
+              "Still just a landing page? Guess the 'giggle' part is slow to load.",
+              "Founders usually quit when the first 3 days are just staring at config files. Any minute now..."
             ],
-            "defeat": "The quiet moments are tough. But the idea is louder than the fear. Back to the keyboard."
+            "defeat": "The registration went through. We are officially a company that makes kids learn stuff that feels like play. Take that, doubt."
           }
         },
         "cardPlayTweets": {
           "attack": [
-            "Pushed the first piece. It works. That feeling never gets old.",
-            "New section live. Small step, big progress."
+            "Initial file structure built. Let's go."
           ],
           "skill": [
-            "That old code was rough. Refactored the whole thing. So much cleaner now.",
-            "Had to undo that last idea. Rolled it back. Smart move saves hours later."
+            "Cleaned up the imports. Tomorrow me is happy."
           ],
           "power": [
-            "Got the first five people trying it out. Watching them use it is the best fuel.",
-            "If this thing catches on, it's because people share it naturally. That's the goal."
+            "The content streaming pipeline is defined. Ready for cartoons."
           ]
         }
       }
@@ -328,8 +327,8 @@
         "setup": "The prototype is taking shape.",
         "conflict": "Nothing works the way you imagined.",
         "resolution": "But you see a glimmer of what it could be.",
-        "storyBeat": "The first lines of code are typing. It's just a placeholder database connection, but it's mine.",
-        "narrativeHook": "My fingers hurt already.",
+        "storyBeat": "The first character drawing script is written.",
+        "narrativeHook": "The first lines of actual code are running. It's messy, but it runs.",
         "primaryDevice": "small_victory",
         "emotionalArc": "hopeful_to_challenged",
         "stakes": "Proving the concept is even possible"
@@ -345,50 +344,47 @@
         }
       ],
       "meso": {
-        "approachTweet": "Just laid down the first few bricks for this thing. It's just a wire connection for now. But it's mine. Hope this road leads somewhere good.",
-        "victoryTweet": "Whoa. It finally did the one thing I wanted it to do. It's clumsy, but it flashes. I can see the whole thing now. This is going to be huge.",
+        "approachTweet": "Got the first draft of the animated story sequences working. It looks like a mess of colored blocks, but the learning loop clicks. We might actually make education fun.",
+        "victoryTweet": "The interactive 'Name That Planet' game actually tracks progress! Kids are learning AND giggling at the same time. This weird idea might fly.",
         "enemyTweets": {
           "critical_bug": {
             "attack": [
-              "Every founder thinks their first connection works. Wait until real data hits it. That's where the fun starts.",
-              "Is this another 'revolutionary' thing that will be forgotten by next week? Seems like a lot of effort for a small idea."
+              "They think they can rewrite kids' education with cartoon characters? Wait until they realize how much money that takes.",
+              "When your entire user experience relies on a custom animation engine that breaks if you change a font size. Fun times.",
+              "Learning that feels like play is just wasting screen time. It's a distraction, not a tool."
             ],
             "buff": [
-              "Good founders know the first draft is always trash. Keep the expectations low, maybe you'll surprise someone."
+              "I bet their video streaming is going to buffer every 30 seconds when 100 kids try to watch the math pirate.",
+              "Making sure the content is actually educational and not just noise is the hard part. I doubt they checked the curriculum standards."
             ],
             "debuff": [
-              "If the basic connection is this hard, imagine scaling it. They are already in too deep.",
-              "I'm starting to think that 'glimmer' is just reflection off the screen."
+              "The prototype looks like a rejected Flash game from 2005. Who is paying for this look?",
+              "I see they spent all their time on the logo and none on testing if kids actually learn anything. Predictable."
             ],
-            "defeat": "It's holding. The foundation is set. Now we build the actual house."
+            "defeat": "We kept the animation fluid AND made sure the counting lesson was right. It's ugly code, but it teaches fractions. We proved it works!"
           },
           "minor_bug": {
             "attack": [
-              "So much drama over getting two things to talk to each other. Standard Tuesday for any developer.",
-              "That little hiccup they are probably hitting right now? That's the one that kills 90% of these projects."
+              "Still talking about Netflix? Show me one user."
             ],
             "buff": [
-              "The struggle to make the first thing work is the real training ground. Don't skip the hard lessons."
+              "Every delay proves me right about GiggleLearn."
             ],
             "debuff": [
-              "I see them wrestling with the basics. They should have outsourced that part if they couldn't handle it.",
-              "If this is challenging, they are not ready for the actual hard parts coming next month."
+              "Looks brittle. Rush it and watch it crack."
             ],
-            "defeat": "Got the communication channel open. We are talking now. Quiet satisfaction."
+            "defeat": "Handled that distraction. Back to building Netflix."
           }
         },
         "cardPlayTweets": {
           "attack": [
-            "Pushed the first chunk of code. It's live in the sandbox. Let's see what breaks next.",
-            "It deployed. Small step, but it's forward. That small win matters right now."
+            "Code pushed. Fingers crossed the new rendering pipeline holds."
           ],
           "skill": [
-            "Had to rewrite that connection logic three times. Better structure now. Much cleaner.",
-            "Rolled back that last attempt. Good learning moment. Starting fresh on that small piece."
+            "Rewrote the story state machine. Cleaner now."
           ],
           "power": [
-            "Saw how quickly the test data flowed. If this scales, our users will love the speed.",
-            "The connections are linking up faster than I expected. This early momentum feels right."
+            "The cross-device sync for saved progress is solid. Kids won't lose their planet maps."
           ]
         }
       }
@@ -401,8 +397,8 @@
         "setup": "You have something to show.",
         "conflict": "It's ugly. Really ugly.",
         "resolution": "But... it works. Kind of.",
-        "storyBeat": "The ugly first prototype exists. It looks like a 1998 GeoCities site, but the core logic is there.",
-        "narrativeHook": "Function over form, always.",
+        "storyBeat": "The first prototype looks like a six-year-old drew it.",
+        "narrativeHook": "Our first version is hideous. But the core idea flashes through the ugly interface.",
         "primaryDevice": "revelation",
         "foreshadowsFloor": 12,
         "emotionalArc": "hopeful_to_challenged",
@@ -415,27 +411,34 @@
         }
       ],
       "meso": {
-        "approachTweet": "Okay. It’s ugly. It looks like it was built in a basement in 1999. But the thing actually spins up. Time to show the world this mess.",
-        "victoryTweet": "It runs. It actually computes the answer! Feels good when the messy middle finally clicks into place.",
+        "approachTweet": "The first look at the 'play' part of our learning app is ready. It looks like a clown drew it, but the video player doesn't crash instantly. Big step.",
+        "victoryTweet": "It plays the science video. And the video pauses when you tap it. It's not pretty, but it's actual content delivery. We have a demo.",
         "enemyTweets": {
           "spaghetti_code": {
-            "attack": [],
-            "buff": [],
-            "debuff": [],
-            "defeat": ""
+            "attack": [
+              "Wait, another kid learning app? Did they even check if anyone cares about this already? Seems like a paint job on an old idea.",
+              "Looks like someone is trying to copy our simple menu design. Cute. Wait till they see our 5-cent hosting bill.",
+              "The visual design for 'playful' learning is always the hardest part to nail. This early stuff looks like homework."
+            ],
+            "buff": [
+              "If you don't have the best content creators locked down, you just have an empty website. That's the real trick."
+            ],
+            "debuff": [
+              "Hope they budgeted for good animations. Kids leave ugly apps faster than they finish a boring math worksheet.",
+              "A working demo is great, but getting parents to trust their kid's screen time to you is the hard part. That takes polish."
+            ],
+            "defeat": "The demo didn't crash during the math module. The look is fine for now. The kids will love the learning part."
           }
         },
         "cardPlayTweets": {
           "attack": [
-            "Commit made. Sending this messy brain-dump into the main file. Fingers crossed."
+            "Code compiled. Testing the video engine now."
           ],
           "skill": [
-            "That section was truly embarrassing. Refactor complete. It looks 10% less like a mistake now.",
-            "Had to hit Rollback on that last batch of changes. Good reminder: test before you trust the quick fixes."
+            "Re-wired the navigation menus. Less confusing now."
           ],
           "power": [
-            "It’s live! First deploy of the week is done. Time to see if anyone notices.",
-            "The early connections are happening naturally. That feeling when the thing starts connecting itself is huge."
+            "This structure helps us add new learning paths easily later."
           ]
         }
       }
@@ -448,8 +451,8 @@
         "setup": "You show it to friends and family.",
         "conflict": "Their feedback is... polite. Too polite.",
         "resolution": "Someone actually signs up. For real.",
-        "storyBeat": "Showed the prototype to my niece. She didn't complain or ask for YouTube. Milestone: Prototype exists!",
-        "narrativeHook": "That's the first 'Yes'.",
+        "storyBeat": "Showed the prototype to my cousin's kids.",
+        "narrativeHook": "They actually stayed on the screen for five minutes without asking for cartoons. That was the signal.",
         "primaryDevice": "ally_appears",
         "secondaryDevice": "comic_relief",
         "emotionalArc": "hopeful_to_challenged",
@@ -466,48 +469,51 @@
         }
       ],
       "meso": {
-        "approachTweet": "Showed the thing to my niece. She just used it. No complaints. That's the first test passed.",
-        "victoryTweet": "Someone I don't know signed up. They actually used it without me watching. This is the best feeling.",
+        "approachTweet": "Finally got the kids' cartoon menu working. It scrolls! Showing family this weekend. Hope they like the colors. 🤞",
+        "victoryTweet": "A 7-year-old paid! Not my dad. Not my friend. They typed in their card. The 'Play Learning' button worked for a stranger. Wow.",
         "enemyTweets": {
           "fanboy": {
             "attack": [
-              "You should totally add a whole social layer next. Make it viral right away!",
-              "If you just add these three more features, it will solve everything. Don't ship until it's perfect!"
+              "You need AR integration for the science lessons! And maybe a marketplace for user-made quizzes? Don't ship until it does everything!",
+              "If kids can't customize their avatar with 50 hats, they won't learn about the solar system. Add hats now!",
+              "When are you adding leaderboards? Learning isn't fun unless you beat Timmy from next door. Get competitive!"
             ],
             "buff": [
-              "Wow, this is a great start! You should definitely explore making it a full platform."
+              "I hear you're making good educational cartoons. But what if they were ALSO video games? Think bigger!",
+              "A simple streaming service? Nah. You need social sharing of completed lessons. Get people talking!"
             ],
             "debuff": [
-              "But if it doesn't do X, Y, and Z, how will people switch from what they already use?"
+              "Still just a few cartoons? If it doesn't teach coding AND knitting, nobody cares.",
+              "If you don't build the next 50 lessons today, you're already behind."
             ],
-            "defeat": "Decided to ship the small thing now. We add the polish later. Focus on the core job."
+            "defeat": "We shipped the core viewing experience. It plays one good lesson. That's where we start. Simple is strong."
           },
           "quick_hack": {
             "attack": [
-              "Why are you still messing with that? Just copy that old code snippet and move on. Nobody checks.",
-              "If it works today, why spend time making it perfect? That's wasting time you could spend on marketing."
+              "Why test the streaming quality? Just load the first 5 seconds and hope for the best. People will stop watching anyway if the content stinks.",
+              "Use that cheap off-brand video player. Nobody notices the buffering wheel when they are learning about gravity!",
+              "Who needs backend database structure? Just dump the lesson names into a spreadsheet and link it. Easy!"
             ],
             "buff": [
-              "Shipping fast means getting real feedback sooner. I get the rush."
+              "Focus on marketing, not that silly 'content caching layer.' People buy stories, not speed.",
+              "If you spend a week cleaning up old code, that's a week you aren't on TikTok telling people your app exists."
             ],
             "debuff": [
-              "If the base isn't solid, the whole thing will fall apart when 10 people try to use it."
+              "Still fiddling with the perfect animation timing? Just use a GIF. Next!",
+              "That polite feedback means they hate it but won't say it. Just move on."
             ],
-            "defeat": "Spent the morning cleaning up that messy bit. It felt slow, but now it's solid. Worth the extra hour."
+            "defeat": "We rebuilt the video player logic three times to make sure it NEVER stops mid-sentence during the dinosaur facts. Solid foundation now."
           }
         },
         "cardPlayTweets": {
           "attack": [
-            "Pushed the small update. It's running. Small steps today.",
-            "New version out. Sending it to the first real user now. Wish us luck."
+            "Hit enter. It's live."
           ],
           "skill": [
-            "Refactored that slow part of the setup. It feels much better under the hood now.",
-            "Had to hit rollback this morning. Didn't break anything major, just needed a clean start. Learning fast."
+            "Untangled the login flow mess. Kids can sign in faster now."
           ],
           "power": [
-            "The way users are connecting their accounts today is really smart. This might actually catch on.",
-            "Seeing user two tell user one about us. That's the magic. It's starting to connect itself."
+            "The 'More Like This' recommendation engine is built. Smart watching ahead."
           ]
         }
       }
@@ -520,8 +526,8 @@
         "setup": "The initial excitement fades.",
         "conflict": "The work is harder than you thought.",
         "resolution": "You find a rhythm, but it's exhausting.",
-        "storyBeat": "It's 3 AM again. Fixing a rendering bug that only shows up on one specific Android tablet.",
-        "narrativeHook": "This bug is personal.",
+        "storyBeat": "Spent 48 hours straight fixing a single rendering glitch.",
+        "narrativeHook": "Sleep is optional when you know you are this close to making something work right.",
         "primaryDevice": "tension_escalation",
         "callbackFrom": 1,
         "emotionalArc": "determined_to_tired",
@@ -534,36 +540,34 @@
         }
       ],
       "meso": {
-        "approachTweet": "Three AM. The shiny new idea feeling is gone. Now it’s just me and this screen. Gotta find the answer in this mess.",
-        "victoryTweet": "It finally settled into place. The rhythm is there, even if I’m running on fumes. It works on the old brick tablet. That’s something.",
+        "approachTweet": "The initial fun of building the cartoon library is gone. Now it’s just making sure the video player doesn't freeze when kids click 'Play' 50 times. We ship this part today.",
+        "victoryTweet": "Fixed the video player bug that made the geometry lesson look like abstract art. It’s stable now. I need a nap that lasts three days.",
         "enemyTweets": {
           "tech_debt": {
             "attack": [
-              "They always say they'll clean it up later. That 'later' is how companies die slow.",
-              "If you have to spend nights fixing tiny details, maybe the core idea wasn't solid enough to start."
+              "They are building a whole video library? Hope they remembered to check if the server can handle actual traffic. Doubt it.",
+              "Building kids content is easy. Getting parents to trust you with their screen time settings? That's where they crash.",
+              "If their video player is clunky, kids will just go back to YouTube. Nobody cares about 'educational play' if it lags."
             ],
             "buff": [
-              "The real work is the boring, invisible stuff nobody sees. Keep pushing through the slow hours."
+              "If they nail the content discovery, the tech headaches will be worth it. That's the magic trick."
             ],
             "debuff": [
-              "That specific bug that only happens on one device? That's the universe telling you to take a nap.",
-              "If you can't test on everything easily, you shipped too fast. Plan better next time."
+              "Looked at the app. Still takes 10 seconds to load the main screen. That’s like a year in kid time.",
+              "They probably didn't plan for offline viewing. Too much work. Parents hate that."
             ],
-            "defeat": "The little glitch is squashed. Didn't need to rethink the whole blueprint, just needed to stop dragging my feet on that one spot."
+            "defeat": "Video buffering is gone. The 'watch next' feature is actually showing relevant science shows. We are building the play zone."
           }
         },
         "cardPlayTweets": {
           "attack": [
-            "Pushed a tiny change to see if it helps the weird display. Fingers crossed this one sticks.",
-            "It’s running on the test machine now. Small update shipped. Hope it stays fixed."
+            "Rerouted the video stream. It’s live!"
           ],
           "skill": [
-            "Dug into the old code section. Reorganized a huge chunk of it. Feels much easier to look at now.",
-            "That last adjustment was bad. Hit undo on that whole section. Going back to the previous good setup."
+            "Rewrote the video loading logic. Cleaner now."
           ],
           "power": [
-            "That fix meant one user told five friends. That's the ripple effect working.",
-            "Every small piece we make better seems to bring in a few more people naturally. The right way to grow."
+            "Pre-caching the first 30 seconds of every show. That's true instant play."
           ]
         }
       }
@@ -576,8 +580,8 @@
         "setup": "You ship a big update.",
         "conflict": "Everything breaks. Users are angry.",
         "resolution": "You fix it. Barely. At 3am.",
-        "storyBeat": "User testing feedback is harsh but fair. We pivoted the entire navigation flow based on one 7-year-old's tantrum.",
-        "narrativeHook": "The user always knows best.",
+        "storyBeat": "Received feedback from five parents. Three completely different ideas.",
+        "narrativeHook": "We had to decide: stick to the plan or follow the noise? We picked a path.",
         "primaryDevice": "setback",
         "secondaryDevice": "tension_escalation",
         "emotionalArc": "determined_to_tired",
@@ -594,48 +598,45 @@
         }
       ],
       "meso": {
-        "approachTweet": "Big push went out. Feels heavy, but it's done. Now we watch. Time to see if this thing flies or falls apart.",
-        "victoryTweet": "It's running. Totally quiet now. Found the tiny thing that was rattling the whole house. Coffee tastes amazing at 3 AM.",
+        "approachTweet": "New update is live! Trying to make sure the 'play' part of our learning videos isn't hiding the actual math lesson. Let's see if kids notice the difference. Determined.",
+        "victoryTweet": "The video player is stable. It only crashed on 1 in 100 streams instead of all of them. 3 AM victory. Sanity score: +1.",
         "enemyTweets": {
           "micromanager": {
             "attack": [
-              "Are we sure that big update needed to go live right now? Seems risky. Need confirmation the impact is zero.",
-              "Just checking in on the status report for the thing that shipped an hour ago. How’s the early data looking?"
+              "Update on the video stream stability fix? Need a percentage complete by 10 AM sharp.",
+              "Is the user feedback loop addressed? We need data validation on that new content category, not just 'fixing things'."
             ],
             "buff": [
-              "Good founders have detailed rollback plans ready before any deploy. That's just good process."
+              "Update on the video stream stability fix? Need a percentage complete by 10 AM sharp."
             ],
             "debuff": [
-              "If you can't explain what broke in simple terms to a non-engineer, you shouldn't have shipped it."
+              "If the core viewing experience is broken, the animated characters don't matter. Report back when you stop tinkering."
             ],
-            "defeat": "Fix is shipped and stable. The process is clear now. No more status pings needed."
+            "defeat": "System stable. I finished the fix before the next check-in. Silence is golden."
           },
           "memory_leak": {
             "attack": [
-              "I am so tired of updates that change everything. Can't we just have one thing that stays the same for more than a week?",
-              "They'll probably have to redo all that work again next month. That's how startups go."
+              "It keeps logging me out mid-lesson! My kid just wants to learn about planets, not log back in 5 times."
             ],
             "buff": [
-              "Every major pivot is just finding a faster way to win. Good job sticking to the mission."
+              "It keeps logging me out mid-lesson! My kid just wants to learn about planets, not log back in 5 times."
             ],
             "debuff": [
-              "Honestly, I'm exhausted just reading about how much they are rebuilding. It sounds like a total mess."
+              "Fixing one thing only breaks another. That's how these things go. Great job breaking the whole content feed.",
+              "The quality of the cartoons looks worse now. Did you use lower resolution videos? This isn't relaxing at all."
             ],
-            "defeat": "We found the core problem. The system is smooth now. Less noise, more doing."
+            "defeat": "Session persistence restored. Kids can finish their space modules uninterrupted now. Deep breath."
           }
         },
         "cardPlayTweets": {
           "attack": [
-            "Pushed the hotfix. It compiled. Let's see what the real world says now.",
-            "New version is live. Simple, clean ship. Hope this sticks."
+            "Forcing a hard re-check on all user session tokens. Live."
           ],
           "skill": [
-            "The old way was confusing everyone. Refactored that entire section. Feels much better under the hood.",
-            "That didn't work at all. Quick rollback to the stable version. Back to the drawing board, smarter this time."
+            "Rolled back the video compression logic. Back to the old, slow, but working version."
           ],
           "power": [
-            "The fix made the whole thing connect better. When one thing gets better, everything starts working right.",
-            "Users are sharing it again now that the main flow is clear. That feeling is the best."
+            "The database connection pooling logic is now totally clean. Will handle high viewing spikes."
           ]
         }
       }
@@ -648,8 +649,8 @@
         "setup": "You're making progress.",
         "conflict": "Then you see THEM. A well-funded competitor.",
         "resolution": "You decide speed is your advantage.",
-        "storyBeat": "Someone else just launched a 'fun learning app'. They look slicker than us. Time to sharpen our edge.",
-        "narrativeHook": "The world is moving fast.",
+        "storyBeat": "Noticed a big company launched something similar last week.",
+        "narrativeHook": "Great. Someone else thought this was a good idea too. Back to the drawing board, faster.",
         "primaryDevice": "stakes_raising",
         "foreshadowsFloor": 16,
         "emotionalArc": "determined_to_tired",
@@ -662,37 +663,35 @@
         }
       ],
       "meso": {
-        "approachTweet": "It’s looking solid. We shipped the main features today. Now we see what happens next.",
-        "victoryTweet": "We just pushed three big things live before lunch. Small lead, but it’s ours for now. Keep building fast.",
+        "approachTweet": "We fixed the bug where the learning videos skipped if the kid was too excited. Making sure the 'play' part doesn't break the 'learn' part. Speed is everything now.",
+        "victoryTweet": "Got the kid profile sorting done. It now curates five perfect learning videos in 1 second flat. We can move faster than they can print logos.",
         "enemyTweets": {
           "legacy_module": {
             "attack": [
-              "Youth always thinks they can just throw code at the wall. Experience matters more than speed.",
-              "A slick frontend is nothing without a solid, tested foundation. Those shortcuts always show up later."
+              "Kids need structure, not 'play.' This 'Netflix' concept for learning dissolves attention spans. Wait until they try to charge money.",
+              "A well-funded player just entered this space. They have distribution. This little startup is about to be forgotten by Tuesday.",
+              "If it feels too much like a game, is it really teaching anything? I'm not letting my kid stare at another subscription screen."
             ],
             "buff": [
-              "The market loves a polished surface. The shiny new thing always sucks in users first, regardless of substance."
+              "The big guy announced their brand new 'AI Tutor' feature. Looks like they actually did the homework on curriculum.",
+              "They hired the best educators from established textbook companies. Quality over flash, every time."
             ],
             "debuff": [
-              "Oh look, another app promising to make learning fun. Yawn. They’ll burn out in six months.",
-              "Founders always think they have a secret advantage. Usually, they just have early debt.",
-              "It's easy to look good when you have investor cash. Let’s see the retention numbers."
+              "Just saw the trailer for the competitor. It looks exactly like the cartoons my kids already watch. Where is the learning?",
+              "The big company's app is confusing. Too many buttons for my 5-year-old. I wish it was simpler, like that other one..."
             ],
-            "defeat": "We pushed the core update through. Took an extra hour but the logic is sound now. Moving on."
+            "defeat": "They built it big, but we built it fast AND fun. Parents are signing up because our video recommendations aren't a mess. We still lead on joy."
           }
         },
         "cardPlayTweets": {
           "attack": [
-            "One more commit pushed. That section of code feels much better now.",
-            "Shipped the latest changes. Things are running smooth over here."
+            "Shipping the new math module. It's live!"
           ],
           "skill": [
-            "Spent time cleaning up that old section. It’s so much cleaner to work with now.",
-            "Pulled back a small tweak that wasn't right. Good to know we can fix it instantly."
+            "Untangled the data structure mess. Cleaner now."
           ],
           "power": [
-            "The way users are connecting features is exactly what we hoped for. That feeling is great.",
-            "Seeing exponential growth from simple sharing. The system is learning how to grow itself."
+            "If one kid watches, their friends will see it. Network effect is starting."
           ]
         }
       }
@@ -705,8 +704,8 @@
         "setup": "User feedback is confusing.",
         "conflict": "Half want feature A, half want B. Neither aligns with your vision.",
         "resolution": "You make a choice. Time will tell if it's right.",
-        "storyBeat": "Major debate: Should we focus on Math content first or Literacy? We chose Literacy. Sticking to it.",
-        "narrativeHook": "No turning back now.",
+        "storyBeat": "Decided to cut half the planned features just to ship something stable.",
+        "narrativeHook": "We chose simplicity over stuffing it with everything. The core thing finally feels right.",
         "primaryDevice": "moment_of_doubt",
         "secondaryDevice": "cliffhanger",
         "foreshadowsFloor": 11,
@@ -720,36 +719,35 @@
         }
       ],
       "meso": {
-        "approachTweet": "Everyone has a perfect feature idea. My inbox is a traffic jam of great advice. We picked one direction. Deep breath. Time to build that path.",
-        "victoryTweet": "We shipped the Literacy focus today. It feels solid. Watching users interact with the thing we chose to build is the best feeling.",
+        "approachTweet": "Feedback says: 'Make the math videos shorter!' AND 'Make the history cartoons longer!' We can only pick one path for the player profile screen. Going for stability first.",
+        "victoryTweet": "We cut half the planned 'play zones' to make the core learning loop rock solid. It loaded. It didn't crash. The kids learned about dinosaurs! That was the whole point.",
         "enemyTweets": {
           "scope_creep": {
             "attack": [
-              "If you aren't building ten features at once, are you even trying? Focus is for small projects.",
-              "Wait, but what about the essential tool that does X, Y, and Z? You need that immediately."
+              "If the kids aren't building a whole universe, is it even educational? You need persistent worlds AND social features. Anything less is just boring videos.",
+              "Why stop at math? Kids need blockchain basics by age 7. Your 'play' sounds like just watching TV with extra steps.",
+              "If it doesn't have live multiplayer lessons with voice chat, it won't keep anyone past Tuesday. Speed means nothing without EVERYTHING."
             ],
             "buff": [
-              "Great founders always listen to the market. If 60% of people ask for something, you build it. Data talks."
+              "Remember, you promised them the world! Don't settle for a small corner of it. More features = more wow factor.",
+              "If the platform isn't infinitely expandable, how will you ever charge for the next expansion pack? Think big!"
             ],
             "debuff": [
-              "Another one of those apps. Let's see if they stick to the plan past Tuesday. Most pivot within a month.",
-              "They are going to drown trying to do everything poorly instead of one thing right."
+              "They are trying to build a full theme park with one coder. Cute.",
+              "Looks like they are too scared to make the hard choice. Just keep adding bells and whistles until the whole thing falls over."
             ],
-            "defeat": "We cut the noise. We made the call. The list is shorter now. Focus is clean."
+            "defeat": "We decided to ship the learning part first. The play part comes later. Focus wins."
           }
         },
         "cardPlayTweets": {
           "attack": [
-            "Ship this piece. Commit made. Let's see it run.",
-            "It's live. Moving fast. Deploy successful."
+            "Removed the complex in-app currency system. Gone."
           ],
           "skill": [
-            "That chunk of code was confusing. Rewrote it completely. Much easier to read now.",
-            "Cleaned up the guts of that feature. Running smooth. Happy engineer."
+            "Refactored the video streaming connection. Cleaner now."
           ],
           "power": [
-            "The early users are already showing friends. This sharing is how things grow.",
-            "Got three people signing up because a friend told them to. The magic is starting."
+            "Focusing on one core learning track means the experience is instantly better for kids."
           ]
         }
       }
@@ -762,8 +760,8 @@
         "setup": "You check the bank account.",
         "conflict": "The numbers are worse than you remembered.",
         "resolution": "You have weeks, not months.",
-        "storyBeat": "The bank account balance is getting way too low. We're burning cash faster than I can write secure auth layers.",
-        "narrativeHook": "Runway anxiety is real.",
+        "storyBeat": "We have enough money for three more months if we skip paying ourselves.",
+        "narrativeHook": "The bank account is looking thin. We need users yesterday.",
         "primaryDevice": "stakes_raising",
         "callbackFrom": 1,
         "secondaryDevice": "tension_escalation",
@@ -777,36 +775,35 @@
         }
       ],
       "meso": {
-        "approachTweet": "Just pulled up the numbers. Oof. We need to ship something huge this week. Coffee supply is currently adequate.",
-        "victoryTweet": "We made it through the crunch. That one small step forward feels massive right now. So much more to do, but we are moving.",
+        "approachTweet": "Checking our funds. The 'Kids Learn' dashboard just got way too real. We have maybe three months max if we eat ramen.",
+        "victoryTweet": "The new video recommendation engine is live. We got 30 more minutes of playtime today! That buys us time. We built a real thing.",
         "enemyTweets": {
           "burnout": {
             "attack": [
-              "If you have to check the balance that often, maybe it’s time to get a real job. This pace is unsustainable.",
-              "Most founders run out of runway before they run out of ideas. Just saying."
+              "If you skip paying yourself, you aren't building. You are just delaying the inevitable crash.",
+              "You can only survive on coffee and dreams for so long before the code gets sloppy.",
+              "That feeling when you realize you traded your life for an app nobody needs. It hits hard."
             ],
             "buff": [
-              "Real pressure makes diamonds. This is where the best teams are forged. Time to push."
+              "The quiet ones are always the most stressed. Wait until they have to talk to customers.",
+              "When the money runs out, the 'mission' evaporates fast. Good luck holding that vision."
             ],
             "debuff": [
-              "Counting weeks instead of months? That usually means you're planning for failure, not success.",
-              "I’ll believe it when I see users paying for it. Until then, it’s just expensive math homework."
+              "Hope that little learning game is worth missing birthdays for. It wasn't for me.",
+              "How many hours of video content did they really make? That production cost is going to crush them."
             ],
-            "defeat": "Sometimes the biggest breakthroughs happen when you absolutely have to deliver. We cleared the hurdle."
+            "defeat": "We fixed the billing glitch. That panic almost made us close. Three months just became four. We keep building."
           }
         },
         "cardPlayTweets": {
           "attack": [
-            "New flow pushed. Tested it three times. It's live. Let's see what happens next.",
-            "Ship it. Review later. It works well enough for right now."
+            "Shipped the payment link. Go click it."
           ],
           "skill": [
-            "Totally rebuilt that core piece. It's simpler and it handles way more. Big cleanup done.",
-            "That whole section was a hot mess. Took an hour to make it perfect. So much faster now."
+            "Refactored the content loading sequence. Faster playtime."
           ],
           "power": [
-            "Look at the sign-ups growing because of that one change we made yesterday. That's the good stuff.",
-            "The system is starting to connect people automatically. That's the whole point. Magic happening."
+            "The content sharing link now tracks views perfectly."
           ]
         }
       }
@@ -819,8 +816,8 @@
         "setup": "The team is quiet.",
         "conflict": "People are burning out. Someone asks about job security.",
         "resolution": "You give a speech you're not sure you believe.",
-        "storyBeat": "Staring at our zero daily active users. Did we build something only we think is cool? Deep breath.",
-        "narrativeHook": "The silence is deafening.",
+        "storyBeat": "Spent a week staring at zero sign-ups after launching a private test.",
+        "narrativeHook": "Did we build a solution for a problem that doesn't exist? It happens.",
         "primaryDevice": "dark_moment",
         "secondaryDevice": "moment_of_doubt",
         "emotionalArc": "anxious_to_desperate",
@@ -833,36 +830,35 @@
         }
       ],
       "meso": {
-        "approachTweet": "The silence in the room is louder than any server error. We have to figure out the next move. Now.",
-        "victoryTweet": "Got the engine running again. The team is looking forward. That's the only metric that matters today.",
+        "approachTweet": "Still quiet in the office. The 'Recommended Learning Path' screen is just showing empty slots. I miss when the placeholder stuff looked fun. 3 days left.",
+        "victoryTweet": "We stayed. The team is back building. Pushed the real-time tracking for 'Learning XP' live. Kids are actually finishing lessons now. That’s the engine.",
         "enemyTweets": {
           "over_engineer": {
             "attack": [
-              "If the foundational logic isn't perfectly modularized for five future use cases, it's not really built.",
-              "Rushing to launch without a comprehensive schema review is just inviting technical debt chaos."
+              "If their 'learning path' isn't built on a proprietary graph database, it's just a playlist. Amateurs.",
+              "Wasting cycles on colorful transitions when the core logic for subject separation is likely monolithic. Sad.",
+              "They need to pause and define their Domain Driven Design boundaries before writing another line of frontend for cartoons."
             ],
             "buff": [
-              "Startups that prioritize speed over pristine structure always crash when scaling hits."
+              "A well-structured caching layer is the only thing saving their brittle content delivery system right now.",
+              "If they actually use strong typing, maybe they won't crash when a kid clicks too fast."
             ],
             "debuff": [
-              "They probably spent six months perfecting a feature nobody asked for.",
-              "Zero users? Shocking. Guess nobody needed that complicated solution."
+              "I bet their video thumbnails have inconsistent aspect ratios. Sloppy.",
+              "This isn't an 'app,' it's a glorified video player with bad tagging. They aren't building a platform."
             ],
-            "defeat": "Ship it. We can clean the layers later. Done is better than perfect theory."
+            "defeat": "That complex content ID system? Built it. It handles 5 levels of educational tagging now. Simple works best for kids."
           }
         },
         "cardPlayTweets": {
           "attack": [
-            "New build pushed. Let's see how it feels now.",
-            "Everything is live. Fingers crossed this time."
+            "It’s live. The kid portal works on tablets now."
           ],
           "skill": [
-            "Refactored that tricky part. Much easier to read now.",
-            "Rolled back the last change. Lesson learned fast."
+            "Rolled back the last three UI changes. Too confusing for 5-year-olds."
           ],
           "power": [
-            "Our first real share happened. That ripple is starting.",
-            "Seeing users connect dots we built. This is why we keep going."
+            "Our content pipeline auto-formats all videos for every screen size."
           ]
         }
       }
@@ -875,8 +871,8 @@
         "setup": "You wake up at 4am with a pit in your stomach.",
         "conflict": "Maybe the doubters were right. Maybe this won't work.",
         "resolution": "But then... a notification. Someone new signed up.",
-        "storyBeat": "The co-founder and I are running on fumes. Had to step in and do some non-tech ops just to keep spirits up.",
-        "narrativeHook": "Team morale is the hardest dependency.",
+        "storyBeat": "Team morale hit rock bottom after the latest testing failure.",
+        "narrativeHook": "Had to buy the entire team pizza and just talk about why we started this in the first place.",
         "primaryDevice": "turning_point",
         "callbackFrom": 8,
         "foreshadowsFloor": 12,
@@ -890,36 +886,35 @@
         }
       ],
       "meso": {
-        "approachTweet": "4 AM alarm, but my stomach beat it. Just staring at the ceiling. Wondering if we have enough fuel left in the tank for today.",
-        "victoryTweet": "The screen just lit up. One more person found us. That's it. That’s the moment.",
+        "approachTweet": "4 AM. The 'Recommended Lesson' engine is stuck showing only dinosaurs. If kids only learn about T-Rexes, we failed. Pit in stomach time.",
+        "victoryTweet": "Notification. A new kid signed up. Not only that, they immediately watched the whole 'Why Do Cats Purr?' video. It's working. We made something people want.",
         "enemyTweets": {
           "pivot_master": {
             "attack": [
-              "If you aren't changing direction every Tuesday, you aren't innovating fast enough.",
-              "This version is fine, but have you considered rebuilding the entire core logic based on an unrelated concept you read this morning?"
+              "Why focus on kids? Teens need to learn coding first. This whole 'play' thing is a distraction from real education.",
+              "If it's educational, it shouldn't feel *too* much like play. Parents want rigor, not cartoons. Change direction now.",
+              "Another video platform? There are already a million. This 'Netflix for kids' thing has zero chance."
             ],
             "buff": [
-              "It's good when a team shows flexibility. Shows they aren't too attached to a failing first idea."
+              "The market for digital learning subscriptions is huge right now. You might actually catch a wave if you hurry up.",
+              "I wish I had this when I was 8. If you make one video about space, I'm in."
             ],
             "debuff": [
-              "When they start swinging wildly, it usually means the first plan was terrible. Big red flag.",
-              "Watch them burn through cash chasing shiny new concepts. Happens every time."
+              "Did they even check if parents trust their kids watching random educational videos? Big hurdle coming.",
+              "Bet you they spent all the money on pretty animations and forgot to code the actual subscription check."
             ],
-            "defeat": "We locked the path. Moving forward with conviction. Less talking, more building."
+            "defeat": "We shipped the payment flow. It's simple, it works, and parents can trust it. We are not changing that again."
           }
         },
         "cardPlayTweets": {
           "attack": [
-            "Pushed the small correction. Let's see it run.",
-            "It’s out there. Working version two is live."
+            "New content added! 🚀"
           ],
           "skill": [
-            "Scrubbed that messy section. Feels much better under the hood now.",
-            "Fixed the loop that wouldn't end. Clean change made."
+            "Refactored the video queue. It's cleaner now."
           ],
           "power": [
-            "The way people are finding each other here is starting to click. Momentum feels real.",
-            "Seeing organic connections form in the platform. This is the good stuff."
+            "Better data structure means faster loading."
           ]
         }
       }
@@ -928,12 +923,12 @@
       "floor": 12,
       "floorBeat": {
         "floor": 12,
-        "storyPhase": "PHASE 3 - THE DOUBT",
+        "storyPhase": "PHASE 4 - THE BREAKTHROUGH",
         "setup": "That new user? They LOVE it.",
         "conflict": "They want to pay. You don't even have a payment system.",
         "resolution": "You stay up all night to build one.",
-        "storyBeat": "A random email from a teacher. 'My students actually asked for more screen time today.' I almost cried.",
-        "narrativeHook": "A glimmer of hope just landed.",
+        "storyBeat": "A random teacher found our test link and emailed us saying her class was begging for more.",
+        "narrativeHook": "One person *loved* it enough to take time to tell us. That's fuel.",
         "primaryDevice": "payoff",
         "callbackFrom": 3,
         "secondaryDevice": "ally_appears",
@@ -951,34 +946,51 @@
         }
       ],
       "meso": {
-        "approachTweet": "Someone actually uses the thing we built. And they want to pay for it. I don't have a way for them to pay yet. This is wild.",
-        "victoryTweet": "The button finally works. It's done. We can take money now. Amazing feeling.",
+        "approachTweet": "The new tester just sent a note. She said her kids watched all 4 science videos back-to-back. We don't even have a way for her to pay us. Oh no.",
+        "victoryTweet": "It's live. The one-click subscription button exists. The first paying customer is confirmed! This feels like magic. They are paying for silly videos!",
         "enemyTweets": {
           "headhunter": {
-            "attack": [],
-            "buff": [],
-            "debuff": [],
-            "defeat": ""
+            "attack": [
+              "We saw the work you are doing. Very cute. But are you building actual systems? Come talk salary, not songs.",
+              "The best builders don't waste time on kids' apps. You need to be designing real infrastructure. DM me.",
+              "Warning: Founders who build 'fun' things often get stuck building 'fun' things forever. Time to get serious."
+            ],
+            "buff": [
+              "Imagine building systems that matter, not just making cartoons load faster.",
+              "That platform you are building is nice, but we offer 10x the stability for real projects."
+            ],
+            "debuff": [
+              "Don't worry, we can train you out of that 'shipping quick' habit.",
+              "Your team seems small. We hire people who have already shipped big things."
+            ],
+            "defeat": "We built a payment system at 3 AM for a teacher who loves our science videos. That's the big thing."
           },
           "bad_merge": {
-            "attack": [],
-            "buff": [],
-            "debuff": [],
-            "defeat": ""
+            "attack": [
+              "Heard the payment integration is just a manual spreadsheet right now. Hope they don't bankrupt the first user.",
+              "They don't even have billing set up? Rookie mistake. This whole 'play' thing is a distraction from real business.",
+              "That one user who loves it? Probably just the founder's aunt. Don't trust the early numbers."
+            ],
+            "buff": [
+              "When you have to build core finance infrastructure overnight, you know you skipped the planning phase.",
+              "They are totally unprepared for the first real money transaction. It's going to be messy."
+            ],
+            "debuff": [
+              "Building payment is the boring part. They wanted to make cartoons. See? It's already not fun.",
+              "No one pays for educational content unless it's free first. That first click won't repeat."
+            ],
+            "defeat": "The payment system worked. The first paying customer is now watching 'The History of Bread' with zero hiccups. We are still building play."
           }
         },
         "cardPlayTweets": {
           "attack": [
-            "Pushed the first rough draft of the money mechanism. Fingers crossed.",
-            "Ship it. Testing the flow now. It actually clicks through."
+            "Building checkout logic. It's ugly but it accepts money. Shipped it. 🚀"
           ],
           "skill": [
-            "Refactored that whole payment handler. So much cleaner than the 3 AM version.",
-            "Made one small change and immediately saw an issue. Quick rollback was the right call."
+            "Refactored the database entry for the subscription. Tomorrow me will thank today me for this."
           ],
           "power": [
-            "When users start telling their friends, that’s when you know the work matters.",
-            "Getting traction feels like every tiny feature is suddenly working together."
+            "This architecture ensures that when 100 teachers sign up, the video streaming won't break."
           ]
         }
       }
@@ -991,8 +1003,8 @@
         "setup": "That customer told a friend.",
         "conflict": "Now there are 10 users. Then 50. You're not ready for this.",
         "resolution": "It's chaotic, but you're growing.",
-        "storyBeat": "A parent paid the tiny subscription fee we set up. First dollar earned from a complete stranger! I framed the receipt.",
-        "narrativeHook": "Someone sees the value.",
+        "storyBeat": "The first person outside our network actually paid the subscription fee.",
+        "narrativeHook": "Not for a test. Real money for the real thing. We almost crashed the payment system from excitement.",
         "primaryDevice": "small_victory",
         "secondaryDevice": "tension_escalation",
         "emotionalArc": "desperate_to_hopeful",
@@ -1005,37 +1017,31 @@
         }
       ],
       "meso": {
-        "approachTweet": "Someone shared the link. Now the little number next to 'users' ticked up. I need coffee. And maybe a vacation.",
-        "victoryTweet": "The first dollar came in from a stranger. I actually framed the receipt. It's working. It's loud, but it's moving.",
+        "approachTweet": "The first real user—not my mom—just signed up for the monthly 'Play Pass.' The payment screen didn't crash. I'm scared to look at the logs now.",
+        "victoryTweet": "The kids' video queue is actually loading for 50 different screens at once. It's noisy, but it's working! We built a digital playground, not a broken toy.",
         "enemyTweets": {
           "merge_conflict": {
             "attack": [
-              "Another parenting app? I bet they didn't think about scale at all.",
-              "Founders always celebrate $1. Wait until they have real overhead. That's when the fun starts."
+              "Still talking about Netflix? Show me one user."
             ],
             "buff": [
-              "My kid loves this! I told three friends already. Keep going!",
-              "Small early traction suggests product-market fit might be forming. Interesting data point."
+              "Every delay proves me right about GiggleLearn."
             ],
             "debuff": [
-              "Easy to look good when you only have ten users. Try handling a thousand next week.",
-              "That small rush always leads to a hard crash later. Hope they built it to last."
+              "Looks brittle. Rush it and watch it crack."
             ],
-            "defeat": "They wanted chaos. They got a path forward. Building for today and tomorrow."
+            "defeat": "Handled that distraction. Back to building Netflix."
           }
         },
         "cardPlayTweets": {
           "attack": [
-            "Pushed a small update. It went through. Solid deploy this time.",
-            "Shipping the quick fix now. Hope it lands right."
+            "Forced a database reset. All old session data gone. Starting clean."
           ],
           "skill": [
-            "Cleaned up that section of code we wrote last week. So much better now.",
-            "Reorganized that tricky part. Feels much stronger under pressure."
+            "Rewrote the video caching layer. Less lag when kids switch cartoons."
           ],
           "power": [
-            "Watching the new users bring in others. It's actually starting to pull itself along.",
-            "The word is getting out faster than I can type. Good problem."
+            "The 'Recommended For You' section just got smart. They'll see more fun stuff."
           ]
         }
       }
@@ -1048,8 +1054,8 @@
         "setup": "You look at the graphs.",
         "conflict": "The curve is going up. Not linear. Exponential.",
         "resolution": "This might actually work. You allow yourself to believe.",
-        "storyBeat": "We hit 50 active users who used the product three times this week. They are coming back without prompting.",
-        "narrativeHook": "The usage curve bent upwards!",
+        "storyBeat": "Sign-ups started happening overnight, faster than we could onboard them.",
+        "narrativeHook": "People are finding us without us saying a word. This feeling is wild.",
         "primaryDevice": "revelation",
         "secondaryDevice": "payoff",
         "callbackFrom": 7,
@@ -1067,34 +1073,51 @@
         }
       ],
       "meso": {
-        "approachTweet": "Staring at these numbers again. Just need one more person to show up tomorrow. Just one.",
-        "victoryTweet": "Fifty people used this thing three times this week. They just opened it. They came back. Wow. This is feeling real.",
+        "approachTweet": "The sign-up graph looks like a ski slope now. We need to fix the onboarding queue before kids get mad their cartoons aren't loading.",
+        "victoryTweet": "The queue is stable! New kids are watching the history lessons that feel like alien invasions. We actually did it.",
         "enemyTweets": {
           "hotfix": {
-            "attack": [],
-            "buff": [],
-            "debuff": [],
-            "defeat": ""
+            "attack": [
+              "Why build a queue? Just let everyone in! If it crashes, that's free marketing when the world talks about it.",
+              "If your kids' learning app can't handle a spike, it's not ready. Don't patch small problems, rebuild the whole thing!",
+              "They are probably spending too much time making the learning fun instead of just getting more users in the door."
+            ],
+            "buff": [
+              "Massive traffic is a good sign! Time to double down on flashy new videos, not boring server maintenance.",
+              "See? People want this. Go big or go home! Who cares if it breaks for ten minutes?"
+            ],
+            "debuff": [
+              "Still buffering? Told you a tiny fix wouldn't work. Enjoy your angry parents.",
+              "They are still fiddling with that loading screen. Meanwhile, my risky plan would have gotten 1000 users already."
+            ],
+            "defeat": "We built the proper ticket system. It's boring, but now every kid sees their fun learning videos instantly."
           },
           "feature_pusher": {
-            "attack": [],
-            "buff": [],
-            "debuff": [],
-            "defeat": ""
+            "attack": [
+              "Sure, add the talking parrot feature! And the built-in coloring book! We should do everything users ask for right now!",
+              "If one user asks for it, a million want it! Say yes to the custom avatar generator immediately!",
+              "Don't worry about the server strain. Just say yes to everyone asking for more HD video storage!"
+            ],
+            "buff": [
+              "Yes! This growing traffic means we must immediately build the parent dashboard we talked about last week!",
+              "This is great! If we just keep saying yes, the product will build itself!"
+            ],
+            "debuff": [
+              "Whoops, saying yes to everything made the main content disappear. My bad! 🤷‍♀️",
+              "We broke the video system because we tried to add ten extra things at once. Totally fine!"
+            ],
+            "defeat": "Said NO to 5 new features today. Focused only on fixing the loading screen. The core play experience is safe."
           }
         },
         "cardPlayTweets": {
           "attack": [
-            "Pushed the latest changes. The whole thing is live now. Let's see what happens next.",
-            "Code sent. It’s done. Ship it and forget it until the next task shows up."
+            "Forcing the new database connection live. If this fails, we're back to manual user approvals."
           ],
           "skill": [
-            "Spent an hour cleaning up that old section. It's so much clearer now. Worth the time.",
-            "Reverted that one small change that felt weird. Back to the working version. No regrets."
+            "Cleaning up the old signup script. It was so messy, like spaghetti code."
           ],
           "power": [
-            "We made sharing so easy that people are showing friends without us even asking. That's the magic.",
-            "The way new users are pulling in others naturally is amazing. It's starting to move on its own."
+            "This auto-scaling setup is huge. It means we can handle the next 10x growth easily."
           ]
         }
       }
@@ -1107,8 +1130,8 @@
         "setup": "An investor wants to meet.",
         "conflict": "This is it. The meeting that could change everything.",
         "resolution": "You prepare the pitch of your life.",
-        "storyBeat": "Today is the big meeting. Pitched the code, the vision, and the sticky kids. Felt like the entire past year was in that slide deck.",
-        "narrativeHook": "Show them the magic.",
+        "storyBeat": "Secured the first meeting with the lead investor we targeted.",
+        "narrativeHook": "We cleaned the whiteboard. Put on actual shoes. Time to show them what we broke and fixed.",
         "primaryDevice": "stakes_raising",
         "callbackFrom": 9,
         "foreshadowsFloor": 16,
@@ -1122,36 +1145,35 @@
         }
       ],
       "meso": {
-        "approachTweet": "The pitch deck is loaded. Every line of code we wrote is in there somewhere. Deep breath. Time to show them what we built.",
-        "victoryTweet": "We showed them the vision. We showed them the sticky kids. That felt good. We moved forward today.",
+        "approachTweet": "Spent all night tuning the 'Play-to-Learn' engine so the math games don't look like homework. Investor meeting in 2 hours. Hope they like cartoons.",
+        "victoryTweet": "The pitch deck is done. Every screen shows a kid actually smiling while learning fractions. Felt good to show them the *play* part.",
         "enemyTweets": {
           "boss_burn_rate": {
             "attack": [
-              "Another pitch about 'disruption.' Most of these burn through cash before they even ship version one.",
-              "If they aren't talking numbers, they aren't serious. That clock is ticking faster than they think."
+              "Kids content is a graveyard. They have no idea what 'running out of money' actually feels like.",
+              "How many months until they need cash? If it’s under 6, this pitch is a waste of everyone's time.",
+              "Another 'play' app. They think fun pays the server bill? LOL."
             ],
             "buff": [
-              "Investors love founders who understand financial reality. It separates the dreamers from the doers."
+              "If their learning material is truly good, maybe there is room. But usually, it's just flashy graphics.",
+              "Parents need screen time that isn't junk. I hope they deliver on the 'educational' promise."
             ],
             "debuff": [
-              "They always think the first meeting solves the money problem. Sweet summer child.",
-              "Hope they have more than just a pretty presentation. Ideas don't pay salaries."
+              "They’re just hoping one big check saves them. Bad sign. Smart people plan ahead.",
+              "Fixing bugs is 90% of the job. If they're pitching, they probably still have 100 bugs."
             ],
-            "defeat": "We showed them the path forward. The runway just got longer. Next steps locked in."
+            "defeat": "The meeting went great. The investor loved how quickly kids move from the ABC game to basic physics puzzles. We’re funded!"
           }
         },
         "cardPlayTweets": {
           "attack": [
-            "Pushed that big demo update. It's live. See how fast it loads now.",
-            "Final check before the pitch. Everything is running smooth. Shipped it."
+            "Pitch deck sent."
           ],
           "skill": [
-            "Refactored that tricky section we talked about last week. It's so much cleaner now. Feels right.",
-            "Quick rollback on that small tweak. Saved us a headache later. Smart move."
+            "Reorganized the whole story flow."
           ],
           "power": [
-            "One new partner signed up. Watching the connections happen is the best feeling.",
-            "The way users are sharing this thing organically is exactly what we hoped for. It’s catching."
+            "Our curated video library is unmatched."
           ]
         }
       }
@@ -1164,8 +1186,8 @@
         "setup": "You walk into the room.",
         "conflict": "The investors are skeptical. They've heard a thousand pitches.",
         "resolution": "But you have something they don't: proof.",
-        "storyBeat": "We got the commitment. Seed round closed! Time to hire engineers and scale this whole thing. Thank you, world.",
-        "narrativeHook": "We're funded. Let's build!",
+        "storyBeat": "The term sheet arrived. We signed it.",
+        "narrativeHook": "The journey from napkin sketch to funded company is done. Now, let's go build the real thing.",
         "primaryDevice": "payoff",
         "secondaryDevice": "turning_point",
         "callbackFrom": 1,
@@ -1179,35 +1201,42 @@
         }
       ],
       "meso": {
-        "approachTweet": "Deep breath. Walked in. The room feels cold. We have the numbers. Show them the reality.",
-        "victoryTweet": "We got the commitment. The seed round is officially closed. Time to hire the best people and build this thing huge. Unreal feeling.",
+        "approachTweet": "Demo time. Hitting 'Play' on the video player for the 50th time. Hope the kids' math lessons load faster than the investor's patience.",
+        "victoryTweet": "We showed them the retention graph. Real kids watch math videos for 45 minutes straight. They stopped asking questions and just started writing numbers down. We made learning feel like cartoons.",
         "enemyTweets": {
           "investor_meeting": {
-            "attack": [],
-            "buff": [],
-            "debuff": [],
-            "defeat": ""
+            "attack": [
+              "You have kids watching educational videos? So, YouTube Kids? Where is the magic difference?",
+              "What's the engagement metric for 'play'? I only see screen time numbers, which look scary.",
+              "Parents pay for tutors. They don't pay for apps that feel like TV. Convince me this isn't just another subscription that dies next month."
+            ],
+            "buff": [
+              "That onboarding flow for the parental controls is surprisingly clean, though. Good job there.",
+              "The animation style for the geometry lesson is top-tier. Clearly high production value."
+            ],
+            "debuff": [
+              "If you can't show me 500 paying families already hooked, I don't see the path here.",
+              "This feels like something that sounds great at dinner but nobody actually opens after week one."
+            ],
+            "defeat": "We showed them the internal data: Kids choose the Science Module over cartoons 70% of the time. They looked at the paper. They signed."
           }
         },
         "cardPlayTweets": {
           "attack": [
-            "New list of people joining the mission. Time to commit the onboarding flow. Let's go.",
-            "Shipped the first big update since funding. Everything is live. Clean deploy."
+            "Hit 'Final Demo Build'. Hope it doesn't break."
           ],
           "skill": [
-            "That part of the code base was a mess from the early days. Refactored it all morning. So much cleaner now.",
-            "Had to pull back a small change that wasn't right for the new scale. Smart to rollback fast. Lesson learned."
+            "Quickly patched the video buffering issue on older tablets."
           ],
           "power": [
-            "The way users are connecting features together is wild. That organic growth is the best signal.",
-            "Seeing usage spread itself. It's like the product is telling people to bring their friends. Love this."
+            "Added the cohort data to the pitch deck. Show the growth spike."
           ]
         }
       }
     }
   ],
   "summary": {
-    "totalTweets": 224,
+    "totalTweets": 235,
     "totalFloors": 16,
     "storyPhases": [
       "PHASE 1 - THE SPARK",
@@ -1216,5 +1245,18 @@
       "PHASE 4 - THE BREAKTHROUGH",
       "PHASE 5 - THE CLIMAX"
     ]
+  },
+  "stickiness": {
+    "vocabularyScore": 70,
+    "vocabularyViolations": [
+      "sam",
+      "cac",
+      "arr"
+    ],
+    "enemyCallbackCount": 1,
+    "floorRecapsMentioned": 15,
+    "causeEffectReferences": 0,
+    "has12yoReadability": false,
+    "storyCardGenerated": true
   }
 }

@@ -20,68 +20,68 @@ export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selecta
   const getTypeColors = () => {
     if (card.unplayable && !selectable) {
       return {
-        border: 'rgba(55, 65, 81, 0.5)',
+        border: 'rgba(156, 163, 175, 0.5)',
         glow: 'transparent',
-        orbBg: 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
+        orbBg: 'linear-gradient(135deg, #9CA3AF 0%, #D1D5DB 100%)',
         orbGlow: 'none',
-        text: 'text-gray-500',
-        accent: '#6b7280',
+        text: 'text-gray-400',
+        accent: '#9CA3AF',
       };
     }
 
     switch (card.type) {
       case 'attack':
         return {
-          border: card.upgraded ? 'rgba(255, 170, 0, 0.6)' : 'rgba(239, 68, 68, 0.5)',
-          glow: card.upgraded ? 'rgba(255, 170, 0, 0.3)' : 'rgba(239, 68, 68, 0.25)',
+          border: card.upgraded ? 'rgba(221, 107, 32, 0.6)' : 'rgba(229, 62, 62, 0.5)',
+          glow: card.upgraded ? 'rgba(221, 107, 32, 0.15)' : 'rgba(229, 62, 62, 0.1)',
           orbBg: card.upgraded
-            ? 'linear-gradient(135deg, #ffd700 0%, #ff9500 100%)'
-            : 'linear-gradient(135deg, #ff6b6b 0%, #dc2626 100%)',
+            ? 'linear-gradient(135deg, #F6AD55 0%, #DD6B20 100%)'
+            : 'linear-gradient(135deg, #FC8181 0%, #E53E3E 100%)',
           orbGlow: card.upgraded
-            ? '0 0 20px rgba(255, 215, 0, 0.6), 0 0 40px rgba(255, 170, 0, 0.3)'
-            : '0 0 20px rgba(239, 68, 68, 0.5), 0 0 40px rgba(239, 68, 68, 0.2)',
-          text: card.upgraded ? 'text-warning' : 'text-red-400',
-          accent: card.upgraded ? '#ffd700' : '#ef4444',
+            ? '0 2px 8px rgba(221, 107, 32, 0.4)'
+            : '0 2px 8px rgba(229, 62, 62, 0.3)',
+          text: card.upgraded ? 'text-orange-600' : 'text-red-600',
+          accent: card.upgraded ? '#DD6B20' : '#E53E3E',
         };
       case 'skill':
         return {
-          border: card.upgraded ? 'rgba(255, 170, 0, 0.6)' : 'rgba(59, 130, 246, 0.5)',
-          glow: card.upgraded ? 'rgba(255, 170, 0, 0.3)' : 'rgba(59, 130, 246, 0.25)',
+          border: card.upgraded ? 'rgba(221, 107, 32, 0.6)' : 'rgba(49, 130, 206, 0.5)',
+          glow: card.upgraded ? 'rgba(221, 107, 32, 0.15)' : 'rgba(49, 130, 206, 0.1)',
           orbBg: card.upgraded
-            ? 'linear-gradient(135deg, #ffd700 0%, #ff9500 100%)'
-            : 'linear-gradient(135deg, #60a5fa 0%, #2563eb 100%)',
+            ? 'linear-gradient(135deg, #F6AD55 0%, #DD6B20 100%)'
+            : 'linear-gradient(135deg, #63B3ED 0%, #3182CE 100%)',
           orbGlow: card.upgraded
-            ? '0 0 20px rgba(255, 215, 0, 0.6), 0 0 40px rgba(255, 170, 0, 0.3)'
-            : '0 0 20px rgba(59, 130, 246, 0.5), 0 0 40px rgba(59, 130, 246, 0.2)',
-          text: card.upgraded ? 'text-warning' : 'text-blue-400',
-          accent: card.upgraded ? '#ffd700' : '#3b82f6',
+            ? '0 2px 8px rgba(221, 107, 32, 0.4)'
+            : '0 2px 8px rgba(49, 130, 206, 0.3)',
+          text: card.upgraded ? 'text-orange-600' : 'text-blue-600',
+          accent: card.upgraded ? '#DD6B20' : '#3182CE',
         };
       case 'power':
         return {
-          border: 'rgba(245, 158, 11, 0.5)',
-          glow: 'rgba(245, 158, 11, 0.25)',
-          orbBg: 'linear-gradient(135deg, #fcd34d 0%, #d97706 100%)',
-          orbGlow: '0 0 20px rgba(245, 158, 11, 0.5), 0 0 40px rgba(245, 158, 11, 0.2)',
-          text: 'text-amber-400',
-          accent: '#f59e0b',
+          border: 'rgba(221, 107, 32, 0.5)',
+          glow: 'rgba(221, 107, 32, 0.1)',
+          orbBg: 'linear-gradient(135deg, #F6AD55 0%, #DD6B20 100%)',
+          orbGlow: '0 2px 8px rgba(221, 107, 32, 0.4)',
+          text: 'text-amber-600',
+          accent: '#DD6B20',
         };
       case 'status':
         return {
-          border: 'rgba(107, 114, 128, 0.5)',
+          border: 'rgba(156, 163, 175, 0.5)',
           glow: 'transparent',
-          orbBg: 'linear-gradient(135deg, #6b7280 0%, #374151 100%)',
+          orbBg: 'linear-gradient(135deg, #9CA3AF 0%, #6B7280 100%)',
           orbGlow: 'none',
-          text: 'text-gray-400',
-          accent: '#6b7280',
+          text: 'text-gray-500',
+          accent: '#6B7280',
         };
       default:
         return {
-          border: 'rgba(255, 255, 255, 0.2)',
+          border: 'rgba(156, 163, 175, 0.3)',
           glow: 'transparent',
-          orbBg: 'linear-gradient(135deg, #ffffff 0%, #a0a0a0 100%)',
+          orbBg: 'linear-gradient(135deg, #E2E8F0 0%, #CBD5E0 100%)',
           orbGlow: 'none',
-          text: 'text-white',
-          accent: '#ffffff',
+          text: 'text-gray-700',
+          accent: '#718096',
         };
     }
   };
@@ -172,16 +172,15 @@ export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selecta
         height: '240px',
       }}
     >
-      {/* Card Frame with Glassmorphism */}
+      {/* Card Frame with Neomorphism */}
       <div
         className="absolute inset-0 rounded-xl overflow-hidden"
         style={{
-          background: 'linear-gradient(180deg, rgba(30, 30, 40, 0.95) 0%, rgba(15, 15, 25, 0.98) 100%)',
-          backdropFilter: 'blur(10px)',
+          background: 'linear-gradient(145deg, #F5F7FA 0%, #E8ECEF 100%)',
           border: `2px solid ${typeColors.border}`,
           boxShadow: isPlayable
-            ? `0 4px 20px rgba(0,0,0,0.4), 0 0 30px ${typeColors.glow}`
-            : 'none',
+            ? `8px 8px 16px #C8CED3, -8px -8px 16px #FFFFFF, 0 0 20px ${typeColors.glow}`
+            : '4px 4px 8px #C8CED3, -4px -4px 8px #FFFFFF',
           transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
         }}
       />
@@ -191,7 +190,7 @@ export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selecta
         <div
           className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
           style={{
-            boxShadow: `0 0 40px ${typeColors.glow}, 0 0 60px ${typeColors.glow}`,
+            boxShadow: `12px 12px 24px #C8CED3, -12px -12px 24px #FFFFFF, 0 0 30px ${typeColors.glow}`,
           }}
         />
       )}
@@ -242,8 +241,9 @@ export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selecta
           className="relative rounded-lg overflow-hidden mb-2 flex-shrink-0"
           style={{
             height: '120px',
-            background: 'linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.5) 100%)',
-            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'linear-gradient(180deg, rgba(200,210,220,0.4) 0%, rgba(180,190,200,0.3) 100%)',
+            border: '1px solid rgba(255,255,255,0.5)',
+            boxShadow: 'inset 2px 2px 4px rgba(200,206,211,0.5), inset -2px -2px 4px rgba(255,255,255,0.8)',
           }}
         >
           {gifUrl ? (
@@ -261,21 +261,21 @@ export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selecta
 
           {/* Exhaust badge */}
           {card.exhaust && (
-            <div className="absolute bottom-1 right-1 bg-black/80 text-[8px] uppercase font-bold text-gray-300 px-1.5 py-0.5 rounded border border-white/10 flex items-center gap-0.5">
+            <div className="absolute bottom-1 right-1 bg-gray-700/90 text-[8px] uppercase font-bold text-gray-100 px-1.5 py-0.5 rounded border border-gray-600 flex items-center gap-0.5 shadow-sm">
               <Archive size={8} /> Archive
             </div>
           )}
 
           {/* Ethereal badge */}
           {card.ethereal && (
-            <div className="absolute top-1 right-1 bg-blue-900/80 text-[8px] uppercase font-bold text-blue-200 px-1.5 py-0.5 rounded border border-blue-400/20 flex items-center gap-0.5">
+            <div className="absolute top-1 right-1 bg-blue-500/90 text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded border border-blue-400 flex items-center gap-0.5 shadow-sm">
               <Ghost size={8} /> Fleeting
             </div>
           )}
 
           {/* Retain badge */}
           {card.retain && (
-            <div className="absolute top-1 left-1 bg-yellow-900/80 text-[8px] uppercase font-bold text-yellow-200 px-1.5 py-0.5 rounded border border-yellow-400/20 flex items-center gap-0.5">
+            <div className="absolute top-1 left-1 bg-amber-500/90 text-[8px] uppercase font-bold text-white px-1.5 py-0.5 rounded border border-amber-400 flex items-center gap-0.5 shadow-sm">
               <Archive size={8} /> Retain
             </div>
           )}
@@ -287,7 +287,7 @@ export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selecta
           style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}
         >
           {card.name}
-          {card.upgraded && <span className="text-amber-400 ml-1">+</span>}
+          {card.upgraded && <span className="text-orange-500 ml-1">+</span>}
         </h3>
 
         {/* Type Badge - Subtle, below name */}
@@ -295,9 +295,10 @@ export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selecta
           <div
             className="px-2 py-0.5 rounded-full text-[9px] font-medium uppercase tracking-wide flex items-center gap-1"
             style={{
-              background: 'rgba(255,255,255,0.05)',
+              background: 'rgba(255,255,255,0.7)',
               border: `1px solid ${typeColors.border}`,
               color: typeColors.accent,
+              boxShadow: 'inset 1px 1px 2px rgba(200,206,211,0.3), inset -1px -1px 2px rgba(255,255,255,0.5)',
             }}
           >
             <span>{getCardTypeIcon()}</span>
@@ -307,7 +308,7 @@ export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selecta
 
         {/* Description */}
         <div
-          className="flex-1 text-[10px] text-gray-400 leading-tight text-center px-1"
+          className="flex-1 text-[10px] text-gray-600 leading-tight text-center px-1"
           style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}
         >
           {formatDescription(card.description)}
@@ -315,11 +316,11 @@ export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selecta
       </div>
 
       {/* Tooltip */}
-      <div className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full w-64 bg-gray-900/95 border border-gray-700 p-2.5 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 backdrop-blur-sm">
+      <div className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full w-64 bg-white border border-gray-200 p-2.5 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
         {card.tooltip && (
-          <div className={keywordsInCard.length > 0 ? "border-b border-gray-700 pb-2 mb-2" : ""}>
-            <div className="text-xs font-bold text-amber-400 mb-0.5">{card.tooltip.term}</div>
-            <div className="text-[10px] text-gray-300 leading-tight">{card.tooltip.definition}</div>
+          <div className={keywordsInCard.length > 0 ? "border-b border-gray-200 pb-2 mb-2" : ""}>
+            <div className="text-xs font-bold text-amber-600 mb-0.5">{card.tooltip.term}</div>
+            <div className="text-[10px] text-gray-600 leading-tight">{card.tooltip.definition}</div>
           </div>
         )}
 
@@ -331,8 +332,8 @@ export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selecta
                 <div key={keyword} className="text-[10px] leading-tight">
                   <span className="mr-1">{def.icon}</span>
                   <span className={`font-bold ${def.color}`}>{keyword}</span>
-                  <span className="text-gray-500 mx-1">—</span>
-                  <span className="text-gray-400">{def.description}</span>
+                  <span className="text-gray-400 mx-1">—</span>
+                  <span className="text-gray-600">{def.description}</span>
                 </div>
               );
             })}
@@ -340,7 +341,7 @@ export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selecta
         )}
 
         {!card.tooltip && keywordsInCard.length === 0 && (
-          <div className="text-[10px] text-gray-500 italic">No additional info</div>
+          <div className="text-[10px] text-gray-400 italic">No additional info</div>
         )}
       </div>
     </div>

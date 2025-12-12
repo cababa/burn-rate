@@ -1,16 +1,17 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { MapLayer, MapNode } from '../types';
 import { Skull, Circle, Coffee, Store, Gem, HelpCircle, Gift } from 'lucide-react';
+import { FloorBeat } from '../progressiveNarrativeTypes';
 
 interface MapScreenProps {
   map: MapLayer[];
   currentFloor: number;
   currentNodeId: string | null;
   onNodeSelect: (node: MapNode) => void;
+  currentStoryBeat?: FloorBeat | null;
 }
 
-export const MapScreen: React.FC<MapScreenProps> = ({ map, currentFloor, currentNodeId, onNodeSelect }) => {
+export const MapScreen: React.FC<MapScreenProps> = ({ map, currentFloor, currentNodeId, onNodeSelect, currentStoryBeat }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [nodePositions, setNodePositions] = useState<Map<string, { x: number; y: number }>>(new Map());
 
@@ -64,17 +65,17 @@ export const MapScreen: React.FC<MapScreenProps> = ({ map, currentFloor, current
   };
 
   const getNodeBgColor = (node: MapNode, isAccessible: boolean) => {
-    if (node.completed) return 'bg-primary/20 border-primary';
-    if (!isAccessible) return 'bg-black border-gray-800';
+    if (node.completed) return 'bg-green-100 border-primary';
+    if (!isAccessible) return 'bg-gray-100 border-gray-300';
 
     switch (node.type) {
-      case 'boss': return 'bg-red-900/50 border-red-500';
-      case 'elite': return 'bg-purple-900/50 border-purple-500';
-      case 'retrospective': return 'bg-green-900/50 border-green-500';
-      case 'vendor': return 'bg-yellow-900/50 border-yellow-500';
-      case 'opportunity': return 'bg-blue-900/50 border-blue-500';
-      case 'treasure': return 'bg-amber-900/50 border-amber-500';
-      default: return 'bg-surface border-white';
+      case 'boss': return 'bg-red-50 border-red-400';
+      case 'elite': return 'bg-purple-50 border-purple-400';
+      case 'retrospective': return 'bg-green-50 border-green-400';
+      case 'vendor': return 'bg-amber-50 border-amber-400';
+      case 'opportunity': return 'bg-blue-50 border-blue-400';
+      case 'treasure': return 'bg-orange-50 border-orange-400';
+      default: return 'bg-white border-gray-300';
     }
   };
 
@@ -116,10 +117,10 @@ export const MapScreen: React.FC<MapScreenProps> = ({ map, currentFloor, current
             <path
               key={`${node.id}-${targetId}`}
               d={`M ${fromPos.x} ${fromPos.y} C ${fromPos.x + controlPointOffset} ${fromPos.y}, ${toPos.x - controlPointOffset} ${toPos.y}, ${toPos.x} ${toPos.y}`}
-              stroke={isActive ? '#00FF88' : '#333'}
+              stroke={isActive ? '#00D67E' : '#C8CED3'}
               strokeWidth={isActive ? 3 : 2}
               fill="none"
-              opacity={node.completed ? 0.3 : 0.6}
+              opacity={node.completed ? 0.4 : 0.8}
               className="transition-all duration-300"
             />
           );
@@ -140,8 +141,20 @@ export const MapScreen: React.FC<MapScreenProps> = ({ map, currentFloor, current
   return (
     <div className="flex flex-col items-center min-h-[60vh] p-4 animate-in fade-in duration-500">
       <div className="text-center mb-6">
-        <h2 className="text-3xl font-display font-bold text-white tracking-tight">THE INCUBATOR</h2>
-        <p className="text-gray-400 font-mono text-sm">Act 1: Finding Product-Market Fit</p>
+        <h2 className="text-3xl font-display font-bold text-gray-800 tracking-tight">THE INCUBATOR</h2>
+        <p className="text-gray-500 font-mono text-sm">Act 1: Finding Product-Market Fit</p>
+
+        {/* Story Beat Progress */}
+        {currentStoryBeat && (
+          <div className="mt-3 flex items-center justify-center gap-2">
+            <span className="px-2 py-0.5 bg-purple-100 text-purple-600 rounded-full text-xs uppercase font-mono">
+              {currentStoryBeat.storyPhase}
+            </span>
+            <span className="text-gray-600 text-sm italic">
+              Next: "{currentStoryBeat.storyBeat}"
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Horizontal scrollable map container */}
@@ -207,7 +220,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({ map, currentFloor, current
 
                     {/* Tooltip */}
                     {isClickable && (
-                      <div className="absolute bottom-full mb-2 bg-gray-900 text-xs px-2 py-1 rounded border border-gray-700 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
+                      <div className="absolute bottom-full mb-2 bg-white text-xs px-2 py-1 rounded-lg border border-gray-200 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-md text-gray-700">
                         {getNodeLabel(node.type)}
                       </div>
                     )}

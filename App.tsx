@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Unit } from './components/Unit';
+import { EnemyCard } from './components/EnemyCard';
 import { Card } from './components/Card';
 import { MapScreen } from './components/MapScreen';
 import { DeckViewer } from './components/DeckViewer';
 import { GAME_DATA, MAX_HAND_SIZE, ACT1_EVENTS, generateBlessingOptions } from './constants';
 import { CardData, GameState, EnemyIntent, MapLayer, MapNode, CharacterStats, RelicData, EntityStatus, EnemyData, CardEffect, EventData, EventChoice, EventEffect, PotionData, NeowBlessing } from './types';
-import { Battery, DollarSign, CheckCircle2, AlertOctagon, RefreshCw, Play, Layers, Archive, Gift, ArrowRight, Coffee, Hammer, Store, Trash2, Gem, Wrench, FastForward, Heart, Plus, Bug, Ghost, Rocket, Lock, User, Briefcase, ChevronRight, Zap, X, HelpCircle, Shuffle, Hash, BookOpen, Skull } from 'lucide-react';
+import { Battery, DollarSign, CheckCircle2, AlertOctagon, RefreshCw, Play, Layers, Archive, Gift, ArrowRight, Coffee, Hammer, Store, Trash2, Gem, Wrench, FastForward, Heart, Plus, Bug, Ghost, Rocket, Lock, User, Briefcase, ChevronRight, Zap, X, HelpCircle, Shuffle, Hash, BookOpen, Skull, Share2 } from 'lucide-react';
 import {
     calculateDamage, countCardsMatches, generateStarterDeck, getRandomRewardCards, shuffle, drawCards, drawCardsWithInnate, upgradeCard,
     applyCombatStartRelics, applyCombatEndRelics, getTurnStartBandwidth, generateMap, resolveCardEffect, resolveEnemyTurn, resolveEndTurn, processDrawnCards,
@@ -26,6 +27,9 @@ import { ApproachTweetOverlay } from './components/ApproachTweetOverlay';
 import { EnemyTweetBubble } from './components/EnemyTweetBubble';
 import { FounderTweetBubble } from './components/FounderTweetBubble';
 import { PostMortemModal } from './components/PostMortemModal';
+import { StoryCardModal } from './components/StoryCardModal';
+import { SettingsModal } from './components/SettingsModal';
+import { StartupStoryCard, generateStoryCard } from './startupStoryCard';
 import {
     NarrativeTweet,
     ActNarrative,
@@ -70,6 +74,8 @@ import { useCardGifs } from './useCardGifs';
 import { prefetchCardGifs, searchMultipleGifsForCard, searchGifsByCustomTerm, setCuratedCardGif, isCardCurated, getCuratedCount, CARD_GIF_SEARCH_TERMS, searchMultipleGifsForEnemy, setCuratedEnemyGif, isEnemyCurated, getCuratedEnemyCount, EMOJI_SEARCH_TERMS } from './giphyService';
 import { PostMortemAnalysis, generatePostMortem } from './postMortemService';
 import { getGlobalLogger } from './logger';
+import { StartupTipsOverlay } from './components/StartupTipsOverlay';
+import { streamStartupTips, getFallbackTips } from './startupTipsStreamingService';
 
 const App: React.FC = () => {
     // --- Game State Initialization ---
@@ -112,6 +118,7 @@ const App: React.FC = () => {
     const [curatingEnemy, setCuratingEnemy] = useState<{ emoji: string; name: string; options: string[]; loading: boolean } | null>(null);
     const [curatedGifs, setCuratedGifs] = useState<Record<string, string>>({});
     const [curatedEnemyGifs, setCuratedEnemyGifsState] = useState<Record<string, string>>({});
+    const [showSettings, setShowSettings] = useState(false);
 
     // Deck/pile viewer modal state
     const [viewingPile, setViewingPile] = useState<'deck' | 'draw' | 'discard' | 'exhaust' | 'remove' | null>(null);
@@ -144,6 +151,17 @@ const App: React.FC = () => {
     // === POST-MORTEM ANALYSIS STATE ===
     const [postMortemAnalysis, setPostMortemAnalysis] = useState<PostMortemAnalysis | null>(null);
     const [postMortemLoading, setPostMortemLoading] = useState(false);
+
+    // === STREAMING TIPS STATE ===
+    const [streamingTips, setStreamingTips] = useState('');
+    const [showTipsOverlay, setShowTipsOverlay] = useState(false);
+    const [tipsComplete, setTipsComplete] = useState(false);
+
+    // === STORY CARD STATE ===
+    const [storyCard, setStoryCard] = useState<StartupStoryCard | null>(null);
+    const [showStoryCard, setShowStoryCard] = useState(false);
+    const [cardPlayCounts, setCardPlayCounts] = useState<Record<string, number>>({});
+    const runStartTimeRef = useRef<number>(Date.now());
 
     // === GIPHY GIF SYSTEM ===
     const { gifUrls: enemyGifUrls, isLoading: gifsLoading } = useEnemyGifs({
@@ -437,6 +455,23 @@ const App: React.FC = () => {
                     console.error('[PostMortem] ❌ Generation failed:', err);
                     setPostMortemLoading(false);
                 });
+
+            // Generate shareable story card for defeat
+            const context = {
+                name: gameState.startupName || 'Startup',
+                oneLiner: gameState.startupOneLiner || 'Building something great'
+            };
+            const card = generateStoryCard(
+                context,
+                macroNarrative,
+                gameState.floor,
+                'defeat',
+                cardPlayCounts,
+                gameState.seed || 'NOSEED',
+                runStartTimeRef.current
+            );
+            setStoryCard(card);
+            console.log('[StoryCard] 📇 Defeat story card generated');
         }
     }, [gameState.status, gameState.floor, gameState.startupName, gameState.startupOneLiner, postMortemLoading, postMortemAnalysis]);
 
@@ -1948,57 +1983,90 @@ const App: React.FC = () => {
 
     if (gameState.status === 'MENU') {
         return (
-            <div className="min-h-screen bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1a1a1a] via-[#0a0a0a] to-[#000000] flex flex-col items-center justify-center p-8 text-white relative overflow-hidden">
-                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=2670&ixlib=rb-4.0.3')] bg-cover bg-center opacity-10"></div>
+            <div
+                className="min-h-screen flex flex-col items-center justify-center p-8 text-gray-800 relative overflow-hidden"
+                style={{
+                    background: 'radial-gradient(ellipse at center, #FFFFFF 0%, #F5F7FA 40%, #E8ECEF 100%)',
+                }}
+            >
+                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=2670&ixlib=rb-4.0.3')] bg-cover bg-center opacity-5"></div>
 
                 <div className="z-10 flex flex-col items-center gap-8 animate-in fade-in zoom-in duration-700">
                     <div className="flex flex-col items-center gap-2">
-                        <div className="p-4 bg-primary/10 rounded-full border border-primary/30 mb-4 shadow-[0_0_30px_rgba(0,255,136,0.3)]">
+                        <div
+                            className="p-4 rounded-full border border-primary/30 mb-4"
+                            style={{
+                                background: 'linear-gradient(145deg, #F5F7FA, #E8ECEF)',
+                                boxShadow: '8px 8px 16px #C8CED3, -8px -8px 16px #FFFFFF, 0 0 30px rgba(0,214,126,0.2)',
+                            }}
+                        >
                             <Rocket size={48} className="text-primary" />
                         </div>
-                        <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-white via-gray-200 to-gray-500 text-center">
+                        <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-gray-800 via-gray-600 to-gray-400 text-center">
                             THE NEXT BIG THING
                         </h1>
-                        <p className="font-mono text-gray-400 mt-2 tracking-widest uppercase text-sm">Pre-Alpha Build v0.14</p>
+                        <p className="font-mono text-gray-500 mt-2 tracking-widest uppercase text-sm">Pre-Alpha Build v0.14</p>
                     </div>
 
-                    <p className="max-w-md text-center text-gray-300 font-sans leading-relaxed">
+                    <p className="max-w-md text-center text-gray-600 font-sans leading-relaxed">
                         A roguelite deckbuilder where your health is your runway. Survive the market, defeat technical debt, and reach the IPO.
                     </p>
 
                     <div className="flex flex-col gap-4">
                         <button
                             onClick={() => setGameState(prev => ({ ...prev, status: 'CHARACTER_SELECT' }))}
-                            className="group relative px-8 py-4 bg-primary text-black font-bold font-mono text-lg uppercase tracking-wider rounded-sm hover:bg-white hover:scale-105 transition-all duration-200 shadow-[0_0_20px_rgba(0,255,136,0.4)]"
+                            className="group relative px-8 py-4 bg-primary text-white font-bold font-mono text-lg uppercase tracking-wider rounded-xl hover:bg-green-600 hover:scale-105 transition-all duration-200"
+                            style={{
+                                boxShadow: '8px 8px 16px #C8CED3, -8px -8px 16px #FFFFFF, 0 0 20px rgba(0,214,126,0.3)',
+                            }}
                         >
                             Initialize Startup
-                            <div className="absolute inset-0 border-2 border-white/20 rounded-sm scale-105 opacity-0 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300"></div>
+                            <div className="absolute inset-0 border-2 border-white/20 rounded-xl scale-105 opacity-0 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300"></div>
                         </button>
                         <button
                             onClick={() => setShowCardCompendium(true)}
-                            className="group relative px-6 py-3 bg-gray-800 border border-gray-600 text-gray-300 font-mono text-sm uppercase tracking-wider rounded-sm hover:bg-gray-700 hover:text-white hover:border-primary/50 transition-all duration-200 flex items-center justify-center gap-2"
+                            className="group relative px-6 py-3 bg-white border border-gray-200 text-gray-600 font-mono text-sm uppercase tracking-wider rounded-xl hover:bg-gray-50 hover:text-gray-800 hover:border-primary/50 transition-all duration-200 flex items-center justify-center gap-2"
+                            style={{
+                                boxShadow: '4px 4px 8px #C8CED3, -4px -4px 8px #FFFFFF',
+                            }}
                         >
                             <BookOpen size={18} />
                             Card Compendium
                         </button>
                         <button
                             onClick={() => setShowEnemyCompendium(true)}
-                            className="group relative px-6 py-3 bg-gray-800 border border-gray-600 text-gray-300 font-mono text-sm uppercase tracking-wider rounded-sm hover:bg-gray-700 hover:text-white hover:border-red-500/50 transition-all duration-200 flex items-center justify-center gap-2"
+                            className="group relative px-6 py-3 bg-white border border-gray-200 text-gray-600 font-mono text-sm uppercase tracking-wider rounded-xl hover:bg-gray-50 hover:text-gray-800 hover:border-red-400/50 transition-all duration-200 flex items-center justify-center gap-2"
+                            style={{
+                                boxShadow: '4px 4px 8px #C8CED3, -4px -4px 8px #FFFFFF',
+                            }}
                         >
                             <Skull size={18} />
                             Enemy Compendium
                         </button>
+                        <button
+                            onClick={() => setShowSettings(true)}
+                            className="group relative px-6 py-3 bg-white border border-gray-200 text-gray-600 font-mono text-sm uppercase tracking-wider rounded-xl hover:bg-gray-50 hover:text-gray-800 hover:border-amber-400/50 transition-all duration-200 flex items-center justify-center gap-2"
+                            style={{
+                                boxShadow: '4px 4px 8px #C8CED3, -4px -4px 8px #FFFFFF',
+                            }}
+                        >
+                            <Wrench size={18} />
+                            Settings
+                        </button>
                     </div>
                 </div>
 
+                {/* Settings Modal */}
+                <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
+
                 {/* Card Compendium Modal - rendered inside MENU so it shows */}
                 {showCardCompendium && (
-                    <div className="fixed inset-0 z-[100] bg-black/98 flex flex-col">
+                    <div className="fixed inset-0 z-[100] bg-white flex flex-col">
                         {/* Header */}
-                        <div className="flex items-center justify-between p-6 border-b border-gray-700">
+                        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
                             <div className="flex items-center gap-3">
                                 <BookOpen size={28} className="text-primary" />
-                                <h2 className="text-2xl font-display font-bold text-white">Card Compendium</h2>
+                                <h2 className="text-2xl font-display font-bold text-gray-800">Card Compendium</h2>
                                 <span className="text-gray-500 font-mono text-sm">
                                     ({Object.keys(GAME_DATA.cards).length} cards)
                                 </span>
@@ -2008,29 +2076,29 @@ const App: React.FC = () => {
                                 <button
                                     onClick={() => setCurateMode(!curateMode)}
                                     className={`px-4 py-2 rounded-lg font-mono text-sm transition-all flex items-center gap-2 ${curateMode
-                                        ? 'bg-primary text-black'
-                                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                        ? 'bg-primary text-white'
+                                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                                         }`}
                                 >
                                     🎨 Curate Mode {curateMode ? 'ON' : 'OFF'}
                                     {getCuratedCount() > 0 && (
-                                        <span className="bg-black/30 px-2 py-0.5 rounded text-xs">
+                                        <span className="bg-black/20 px-2 py-0.5 rounded text-xs">
                                             {getCuratedCount()} curated
                                         </span>
                                     )}
                                 </button>
                                 <button
                                     onClick={() => setShowCardCompendium(false)}
-                                    className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                                    className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
                                 >
-                                    <X size={24} className="text-gray-400 hover:text-white" />
+                                    <X size={24} className="text-gray-500 hover:text-gray-800" />
                                 </button>
                             </div>
                         </div>
 
                         {/* Curate Mode Instructions */}
                         {curateMode && (
-                            <div className="bg-primary/10 border-b border-primary/30 px-6 py-3 text-center text-primary font-mono text-sm">
+                            <div className="bg-green-50 border-b border-green-200 px-6 py-3 text-center text-primary font-mono text-sm">
                                 🎨 Click any card to choose from 12 GIF alternatives
                             </div>
                         )}
@@ -2045,11 +2113,11 @@ const App: React.FC = () => {
                                 if (cardsOfRarity.length === 0) return null;
 
                                 const rarityColors: Record<string, string> = {
-                                    starter: 'text-gray-400 border-gray-600',
-                                    common: 'text-gray-300 border-gray-500',
-                                    uncommon: 'text-blue-400 border-blue-500/50',
-                                    rare: 'text-yellow-400 border-yellow-500/50',
-                                    status: 'text-red-400 border-red-500/50'
+                                    starter: 'text-gray-600 border-gray-300',
+                                    common: 'text-gray-500 border-gray-300',
+                                    uncommon: 'text-blue-500 border-blue-300',
+                                    rare: 'text-amber-500 border-amber-300',
+                                    status: 'text-red-500 border-red-300'
                                 };
 
                                 const rarityLabels: Record<string, string> = {
@@ -2405,42 +2473,56 @@ const App: React.FC = () => {
 
     if (gameState.status === 'CHARACTER_SELECT') {
         return (
-            <div className="min-h-screen bg-black flex flex-col items-center justify-center p-8 text-white relative">
+            <div
+                className="min-h-screen flex flex-col items-center justify-center p-8 text-gray-800 relative"
+                style={{
+                    background: 'radial-gradient(ellipse at center, #FFFFFF 0%, #F5F7FA 40%, #E8ECEF 100%)',
+                }}
+            >
                 <div className="absolute top-8 left-8">
-                    <button onClick={() => setGameState(prev => ({ ...prev, status: 'MENU' }))} className="text-gray-500 hover:text-white font-mono text-sm">
+                    <button onClick={() => setGameState(prev => ({ ...prev, status: 'MENU' }))} className="text-gray-400 hover:text-gray-800 font-mono text-sm">
                         &lt; Back to Menu
                     </button>
                 </div>
 
-                <h2 className="text-3xl font-display font-bold mb-12 flex items-center gap-3">
+                <h2 className="text-3xl font-display font-bold mb-12 flex items-center gap-3 text-gray-800">
                     <User className="text-primary" /> Select Founder
                 </h2>
 
                 <div className="flex flex-wrap gap-8 justify-center">
                     {/* CTO - Available */}
-                    <div className="w-72 bg-surface border-2 border-primary rounded-xl overflow-hidden hover:scale-105 transition-transform duration-300 group shadow-[0_0_30px_rgba(0,255,136,0.1)] hover:shadow-[0_0_50px_rgba(0,255,136,0.3)]">
+                    <div
+                        className="w-72 rounded-2xl overflow-hidden hover:scale-105 transition-transform duration-300 group border-2 border-primary"
+                        style={{
+                            background: 'linear-gradient(145deg, #F5F7FA, #E8ECEF)',
+                            boxShadow: '8px 8px 20px #C8CED3, -8px -8px 20px #FFFFFF, 0 0 30px rgba(0,214,126,0.15)',
+                        }}
+                    >
                         <div className="h-32 bg-primary/20 flex items-center justify-center text-6xl border-b border-primary/20">
                             {GAME_DATA.character.emoji}
                         </div>
                         <div className="p-6">
-                            <h3 className="text-2xl font-display font-bold text-white mb-1">{GAME_DATA.character.name}</h3>
+                            <h3 className="text-2xl font-display font-bold text-gray-800 mb-1">{GAME_DATA.character.name}</h3>
                             <div className="text-primary font-mono text-xs uppercase mb-4">{GAME_DATA.character.role}</div>
 
-                            <div className="space-y-2 mb-6 text-sm text-gray-400 font-sans">
+                            <div className="space-y-2 mb-6 text-sm text-gray-600 font-sans">
                                 <p>The builder. Focuses on scaling infrastructure and managing technical debt.</p>
-                                <div className="flex gap-4 mt-4 pt-4 border-t border-white/10">
-                                    <div className="flex items-center gap-1 text-white font-mono">
+                                <div className="flex gap-4 mt-4 pt-4 border-t border-gray-200">
+                                    <div className="flex items-center gap-1 text-gray-700 font-mono">
                                         <Battery size={14} className="text-primary" /> {GAME_DATA.character.stats.hp}k
                                     </div>
-                                    <div className="flex items-center gap-1 text-white font-mono">
-                                        <Zap size={14} className="text-warning" /> {GAME_DATA.character.stats.bandwidth}
+                                    <div className="flex items-center gap-1 text-gray-700 font-mono">
+                                        <Zap size={14} className="text-amber-500" /> {GAME_DATA.character.stats.bandwidth}
                                     </div>
                                 </div>
                             </div>
 
                             <button
                                 onClick={() => handleStartRun('cto')}
-                                className="w-full py-3 bg-primary text-black font-bold font-mono uppercase rounded hover:bg-white transition-colors flex items-center justify-center gap-2"
+                                className="w-full py-3 bg-primary text-white font-bold font-mono uppercase rounded-xl hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
+                                style={{
+                                    boxShadow: '4px 4px 8px #C8CED3, -4px -4px 8px #FFFFFF',
+                                }}
                             >
                                 Select <ChevronRight size={16} />
                             </button>
@@ -2448,40 +2530,52 @@ const App: React.FC = () => {
                     </div>
 
                     {/* CEO - Locked */}
-                    <div className="w-72 bg-gray-900 border-2 border-gray-800 rounded-xl overflow-hidden opacity-60 grayscale cursor-not-allowed relative">
-                        <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/50">
-                            <Lock size={48} className="text-gray-500" />
+                    <div
+                        className="w-72 rounded-2xl overflow-hidden opacity-60 grayscale cursor-not-allowed relative border-2 border-gray-300"
+                        style={{
+                            background: 'linear-gradient(145deg, #F5F7FA, #E8ECEF)',
+                            boxShadow: '6px 6px 12px #C8CED3, -6px -6px 12px #FFFFFF',
+                        }}
+                    >
+                        <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/50">
+                            <Lock size={48} className="text-gray-400" />
                         </div>
-                        <div className="h-32 bg-gray-800 flex items-center justify-center text-6xl border-b border-gray-700">
+                        <div className="h-32 bg-gray-200 flex items-center justify-center text-6xl border-b border-gray-300">
                             👔
                         </div>
                         <div className="p-6">
-                            <h3 className="text-2xl font-display font-bold text-gray-500 mb-1">CEO</h3>
-                            <div className="text-gray-600 font-mono text-xs uppercase mb-4">The Visionary</div>
-                            <div className="space-y-2 mb-6 text-sm text-gray-600 font-sans">
+                            <h3 className="text-2xl font-display font-bold text-gray-400 mb-1">CEO</h3>
+                            <div className="text-gray-500 font-mono text-xs uppercase mb-4">The Visionary</div>
+                            <div className="space-y-2 mb-6 text-sm text-gray-500 font-sans">
                                 <p>Focuses on fundraising, hype generation, and market distortion.</p>
                             </div>
-                            <button disabled className="w-full py-3 bg-gray-800 text-gray-600 font-bold font-mono uppercase rounded">
+                            <button disabled className="w-full py-3 bg-gray-200 text-gray-400 font-bold font-mono uppercase rounded-xl">
                                 Locked
                             </button>
                         </div>
                     </div>
 
                     {/* COO - Locked */}
-                    <div className="w-72 bg-gray-900 border-2 border-gray-800 rounded-xl overflow-hidden opacity-60 grayscale cursor-not-allowed relative">
-                        <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/50">
-                            <Lock size={48} className="text-gray-500" />
+                    <div
+                        className="w-72 rounded-2xl overflow-hidden opacity-60 grayscale cursor-not-allowed relative border-2 border-gray-300"
+                        style={{
+                            background: 'linear-gradient(145deg, #F5F7FA, #E8ECEF)',
+                            boxShadow: '6px 6px 12px #C8CED3, -6px -6px 12px #FFFFFF',
+                        }}
+                    >
+                        <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/50">
+                            <Lock size={48} className="text-gray-400" />
                         </div>
-                        <div className="h-32 bg-gray-800 flex items-center justify-center text-6xl border-b border-gray-700">
+                        <div className="h-32 bg-gray-200 flex items-center justify-center text-6xl border-b border-gray-300">
                             💼
                         </div>
                         <div className="p-6">
-                            <h3 className="text-2xl font-display font-bold text-gray-500 mb-1">COO</h3>
-                            <div className="text-gray-600 font-mono text-xs uppercase mb-4">The Scaler</div>
-                            <div className="space-y-2 mb-6 text-sm text-gray-600 font-sans">
+                            <h3 className="text-2xl font-display font-bold text-gray-400 mb-1">COO</h3>
+                            <div className="text-gray-500 font-mono text-xs uppercase mb-4">The Scaler</div>
+                            <div className="space-y-2 mb-6 text-sm text-gray-500 font-sans">
                                 <p>Focuses on efficiency, hiring, and operational excellence.</p>
                             </div>
-                            <button disabled className="w-full py-3 bg-gray-800 text-gray-600 font-bold font-mono uppercase rounded">
+                            <button disabled className="w-full py-3 bg-gray-200 text-gray-400 font-bold font-mono uppercase rounded-xl">
                                 Locked
                             </button>
                         </div>
@@ -2683,6 +2777,30 @@ const App: React.FC = () => {
         setNarrativeLoading(true);
         setNarrativeError(null);
 
+        // === START STREAMING TIPS IN PARALLEL ===
+        // Show tips overlay immediately while narrative generates
+        setStreamingTips('');
+        setShowTipsOverlay(true);
+        setTipsComplete(false);
+
+        // Start streaming tips (runs in parallel with MACRO generation)
+        streamStartupTips(context, {
+            onChunk: (chunk) => {
+                setStreamingTips(prev => prev + chunk);
+            },
+            onComplete: () => {
+                console.log('[StreamingTips] Tips stream complete');
+                setTipsComplete(true);
+            },
+            onError: (error) => {
+                console.warn('[StreamingTips] Error, using fallback:', error.message);
+                // Use fallback tips on error
+                const fallback = getFallbackTips();
+                setStreamingTips(fallback.join('\n\n'));
+                setTipsComplete(true);
+            }
+        });
+
         try {
             // Generate MACRO narrative (fast - just theme, voice, key tweets, floor beats)
             console.log('[PROGRESSIVE] 🎬 Generating MACRO layer...');
@@ -2720,14 +2838,9 @@ const App: React.FC = () => {
             }
         } finally {
             setNarrativeLoading(false);
+            // Mark tips as complete when MACRO finishes (allows dismiss)
+            setTipsComplete(true);
         }
-
-        // Proceed to intro tweet screen (then to Neow's blessing)
-        setGameState(prev => ({
-            ...prev,
-            status: 'INTRO_TWEET',
-            narrativeGenerated: true
-        }));
     };
 
     const handlePresetSelect = (preset: StartupContext) => {
@@ -2737,23 +2850,29 @@ const App: React.FC = () => {
 
     if (gameState.status === 'STARTUP_INPUT') {
         return (
-            <div className="min-h-screen bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1a1a1a] via-[#0a0a0a] to-[#000000] flex flex-col items-center justify-center p-8 text-white">
+            <div
+                className="min-h-screen flex flex-col items-center justify-center p-8 text-gray-800"
+                style={{ background: 'radial-gradient(ellipse at center, #FFFFFF 0%, #F5F7FA 40%, #E8ECEF 100%)' }}
+            >
                 <div className="max-w-2xl w-full">
                     {/* Header */}
                     <div className="text-center mb-10">
                         <div className="text-6xl mb-4">🚀</div>
-                        <h1 className="text-4xl md:text-5xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary via-white to-warning">
+                        <h1 className="text-4xl md:text-5xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary via-gray-700 to-amber-500">
                             Name Your Startup
                         </h1>
-                        <p className="text-gray-400 mt-4 max-w-lg mx-auto font-sans">
+                        <p className="text-gray-500 mt-4 max-w-lg mx-auto font-sans">
                             Every founder's journey starts with a vision. What will you build?
                         </p>
                     </div>
 
                     {/* Form */}
-                    <div className="bg-surface border border-gray-700 rounded-xl p-6 mb-6">
+                    <div
+                        className="bg-white border border-gray-200 rounded-2xl p-6 mb-6"
+                        style={{ boxShadow: '8px 8px 16px #C8CED3, -8px -8px 16px #FFFFFF' }}
+                    >
                         <div className="mb-6">
-                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                            <label className="block text-sm font-medium text-gray-600 mb-2">
                                 Startup Name
                             </label>
                             <input
@@ -2761,12 +2880,12 @@ const App: React.FC = () => {
                                 value={startupNameInput}
                                 onChange={(e) => setStartupNameInput(e.target.value)}
                                 placeholder="e.g., Serial Flicks"
-                                className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                                 maxLength={30}
                             />
                         </div>
                         <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                            <label className="block text-sm font-medium text-gray-600 mb-2">
                                 One-Liner (the elevator pitch)
                             </label>
                             <input
@@ -2774,22 +2893,22 @@ const App: React.FC = () => {
                                 value={startupOneLinerInput}
                                 onChange={(e) => setStartupOneLinerInput(e.target.value)}
                                 placeholder="e.g., Netflix for book serials"
-                                className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                                 maxLength={60}
                             />
                         </div>
 
                         {/* Preset Quick Picks */}
                         <div className="mt-6">
-                            <p className="text-xs text-gray-500 mb-3 font-mono">OR PICK A PRESET:</p>
+                            <p className="text-xs text-gray-400 mb-3 font-mono">OR PICK A PRESET:</p>
                             <div className="flex flex-wrap gap-2">
                                 {STARTUP_PRESETS.slice(0, 6).map((preset) => (
                                     <button
                                         key={preset.name}
                                         onClick={() => handlePresetSelect(preset)}
                                         className={`px-3 py-1.5 text-sm border rounded-full transition-all ${startupNameInput === preset.name
-                                            ? 'bg-primary/20 border-primary text-primary'
-                                            : 'bg-gray-800 border-gray-600 text-gray-300 hover:border-primary/50'
+                                            ? 'bg-green-100 border-primary text-primary'
+                                            : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-primary/50'
                                             }`}
                                     >
                                         {preset.name}
@@ -2799,28 +2918,11 @@ const App: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* API Key (collapsible) */}
-                    <details className="bg-surface border border-gray-700 rounded-xl p-4 mb-6">
-                        <summary className="cursor-pointer text-sm text-gray-400 font-mono">
-                            🔑 Gemini API Key (Optional - for AI narrative)
-                        </summary>
-                        <div className="mt-4">
-                            <input
-                                type="password"
-                                value={apiKeyInput}
-                                onChange={(e) => setApiKeyInput(e.target.value)}
-                                placeholder="Paste your Gemini API key here..."
-                                className="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-primary"
-                            />
-                            <p className="text-xs text-gray-500 mt-2">
-                                Get a free key at <span className="text-primary">aistudio.google.com</span>. Without it, you'll get basic narrative.
-                            </p>
-                        </div>
-                    </details>
+                    {/* API key is now configured in Settings */}
 
                     {/* Error Message */}
                     {narrativeError && (
-                        <div className="text-danger text-sm text-center mb-4 font-mono">
+                        <div className="text-red-500 text-sm text-center mb-4 font-mono">
                             ⚠️ {narrativeError}
                         </div>
                     )}
@@ -2830,9 +2932,10 @@ const App: React.FC = () => {
                         onClick={handleStartupSubmit}
                         disabled={narrativeLoading || !startupNameInput.trim() || !startupOneLinerInput.trim()}
                         className={`w-full py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-3 ${narrativeLoading || !startupNameInput.trim() || !startupOneLinerInput.trim()
-                            ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                            : 'bg-gradient-to-r from-primary to-warning text-black hover:opacity-90'
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-primary text-white hover:bg-green-600'
                             }`}
+                        style={(!narrativeLoading && startupNameInput.trim() && startupOneLinerInput.trim()) ? { boxShadow: '8px 8px 16px #C8CED3, -8px -8px 16px #FFFFFF, 0 0 20px rgba(0,214,126,0.2)' } : {}}
                     >
                         {narrativeLoading ? (
                             <>
@@ -2847,6 +2950,21 @@ const App: React.FC = () => {
                         )}
                     </button>
                 </div>
+
+                {/* Streaming Tips Overlay */}
+                <StartupTipsOverlay
+                    isVisible={showTipsOverlay}
+                    streamedText={streamingTips}
+                    isComplete={tipsComplete && !narrativeLoading}
+                    onDismiss={() => {
+                        setShowTipsOverlay(false);
+                        setGameState(prev => ({
+                            ...prev,
+                            status: 'INTRO_TWEET',
+                            narrativeGenerated: true
+                        }));
+                    }}
+                />
             </div>
         );
     }
@@ -2857,50 +2975,56 @@ const App: React.FC = () => {
         const introTweet = currentTweet || tweetHistory[0];
 
         return (
-            <div className="min-h-screen bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1a1a1a] via-[#0a0a0a] to-[#000000] flex flex-col items-center justify-center p-8 text-white relative overflow-hidden">
-                {/* Animated background particles */}
+            <div
+                className="min-h-screen flex flex-col items-center justify-center p-8 text-gray-800 relative overflow-hidden"
+                style={{ background: 'radial-gradient(ellipse at center, #FFFFFF 0%, #F5F7FA 40%, #E8ECEF 100%)' }}
+            >
+                {/* Subtle background accents */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
                     <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-primary/5 rounded-full blur-3xl animate-pulse" />
-                    <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-warning/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+                    <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
                 </div>
 
                 <div className="z-10 max-w-xl w-full flex flex-col items-center gap-8 animate-in fade-in zoom-in duration-700">
                     {/* Header */}
                     <div className="text-center">
                         <div className="text-6xl mb-4">📱</div>
-                        <h1 className="text-3xl md:text-4xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary via-white to-info">
+                        <h1 className="text-3xl md:text-4xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary via-gray-700 to-blue-500">
                             The Beginning
                         </h1>
-                        <p className="text-gray-400 mt-3 font-sans">
+                        <p className="text-gray-500 mt-3 font-sans">
                             You have an idea. You share it with the world...
                         </p>
                     </div>
 
                     {/* The Tweet - styled like a real tweet */}
                     {introTweet && (
-                        <div className="w-full bg-surface border border-gray-700 rounded-2xl p-6 shadow-2xl animate-in slide-in-from-bottom-5 duration-500" style={{ animationDelay: '0.3s' }}>
+                        <div
+                            className="w-full bg-white border border-gray-200 rounded-2xl p-6 animate-in slide-in-from-bottom-5 duration-500"
+                            style={{ boxShadow: '8px 8px 16px #C8CED3, -8px -8px 16px #FFFFFF', animationDelay: '0.3s' }}
+                        >
                             {/* Tweet Header */}
                             <div className="flex items-center gap-3 mb-4">
-                                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-2xl border-2 border-primary/30">
+                                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-2xl border-2 border-primary/30">
                                     🚀
                                 </div>
                                 <div>
-                                    <div className="font-bold text-white">
+                                    <div className="font-bold text-gray-800">
                                         {gameState.startupName || 'Founder'}
                                     </div>
-                                    <div className="text-gray-500 text-sm font-mono">
+                                    <div className="text-gray-400 text-sm font-mono">
                                         @{(gameState.startupName || 'founder').toLowerCase().replace(/\s+/g, '')}
                                     </div>
                                 </div>
                             </div>
 
                             {/* Tweet Content */}
-                            <p className="text-lg text-white leading-relaxed mb-4">
+                            <p className="text-lg text-gray-800 leading-relaxed mb-4">
                                 {introTweet.content}
                             </p>
 
                             {/* Tweet Meta */}
-                            <div className="flex items-center gap-6 text-gray-500 text-sm border-t border-gray-800 pt-4">
+                            <div className="flex items-center gap-6 text-gray-400 text-sm border-t border-gray-200 pt-4">
                                 <span className="flex items-center gap-1">
                                     💬 0
                                 </span>
@@ -2917,14 +3041,14 @@ const App: React.FC = () => {
                     {/* Continue button */}
                     <button
                         onClick={() => setGameState(prev => ({ ...prev, status: 'NEOW_BLESSING' }))}
-                        className="group px-8 py-4 bg-primary text-black font-bold font-mono text-lg uppercase tracking-wider rounded-lg hover:bg-white hover:scale-105 transition-all duration-200 shadow-[0_0_20px_rgba(0,255,136,0.4)] flex items-center gap-3 animate-in fade-in duration-500"
-                        style={{ animationDelay: '0.6s' }}
+                        className="group px-8 py-4 bg-primary text-white font-bold font-mono text-lg uppercase tracking-wider rounded-xl hover:bg-green-600 hover:scale-105 transition-all duration-200 flex items-center gap-3 animate-in fade-in duration-500"
+                        style={{ boxShadow: '8px 8px 16px #C8CED3, -8px -8px 16px #FFFFFF, 0 0 20px rgba(0,214,126,0.3)', animationDelay: '0.6s' }}
                     >
                         <span>Your Family Notices</span>
                         <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
                     </button>
 
-                    <p className="text-gray-600 text-sm font-mono text-center">
+                    <p className="text-gray-400 text-sm font-mono text-center">
                         People who believe in you are about to step forward...
                     </p>
                 </div>
@@ -2934,15 +3058,20 @@ const App: React.FC = () => {
 
     if (gameState.status === 'NEOW_BLESSING') {
         return (
-            <div className="min-h-screen bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1a1a1a] via-[#0a0a0a] to-[#000000] flex flex-col items-center justify-center p-8 text-white">
+            <div
+                className="min-h-screen flex flex-col items-center justify-center p-8 text-gray-800"
+                style={{
+                    background: 'radial-gradient(ellipse at center, #FFFFFF 0%, #F5F7FA 40%, #E8ECEF 100%)',
+                }}
+            >
                 <div className="max-w-4xl w-full">
                     {/* Header */}
                     <div className="text-center mb-12">
                         <div className="text-6xl mb-4">👨‍👩‍👧‍👦</div>
-                        <h1 className="text-4xl md:text-5xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary via-white to-warning">
+                        <h1 className="text-4xl md:text-5xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary via-gray-700 to-amber-500">
                             Friends & Family Round
                         </h1>
-                        <p className="text-gray-400 mt-4 max-w-lg mx-auto font-sans">
+                        <p className="text-gray-500 mt-4 max-w-lg mx-auto font-sans">
                             Before you start your venture, loved ones gather to help you get off the ground. Choose one offer of support.
                         </p>
                     </div>
@@ -2953,24 +3082,27 @@ const App: React.FC = () => {
                             <button
                                 key={blessing.id}
                                 onClick={() => handleSelectBlessing(blessing)}
-                                className="group p-6 bg-surface border-2 border-gray-700 rounded-xl hover:border-primary hover:bg-primary/5 transition-all duration-300 text-left flex flex-col gap-4"
+                                className="group p-6 bg-white border-2 border-gray-200 rounded-2xl hover:border-primary hover:bg-green-50/30 transition-all duration-300 text-left flex flex-col gap-4"
+                                style={{
+                                    boxShadow: '6px 6px 12px #C8CED3, -6px -6px 12px #FFFFFF',
+                                }}
                             >
                                 <div className="flex items-center gap-4">
                                     <div className="text-4xl">{blessing.icon}</div>
                                     <div>
-                                        <div className="text-xl font-bold text-white group-hover:text-primary transition-colors">
+                                        <div className="text-xl font-bold text-gray-800 group-hover:text-primary transition-colors">
                                             {blessing.giver}
                                         </div>
-                                        <div className="text-xs font-mono text-gray-500 uppercase">
+                                        <div className="text-xs font-mono text-gray-400 uppercase">
                                             {blessing.category}
                                         </div>
                                     </div>
                                 </div>
-                                <p className="text-gray-300 font-sans text-sm leading-relaxed">
+                                <p className="text-gray-600 font-sans text-sm leading-relaxed">
                                     {blessing.description}
                                 </p>
                                 {blessing.downside && (
-                                    <div className="text-xs text-danger font-mono mt-2 border-t border-gray-800 pt-2">
+                                    <div className="text-xs text-red-500 font-mono mt-2 border-t border-gray-100 pt-2">
                                         ⚠️ Has a downside
                                     </div>
                                 )}
@@ -2994,36 +3126,49 @@ const App: React.FC = () => {
 
     if (gameState.status === 'MAP') {
         return (
-            <div className="min-h-screen bg-background text-white font-sans flex flex-col">
-                <header className="h-14 border-b border-border bg-surface/50 backdrop-blur-md flex items-center justify-between px-6">
+            <div className="min-h-screen bg-background text-gray-800 font-sans flex flex-col">
+                <header
+                    className="h-14 border-b border-gray-200 flex items-center justify-between px-6"
+                    style={{
+                        background: 'linear-gradient(145deg, #F5F7FA, #E8ECEF)',
+                        boxShadow: '0 4px 12px rgba(200, 206, 211, 0.4)',
+                    }}
+                >
                     <div className="flex items-center gap-6">
-                        <h1 className="font-display font-bold text-lg">THE NEXT BIG THING</h1>
-                        <div className="h-6 w-px bg-white/10" />
-                        <span className="text-sm font-mono text-gray-400">Roadmap View</span>
+                        <h1 className="font-display font-bold text-lg text-gray-800">THE NEXT BIG THING</h1>
+                        <div className="h-6 w-px bg-gray-300" />
+                        <span className="text-sm font-mono text-gray-500">Roadmap View</span>
                     </div>
                     <div className="flex items-center gap-4 text-sm font-mono">
                         {/* Deck View Button */}
                         <button
                             onClick={() => setViewingPile('deck')}
-                            className="px-3 py-1.5 bg-surface border border-gray-700 rounded-lg hover:border-primary/50 hover:bg-primary/10 transition-all flex items-center gap-2 text-gray-300 hover:text-white"
+                            className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:border-primary/50 hover:bg-green-50 transition-all flex items-center gap-2 text-gray-600 hover:text-gray-800"
+                            style={{ boxShadow: '4px 4px 8px #C8CED3, -4px -4px 8px #FFFFFF' }}
                         >
                             <Layers size={14} />
                             <span>Deck ({gameState.deck.length})</span>
                         </button>
-                        <span className="text-warning flex items-center gap-2">
+                        <span className="text-amber-600 font-semibold flex items-center gap-2">
                             <DollarSign size={16} /> ${gameState.playerStats.capital}k
                         </span>
-                        <span className="text-primary flex items-center gap-2">
+                        <span className="text-primary font-semibold flex items-center gap-2">
                             <Battery size={16} /> $ {gameState.playerStats.hp}k
                         </span>
                     </div>
                 </header>
-                <main className="flex-1 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#1a1a1a] via-[#0a0a0a] to-[#000000]">
+                <main
+                    className="flex-1"
+                    style={{
+                        background: 'radial-gradient(ellipse at top, #FFFFFF 0%, #F5F7FA 40%, #E8ECEF 100%)',
+                    }}
+                >
                     <MapScreen
                         map={gameState.map}
                         currentFloor={gameState.currentMapPosition ? gameState.currentMapPosition.floor : 0}
                         currentNodeId={gameState.currentMapPosition?.nodeId || null}
                         onNodeSelect={handleNodeSelect}
+                        currentStoryBeat={macroNarrative?.floorBeats?.[gameState.floor] || null}
                     />
                 </main>
 
@@ -3035,6 +3180,7 @@ const App: React.FC = () => {
                         onClose={() => setViewingPile(null)}
                         icon="deck"
                         emptyMessage="No cards in deck"
+                        getGifUrl={getCardGifUrl}
                     />
                 )}
 
@@ -3047,8 +3193,11 @@ const App: React.FC = () => {
     if (gameState.status === 'RETROSPECTIVE') {
         if (viewingDeckForUpgrade) {
             return (
-                <div className="min-h-screen bg-black flex flex-col p-8 items-center">
-                    <h2 className="text-2xl font-bold mb-8 text-warning flex items-center gap-2"><Hammer /> Select a component to Optimize</h2>
+                <div
+                    className="min-h-screen flex flex-col p-8 items-center"
+                    style={{ background: 'radial-gradient(ellipse at center, #FFFFFF 0%, #F5F7FA 40%, #E8ECEF 100%)' }}
+                >
+                    <h2 className="text-2xl font-bold mb-8 text-amber-600 flex items-center gap-2"><Hammer /> Select a component to Optimize</h2>
                     <div className="flex flex-wrap gap-4 justify-center">
                         {gameState.deck.map((card, index) => (
                             <div key={card.id} onClick={() => !card.upgraded && handleConfirmUpgrade(card)} className={`cursor-pointer ${card.upgraded ? 'opacity-50' : 'hover:scale-105 transition'}`}>
@@ -3056,43 +3205,48 @@ const App: React.FC = () => {
                             </div>
                         ))}
                     </div>
-                    <button onClick={() => setViewingDeckForUpgrade(false)} className="mt-8 text-gray-400 hover:text-white">Cancel</button>
+                    <button onClick={() => setViewingDeckForUpgrade(false)} className="mt-8 text-gray-500 hover:text-gray-800">Cancel</button>
                     <DevConsole />
                 </div>
             )
         }
 
         return (
-            <div className="min-h-screen bg-black/90 flex flex-col items-center justify-center gap-12 p-8">
-                <h2 className="text-3xl font-display font-bold text-white mb-4 flex items-center gap-3">
-                    <Coffee size={32} className="text-info" /> Sprint Retrospective
+            <div
+                className="min-h-screen flex flex-col items-center justify-center gap-12 p-8"
+                style={{ background: 'radial-gradient(ellipse at center, #FFFFFF 0%, #F5F7FA 40%, #E8ECEF 100%)' }}
+            >
+                <h2 className="text-3xl font-display font-bold text-gray-800 mb-4 flex items-center gap-3">
+                    <Coffee size={32} className="text-blue-500" /> Sprint Retrospective
                 </h2>
                 <div className="flex gap-8">
                     {/* Heal Option */}
                     <button
                         onClick={() => handleRetrospectiveAction('heal')}
-                        className="group w-64 p-6 border-2 border-gray-700 rounded-xl hover:border-primary hover:bg-primary/5 transition-all flex flex-col items-center text-center gap-4"
+                        className="group w-64 p-6 bg-white border-2 border-gray-200 rounded-2xl hover:border-primary hover:bg-green-50/30 transition-all flex flex-col items-center text-center gap-4"
+                        style={{ boxShadow: '6px 6px 12px #C8CED3, -6px -6px 12px #FFFFFF' }}
                     >
-                        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                        <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                             <Battery size={32} />
                         </div>
                         <div>
-                            <div className="text-lg font-bold text-white mb-1">Team Retreat</div>
-                            <div className="text-sm text-gray-400">Recover 30% Runway ($ {Math.floor(gameState.playerStats.maxHp * 0.3)}k)</div>
+                            <div className="text-lg font-bold text-gray-800 mb-1">Team Retreat</div>
+                            <div className="text-sm text-gray-500">Recover 30% Runway ($ {Math.floor(gameState.playerStats.maxHp * 0.3)}k)</div>
                         </div>
                     </button>
 
                     {/* Upgrade Option */}
                     <button
                         onClick={() => handleRetrospectiveAction('upgrade')}
-                        className="group w-64 p-6 border-2 border-gray-700 rounded-xl hover:border-warning hover:bg-warning/5 transition-all flex flex-col items-center text-center gap-4"
+                        className="group w-64 p-6 bg-white border-2 border-gray-200 rounded-2xl hover:border-amber-500 hover:bg-amber-50/30 transition-all flex flex-col items-center text-center gap-4"
+                        style={{ boxShadow: '6px 6px 12px #C8CED3, -6px -6px 12px #FFFFFF' }}
                     >
-                        <div className="w-16 h-16 rounded-full bg-warning/10 flex items-center justify-center text-warning group-hover:scale-110 transition-transform">
+                        <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform">
                             <Hammer size={32} />
                         </div>
                         <div>
-                            <div className="text-lg font-bold text-white mb-1">Refactor Code</div>
-                            <div className="text-sm text-gray-400">Optimize (Upgrade) a card in your deck.</div>
+                            <div className="text-lg font-bold text-gray-800 mb-1">Refactor Code</div>
+                            <div className="text-sm text-gray-500">Optimize (Upgrade) a card in your deck.</div>
                         </div>
                     </button>
                 </div>
@@ -3107,13 +3261,19 @@ const App: React.FC = () => {
         const removePrice = 75;
 
         return (
-            <div className="min-h-screen bg-black/90 flex flex-col items-center justify-center p-12">
-                <div className="w-full max-w-5xl bg-surface border border-gray-800 rounded-2xl p-10 shadow-2xl relative">
-                    <div className="flex justify-between items-center mb-10 border-b border-gray-800 pb-6">
-                        <h2 className="text-3xl font-display font-bold text-white flex items-center gap-3">
-                            <Store size={32} className="text-warning" /> Vendor
+            <div
+                className="min-h-screen flex flex-col items-center justify-center p-12"
+                style={{ background: 'radial-gradient(ellipse at center, #FFFFFF 0%, #F5F7FA 40%, #E8ECEF 100%)' }}
+            >
+                <div
+                    className="w-full max-w-5xl bg-white border border-gray-200 rounded-2xl p-10 relative"
+                    style={{ boxShadow: '12px 12px 24px #C8CED3, -12px -12px 24px #FFFFFF' }}
+                >
+                    <div className="flex justify-between items-center mb-10 border-b border-gray-200 pb-6">
+                        <h2 className="text-3xl font-display font-bold text-gray-800 flex items-center gap-3">
+                            <Store size={32} className="text-amber-500" /> Vendor
                         </h2>
-                        <div className="flex items-center gap-2 text-warning font-mono text-xl font-bold bg-black/50 px-4 py-2 rounded">
+                        <div className="flex items-center gap-2 text-amber-600 font-mono text-xl font-bold bg-amber-50 px-4 py-2 rounded-lg border border-amber-200">
                             <DollarSign /> {gameState.playerStats.capital}k
                         </div>
                     </div>
@@ -3121,7 +3281,7 @@ const App: React.FC = () => {
                     <div className="flex gap-16">
                         {/* Cards Section */}
                         <div className="flex-1">
-                            <h3 className="text-gray-400 font-mono text-sm uppercase tracking-wider mb-6">Acquire Assets</h3>
+                            <h3 className="text-gray-500 font-mono text-sm uppercase tracking-wider mb-6">Acquire Assets</h3>
                             <div className="flex flex-wrap gap-6">
                                 {gameState.vendorStock?.map(card => {
                                     const canAfford = gameState.playerStats.capital >= cardPrice;
@@ -3131,7 +3291,8 @@ const App: React.FC = () => {
                                             <button
                                                 onClick={() => handleBuyCard(card, cardPrice)}
                                                 disabled={!canAfford}
-                                                className={`px-4 py-2 rounded text-sm font-mono flex items-center gap-1 ${canAfford ? 'bg-primary text-black hover:bg-white' : 'bg-gray-800 text-gray-500'}`}
+                                                className={`px-4 py-2 rounded-lg text-sm font-mono flex items-center gap-1 ${canAfford ? 'bg-primary text-white hover:bg-green-600' : 'bg-gray-200 text-gray-400'}`}
+                                                style={{ boxShadow: canAfford ? '4px 4px 8px #C8CED3, -4px -4px 8px #FFFFFF' : 'none' }}
                                             >
                                                 ${cardPrice}k
                                             </button>
@@ -3139,29 +3300,32 @@ const App: React.FC = () => {
                                     )
                                 })}
                                 {gameState.vendorStock?.length === 0 && (
-                                    <div className="text-gray-600 italic">Sold Out</div>
+                                    <div className="text-gray-400 italic">Sold Out</div>
                                 )}
                             </div>
                         </div>
 
                         {/* Services Section */}
-                        <div className="w-72 border-l border-gray-800 pl-10">
-                            <h3 className="text-gray-400 font-mono text-sm uppercase tracking-wider mb-6">Services</h3>
+                        <div className="w-72 border-l border-gray-200 pl-10">
+                            <h3 className="text-gray-500 font-mono text-sm uppercase tracking-wider mb-6">Services</h3>
                             <div className="flex flex-col gap-4">
-                                <div className="flex flex-col gap-3 bg-black/40 p-5 rounded-lg border border-gray-800">
+                                <div
+                                    className="flex flex-col gap-3 bg-red-50 p-5 rounded-xl border border-red-200"
+                                    style={{ boxShadow: '4px 4px 8px #C8CED3, -4px -4px 8px #FFFFFF' }}
+                                >
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded bg-danger/20 flex items-center justify-center text-danger">
+                                        <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center text-red-500">
                                             <Trash2 size={20} />
                                         </div>
                                         <div>
-                                            <div className="text-white font-bold">Cut a Feature</div>
+                                            <div className="text-gray-800 font-bold">Cut a Feature</div>
                                             <div className="text-xs text-gray-500">Streamline your playbook. Remove one card.</div>
                                         </div>
                                     </div>
                                     <button
                                         onClick={() => handleRemoveCardService(removePrice)}
                                         disabled={gameState.playerStats.capital < removePrice}
-                                        className={`w-full px-4 py-2 rounded text-sm font-mono ${gameState.playerStats.capital >= removePrice ? 'bg-danger text-white hover:bg-red-500' : 'bg-gray-800 text-gray-500'}`}
+                                        className={`w-full px-4 py-2 rounded-lg text-sm font-mono ${gameState.playerStats.capital >= removePrice ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-200 text-gray-400'}`}
                                     >
                                         ${removePrice}k
                                     </button>
@@ -3171,7 +3335,7 @@ const App: React.FC = () => {
                     </div>
 
                     <div className="mt-10 flex justify-end">
-                        <button onClick={handleLeaveNode} className="text-gray-400 hover:text-white flex items-center gap-2 font-mono">
+                        <button onClick={handleLeaveNode} className="text-gray-500 hover:text-gray-800 flex items-center gap-2 font-mono">
                             Leave Shop <ArrowRight size={16} />
                         </button>
                     </div>
@@ -3187,6 +3351,7 @@ const App: React.FC = () => {
                         onSelect={handleConfirmCardRemoval}
                         icon="remove"
                         emptyMessage="No cards in deck"
+                        getGifUrl={getCardGifUrl}
                     />
                 )}
 
@@ -3217,38 +3382,44 @@ const App: React.FC = () => {
         };
 
         return (
-            <div className="min-h-screen bg-black/95 flex flex-col items-center justify-center p-8">
-                <div className="w-full max-w-2xl bg-surface border border-blue-500/30 rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(59,130,246,0.1)]">
+            <div
+                className="min-h-screen flex flex-col items-center justify-center p-8"
+                style={{ background: 'radial-gradient(ellipse at center, #FFFFFF 0%, #F5F7FA 40%, #E8ECEF 100%)' }}
+            >
+                <div
+                    className="w-full max-w-2xl bg-white border border-blue-200 rounded-2xl overflow-hidden"
+                    style={{ boxShadow: '12px 12px 24px #C8CED3, -12px -12px 24px #FFFFFF, 0 0 30px rgba(59,130,246,0.1)' }}
+                >
                     {/* Event Header */}
-                    <div className="bg-blue-900/30 border-b border-blue-500/20 p-6">
+                    <div className="bg-blue-50 border-b border-blue-200 p-6">
                         <div className="flex items-center gap-3 mb-4">
-                            <div className="p-3 bg-blue-500/20 rounded-full">
-                                <HelpCircle size={32} className="text-blue-400" />
+                            <div className="p-3 bg-blue-100 rounded-full">
+                                <HelpCircle size={32} className="text-blue-500" />
                             </div>
                             <div>
-                                <h2 className="text-2xl font-display font-bold text-white">{event.name}</h2>
-                                <span className="text-xs font-mono text-blue-400 uppercase tracking-wider">Opportunity Event</span>
+                                <h2 className="text-2xl font-display font-bold text-gray-800">{event.name}</h2>
+                                <span className="text-xs font-mono text-blue-500 uppercase tracking-wider">Opportunity Event</span>
                             </div>
                         </div>
-                        <p className="text-gray-300 leading-relaxed italic">"{event.description}"</p>
+                        <p className="text-gray-600 leading-relaxed italic">"{event.description}"</p>
                     </div>
 
                     {/* Choices OR Result */}
                     {gameState.eventResult ? (
                         // Result Screen
                         <div className="p-6 space-y-4">
-                            <div className={`p-6 rounded-xl border ${gameState.eventResult.success ? 'bg-green-900/20 border-green-500/30' : 'bg-red-900/20 border-red-500/30'}`}>
+                            <div className={`p-6 rounded-xl border ${gameState.eventResult.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
                                 <div className="flex items-center gap-3 mb-4">
-                                    <div className={`p-2 rounded-full ${gameState.eventResult.success ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+                                    <div className={`p-2 rounded-full ${gameState.eventResult.success ? 'bg-green-100' : 'bg-red-100'}`}>
                                         {gameState.eventResult.success ? (
-                                            <CheckCircle2 size={28} className="text-green-400" />
+                                            <CheckCircle2 size={28} className="text-green-500" />
                                         ) : (
-                                            <X size={28} className="text-red-400" />
+                                            <X size={28} className="text-red-500" />
                                         )}
                                     </div>
                                     <div>
-                                        <div className="text-sm text-gray-400 uppercase tracking-wider">You chose</div>
-                                        <div className="text-xl font-bold text-white">{gameState.eventResult.choiceLabel}</div>
+                                        <div className="text-sm text-gray-500 uppercase tracking-wider">You chose</div>
+                                        <div className="text-xl font-bold text-gray-800">{gameState.eventResult.choiceLabel}</div>
                                     </div>
                                 </div>
 
@@ -3256,8 +3427,8 @@ const App: React.FC = () => {
                                 <div className="space-y-2">
                                     {gameState.eventResult.resultMessage.split('.').filter(s => s.trim()).map((part, i) => (
                                         <div key={i} className="flex items-center gap-2 text-sm">
-                                            <span className="text-gray-500">→</span>
-                                            <span className={gameState.eventResult?.success ? 'text-green-300' : 'text-gray-300'}>{part.trim()}</span>
+                                            <span className="text-gray-400">→</span>
+                                            <span className={gameState.eventResult?.success ? 'text-green-700' : 'text-gray-600'}>{part.trim()}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -3270,7 +3441,8 @@ const App: React.FC = () => {
                                     currentEvent: undefined,
                                     eventResult: undefined
                                 }))}
-                                className="w-full py-3 bg-primary text-black font-bold rounded-lg hover:bg-white transition flex items-center justify-center gap-2"
+                                className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:bg-green-600 transition flex items-center justify-center gap-2"
+                                style={{ boxShadow: '4px 4px 8px #C8CED3, -4px -4px 8px #FFFFFF' }}
                             >
                                 Continue <ArrowRight size={18} />
                             </button>
@@ -3288,26 +3460,27 @@ const App: React.FC = () => {
                                         className={`
                                         w-full p-4 rounded-xl border text-left transition-all
                                         ${isAvailable
-                                                ? 'border-gray-700 bg-black/40 hover:border-blue-500/50 hover:bg-blue-500/10 cursor-pointer'
-                                                : 'border-gray-800 bg-gray-900/30 opacity-50 cursor-not-allowed'}
+                                                ? 'border-gray-200 bg-white hover:border-blue-400 hover:bg-blue-50 cursor-pointer'
+                                                : 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'}
                                     `}
+                                        style={isAvailable ? { boxShadow: '4px 4px 8px #C8CED3, -4px -4px 8px #FFFFFF' } : {}}
                                     >
                                         <div className="flex items-start gap-4">
                                             <div className={`
                                             w-8 h-8 rounded-full flex items-center justify-center font-bold font-mono text-sm
-                                            ${isAvailable ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-800 text-gray-600'}
+                                            ${isAvailable ? 'bg-blue-100 text-blue-500' : 'bg-gray-200 text-gray-400'}
                                         `}>
                                                 {index + 1}
                                             </div>
                                             <div className="flex-1">
-                                                <div className={`font-bold mb-1 ${isAvailable ? 'text-white' : 'text-gray-500'}`}>
+                                                <div className={`font-bold mb-1 ${isAvailable ? 'text-gray-800' : 'text-gray-400'}`}>
                                                     {choice.label}
                                                 </div>
-                                                <div className={`text-sm ${isAvailable ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                <div className={`text-sm ${isAvailable ? 'text-gray-500' : 'text-gray-400'}`}>
                                                     {choice.description}
                                                 </div>
                                                 {!isAvailable && choice.condition && (
-                                                    <div className="text-xs text-red-400 mt-2 flex items-center gap-1">
+                                                    <div className="text-xs text-red-500 mt-2 flex items-center gap-1">
                                                         <X size={12} /> Requires: {choice.condition.type} {choice.condition.operator} {choice.condition.value}
                                                     </div>
                                                 )}
@@ -3320,16 +3493,16 @@ const App: React.FC = () => {
                     )}
 
                     {/* Footer Stats */}
-                    <div className="bg-black/40 border-t border-gray-800 px-6 py-4 flex justify-between items-center text-sm font-mono">
+                    <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-between items-center text-sm font-mono">
                         <div className="flex items-center gap-4 text-gray-500">
                             <span className="flex items-center gap-1">
                                 <Battery size={14} className="text-primary" /> {gameState.playerStats.hp}/{gameState.playerStats.maxHp}k
                             </span>
                             <span className="flex items-center gap-1">
-                                <DollarSign size={14} className="text-warning" /> ${gameState.playerStats.capital}k
+                                <DollarSign size={14} className="text-amber-500" /> ${gameState.playerStats.capital}k
                             </span>
                         </div>
-                        <span className="text-gray-600">Deck: {gameState.deck.length} cards</span>
+                        <span className="text-gray-400">Deck: {gameState.deck.length} cards</span>
                     </div>
                 </div>
                 <DevConsole />
@@ -3340,38 +3513,44 @@ const App: React.FC = () => {
     // --- PLAYING UI ---
 
     return (
-        <div className="min-h-screen bg-background text-white font-sans selection:bg-primary/30 overflow-hidden flex flex-col">
-            <header className="h-14 border-b border-border bg-surface/50 backdrop-blur-md flex items-center justify-between px-6 z-10">
+        <div className="min-h-screen bg-background text-gray-800 font-sans selection:bg-primary/30 overflow-hidden flex flex-col">
+            <header
+                className="h-14 border-b border-gray-200 flex items-center justify-between px-6 z-10"
+                style={{
+                    background: 'linear-gradient(145deg, #F5F7FA, #E8ECEF)',
+                    boxShadow: '0 4px 12px rgba(200, 206, 211, 0.4)',
+                }}
+            >
                 <div className="flex items-center gap-6">
-                    <h1 className="font-display font-bold text-lg tracking-tight">THE NEXT BIG THING</h1>
-                    <div className="h-6 w-px bg-white/10" />
-                    <div className="flex items-center gap-2 text-sm font-mono text-gray-300">
-                        <span className="text-gray-500">ACT 1</span>
-                        <span>The Incubator</span>
-                        <span className="text-gray-600 mx-2">|</span>
-                        <span className="text-primary">SPRINT {gameState.floor}</span>
-                        <span className="text-gray-600 mx-2">|</span>
-                        <span className="text-gray-400">TURN {gameState.turn}</span>
+                    <h1 className="font-display font-bold text-lg tracking-tight text-gray-800">THE NEXT BIG THING</h1>
+                    <div className="h-6 w-px bg-gray-300" />
+                    <div className="flex items-center gap-2 text-sm font-mono text-gray-600">
+                        <span className="text-gray-400">ACT 1</span>
+                        <span className="text-gray-700">The Incubator</span>
+                        <span className="text-gray-300 mx-2">|</span>
+                        <span className="text-primary font-semibold">SPRINT {gameState.floor}</span>
+                        <span className="text-gray-300 mx-2">|</span>
+                        <span className="text-gray-500">TURN {gameState.turn}</span>
                     </div>
 
                     {/* Perk Bar */}
-                    <div className="h-6 w-px bg-white/10 mx-2" />
+                    <div className="h-6 w-px bg-gray-300 mx-2" />
                     <div className="flex items-center gap-2">
                         {gameState.relics.map(relic => (
-                            <div key={relic.id} className="group relative w-8 h-8 rounded border border-white/20 bg-black/40 flex items-center justify-center cursor-help hover:border-warning/50 hover:bg-warning/10 transition-colors">
+                            <div key={relic.id} className="group relative w-8 h-8 rounded-lg border border-gray-200 bg-white flex items-center justify-center cursor-help hover:border-warning/50 hover:bg-amber-50 transition-colors shadow-sm">
                                 <span className="text-lg">{relic.icon}</span>
                                 {/* Tooltip */}
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 p-3 bg-gray-900 border border-warning rounded shadow-xl hidden group-hover:block z-50">
-                                    <div className="font-bold text-warning mb-1 flex items-center gap-2">
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 p-3 bg-white border border-amber-300 rounded-lg shadow-xl hidden group-hover:block z-50">
+                                    <div className="font-bold text-amber-600 mb-1 flex items-center gap-2">
                                         <span>{relic.name}</span>
-                                        <span className="text-[10px] uppercase bg-purple-500/20 px-1 rounded text-purple-300">Perk</span>
-                                        <span className="text-[10px] uppercase bg-white/10 px-1 rounded text-gray-400">{relic.rarity}</span>
+                                        <span className="text-[10px] uppercase bg-purple-100 px-1 rounded text-purple-600">Perk</span>
+                                        <span className="text-[10px] uppercase bg-gray-100 px-1 rounded text-gray-500">{relic.rarity}</span>
                                     </div>
-                                    <div className="text-xs text-white mb-2">{relic.description}</div>
+                                    <div className="text-xs text-gray-700 mb-2">{relic.description}</div>
                                     {relic.tooltip && (
-                                        <div className="border-t border-gray-700 pt-2 mt-2">
-                                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">{relic.tooltip.term}</div>
-                                            <div className="text-[10px] text-gray-500 italic">{relic.tooltip.definition}</div>
+                                        <div className="border-t border-gray-200 pt-2 mt-2">
+                                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">{relic.tooltip.term}</div>
+                                            <div className="text-[10px] text-gray-400 italic">{relic.tooltip.definition}</div>
                                         </div>
                                     )}
                                 </div>
@@ -3380,17 +3559,17 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Stash Bar */}
-                    <div className="h-6 w-px bg-white/10 mx-2" />
+                    <div className="h-6 w-px bg-gray-300 mx-2" />
                     <div className="flex items-center gap-2">
                         {gameState.potions.map((potion, index) => (
                             <div
                                 key={`potion-slot-${index}`}
-                                className={`group relative w-8 h-8 rounded border flex items-center justify-center transition-all cursor-pointer
+                                className={`group relative w-8 h-8 rounded-lg border flex items-center justify-center transition-all cursor-pointer shadow-sm
                                     ${potion
                                         ? pendingPotionUse?.slotIndex === index
-                                            ? 'border-primary bg-primary/30 ring-2 ring-primary animate-pulse'
-                                            : 'border-info/50 bg-info/10 hover:border-info hover:bg-info/20'
-                                        : 'border-white/10 bg-black/20'
+                                            ? 'border-primary bg-green-100 ring-2 ring-primary animate-pulse'
+                                            : 'border-blue-200 bg-blue-50 hover:border-blue-400 hover:bg-blue-100'
+                                        : 'border-gray-200 bg-gray-50'
                                     }
                                     ${gameState.status === 'PLAYING' && potion ? 'cursor-pointer' : 'cursor-default'}
                                 `}
@@ -3402,41 +3581,46 @@ const App: React.FC = () => {
                                     <>
                                         <span className="text-lg">{potion.icon}</span>
                                         {/* Tooltip */}
-                                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 p-3 bg-gray-900 border border-info rounded shadow-xl hidden group-hover:block z-50 pointer-events-none">
-                                            <div className="font-bold text-info mb-1 flex items-center gap-2">
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 p-3 bg-white border border-blue-300 rounded-lg shadow-xl hidden group-hover:block z-50 pointer-events-none">
+                                            <div className="font-bold text-blue-600 mb-1 flex items-center gap-2">
                                                 <span>{potion.name}</span>
-                                                <span className={`text-[10px] uppercase px-1 rounded ${potion.rarity === 'rare' ? 'bg-warning/20 text-warning' :
-                                                    potion.rarity === 'uncommon' ? 'bg-info/20 text-info' :
-                                                        'bg-white/10 text-gray-400'
+                                                <span className={`text-[10px] uppercase px-1 rounded ${potion.rarity === 'rare' ? 'bg-amber-100 text-amber-600' :
+                                                    potion.rarity === 'uncommon' ? 'bg-blue-100 text-blue-600' :
+                                                        'bg-gray-100 text-gray-500'
                                                     }`}>{potion.rarity}</span>
                                             </div>
-                                            <div className="text-xs text-white mb-2">{potion.description}</div>
+                                            <div className="text-xs text-gray-700 mb-2">{potion.description}</div>
                                             {potion.tooltip && (
-                                                <div className="border-t border-gray-700 pt-2 mt-2">
-                                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">{potion.tooltip.term}</div>
-                                                    <div className="text-[10px] text-gray-500 italic">{potion.tooltip.definition}</div>
+                                                <div className="border-t border-gray-200 pt-2 mt-2">
+                                                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">{potion.tooltip.term}</div>
+                                                    <div className="text-[10px] text-gray-400 italic">{potion.tooltip.definition}</div>
                                                 </div>
                                             )}
-                                            <div className="text-[10px] text-gray-500 mt-2 border-t border-gray-700 pt-2">
-                                                <span className="text-info">Click</span> to use • <span className="text-danger">Right-click</span> to discard
+                                            <div className="text-[10px] text-gray-500 mt-2 border-t border-gray-200 pt-2">
+                                                <span className="text-blue-500">Click</span> to use • <span className="text-red-500">Right-click</span> to discard
                                             </div>
                                         </div>
                                     </>
                                 ) : (
-                                    <span className="text-gray-600 text-xs">○</span>
+                                    <span className="text-gray-300 text-xs">○</span>
                                 )}
                             </div>
                         ))}
                     </div>
                 </div>
                 <div className="flex items-center gap-4 text-sm font-mono">
-                    <span className="text-warning flex items-center gap-2">
+                    <span className="text-amber-600 font-semibold flex items-center gap-2">
                         <DollarSign size={16} /> ${gameState.playerStats.capital}k
                     </span>
                 </div>
             </header>
 
-            <main className="flex-1 relative flex flex-col items-center justify-end pt-32 pb-8 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1a1a1a] via-[#0a0a0a] to-[#000000]">
+            <main
+                className="flex-1 relative flex flex-col items-center justify-end pt-32 pb-8"
+                style={{
+                    background: 'radial-gradient(ellipse at center, #F5F7FA 0%, #E8ECEF 50%, #DCE2E8 100%)',
+                }}
+            >
 
                 <div className="w-full max-w-7xl flex justify-between items-end px-4 mt-auto">
 
@@ -3467,23 +3651,28 @@ const App: React.FC = () => {
                             />
 
                             {/* Terminal Log */}
-                            <div className={`
-                                w-full min-w-[280px] px-4 py-3 rounded-md font-mono text-xs border backdrop-blur-sm transition-all duration-300
-                                ${gameState.status === 'VICTORY' ? 'bg-primary/10 border-primary text-primary' :
-                                    gameState.status === 'GAME_OVER' ? 'bg-danger/10 border-danger text-danger' :
-                                        gameState.status === 'ENEMY_TURN' ? 'bg-warning/10 border-warning text-warning' :
-                                            'bg-black/50 border-white/10 text-gray-400'}
-                            `}>
+                            <div
+                                className={`
+                                    w-full min-w-[280px] px-4 py-3 rounded-xl font-mono text-xs border transition-all duration-300
+                                    ${gameState.status === 'VICTORY' ? 'bg-green-50 border-green-400 text-green-700' :
+                                        gameState.status === 'GAME_OVER' ? 'bg-red-50 border-red-400 text-red-700' :
+                                            gameState.status === 'ENEMY_TURN' ? 'bg-amber-50 border-amber-400 text-amber-700' :
+                                                'bg-white border-gray-200 text-gray-600'}
+                                `}
+                                style={{
+                                    boxShadow: '4px 4px 8px #C8CED3, -4px -4px 8px #FFFFFF',
+                                }}
+                            >
                                 <span className="opacity-50 mr-2">{`>_`}</span>
                                 {gameState.message}
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex flex-col items-center gap-2 opacity-20 select-none">
-                        <div className="w-px h-12 bg-white"></div>
-                        <span className="font-display font-bold text-2xl">VS</span>
-                        <div className="w-px h-12 bg-white"></div>
+                    <div className="flex flex-col items-center gap-2 opacity-30 select-none">
+                        <div className="w-px h-12 bg-gray-400"></div>
+                        <span className="font-display font-bold text-2xl text-gray-500">VS</span>
+                        <div className="w-px h-12 bg-gray-400"></div>
                     </div>
 
                     {/* Enemies Container with Stacked Tweets */}
@@ -3523,17 +3712,17 @@ const App: React.FC = () => {
                         `}>
                             {gameState.enemies.map((enemy, index) => (
                                 <div key={enemy.id} className="relative">
-                                    <Unit
+                                    <EnemyCard
                                         name={enemy.name}
                                         currentHp={enemy.hp}
                                         maxHp={enemy.maxHp}
                                         emoji={enemy.emoji}
                                         gifUrl={enemyGifUrls[enemy.id]}
-                                        isEnemy
                                         intent={enemy.currentIntent}
                                         statuses={enemy.statuses}
+                                        mitigation={enemy.mitigation}
                                         description={enemy.description}
-                                        onDrop={(card) => handleEnemyDrop(card, enemy.id)}
+                                        onDrop={(e) => handleEnemyDrop(e, enemy.id)}
                                         isTargetable={gameState.status === 'PLAYING' || !!pendingPotionUse}
                                         isSelected={gameState.selectedEnemyId === enemy.id || (pendingPotionUse !== null)}
                                         onClick={() => {
@@ -3680,7 +3869,10 @@ const App: React.FC = () => {
                 {/* Phase 1: "SHIPPED!" with victory tweet + Collect Rewards button */}
                 {/* Phase 2: Rewards screen + Next Challenge button */}
                 {gameState.status === 'VICTORY' && (
-                    <div className="fixed inset-0 z-[100] bg-gradient-to-b from-primary/5 via-black to-black flex items-center justify-center animate-in fade-in duration-500">
+                    <div
+                        className="fixed inset-0 z-[100] flex items-center justify-center animate-in fade-in duration-500"
+                        style={{ background: 'radial-gradient(ellipse at center, #FFFFFF 0%, #F0FFF4 40%, #E8ECEF 100%)' }}
+                    >
                         <div className="max-w-2xl w-full p-8 flex flex-col items-center">
 
                             {/* ========== PHASE 1: SHIPPED + TWEET ========== */}
@@ -3689,22 +3881,37 @@ const App: React.FC = () => {
                                     {/* Victory celebration */}
                                     <div className="text-6xl mb-4 animate-bounce">🚀</div>
                                     <h2 className="text-3xl font-display font-bold text-primary mb-2">Shipped!</h2>
-                                    <p className="text-gray-400 mb-6 text-center">Another challenge crushed. Your startup lives to fight another day.</p>
+                                    <p className="text-gray-500 mb-2 text-center">Another challenge crushed. Your startup lives to fight another day.</p>
+
+                                    {/* Story Beat Progress */}
+                                    {macroNarrative?.floorBeats?.[gameState.floor - 1] && (
+                                        <div className="flex items-center gap-2 mb-6 text-sm">
+                                            <span className="px-2 py-0.5 bg-purple-100 text-purple-600 rounded-full text-xs uppercase font-mono">
+                                                {macroNarrative.floorBeats[gameState.floor - 1].storyPhase}
+                                            </span>
+                                            <span className="text-gray-600 italic">
+                                                "{macroNarrative.floorBeats[gameState.floor - 1].storyBeat}"
+                                            </span>
+                                        </div>
+                                    )}
 
                                     {/* Tweet Display */}
                                     {currentMeso?.victoryTweet && (
-                                        <div className="w-full bg-surface border border-primary/30 rounded-2xl p-6 mb-8 shadow-[0_0_30px_rgba(0,255,136,0.1)]">
+                                        <div
+                                            className="w-full bg-white border border-gray-200 rounded-2xl p-6 mb-8"
+                                            style={{ boxShadow: '8px 8px 16px #C8CED3, -8px -8px 16px #FFFFFF' }}
+                                        >
                                             <div className="flex items-start gap-4">
-                                                <div className="text-3xl bg-primary/20 rounded-full p-2">
+                                                <div className="text-3xl bg-green-100 rounded-full p-2">
                                                     {macroNarrative?.startupEmoji || '🚀'}
                                                 </div>
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <span className="font-bold text-white">{gameState.startupName || 'Startup'}</span>
-                                                        <span className="text-gray-500 text-sm">{macroNarrative?.startupHandle || '@startup'}</span>
+                                                        <span className="font-bold text-gray-800">{gameState.startupName || 'Startup'}</span>
+                                                        <span className="text-gray-400 text-sm">{macroNarrative?.startupHandle || '@startup'}</span>
                                                     </div>
-                                                    <p className="text-white text-lg leading-relaxed">{currentMeso.victoryTweet.content}</p>
-                                                    <div className="flex items-center gap-6 mt-4 text-gray-500 text-sm">
+                                                    <p className="text-gray-800 text-lg leading-relaxed">{currentMeso.victoryTweet.content}</p>
+                                                    <div className="flex items-center gap-6 mt-4 text-gray-400 text-sm">
                                                         <span>❤️ {currentMeso.victoryTweet.likes || 42}</span>
                                                         <span>🔁 {currentMeso.victoryTweet.retweets || 8}</span>
                                                         <span>💬 {currentMeso.victoryTweet.replies || 3}</span>
@@ -3717,14 +3924,15 @@ const App: React.FC = () => {
                                     {/* Collect Rewards Button */}
                                     <button
                                         onClick={() => setVictoryPhase('rewards')}
-                                        className="group bg-primary text-black font-bold py-4 px-10 rounded-lg hover:bg-white transition-all duration-200 font-mono text-sm uppercase tracking-wider flex items-center gap-3 shadow-[0_0_20px_rgba(0,255,136,0.3)]"
+                                        className="group bg-primary text-white font-bold py-4 px-10 rounded-xl hover:bg-green-600 transition-all duration-200 font-mono text-sm uppercase tracking-wider flex items-center gap-3"
+                                        style={{ boxShadow: '8px 8px 16px #C8CED3, -8px -8px 16px #FFFFFF, 0 0 20px rgba(0,214,126,0.3)' }}
                                     >
                                         <Gift size={18} />
                                         <span>Collect Rewards</span>
                                         <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
                                     </button>
 
-                                    <p className="text-gray-600 text-xs mt-4 font-mono">Keep building. Keep shipping. 🚀</p>
+                                    <p className="text-gray-400 text-xs mt-4 font-mono">Keep building. Keep shipping. 🚀</p>
                                 </>
                             )}
 
@@ -3733,25 +3941,28 @@ const App: React.FC = () => {
                                 <>
                                     {/* Rewards Header */}
                                     <div className="text-4xl mb-4">🎁</div>
-                                    <h2 className="text-2xl font-display font-bold text-white mb-2">Rewards</h2>
+                                    <h2 className="text-2xl font-display font-bold text-gray-800 mb-2">Rewards</h2>
                                     <p className="text-gray-500 mb-6 text-center text-sm">Choose what to take with you</p>
 
                                     {/* Rewards Section */}
                                     {gameState.lastVictoryReward && (
                                         <div className="w-full space-y-3 mb-6">
                                             {/* Gold Reward */}
-                                            <div className={`bg-black/40 p-4 rounded-lg flex items-center justify-between ${gameState.lastVictoryReward.goldCollected ? 'opacity-50' : ''}`}>
+                                            <div
+                                                className={`bg-white p-4 rounded-xl border border-gray-200 flex items-center justify-between ${gameState.lastVictoryReward.goldCollected ? 'opacity-50' : ''}`}
+                                                style={{ boxShadow: '6px 6px 12px #C8CED3, -6px -6px 12px #FFFFFF' }}
+                                            >
                                                 <div className="flex items-center gap-3">
-                                                    <DollarSign size={24} className="text-warning" />
+                                                    <DollarSign size={24} className="text-amber-500" />
                                                     <div className="text-left">
-                                                        <div className="text-warning font-mono font-bold text-lg">${gameState.lastVictoryReward.capital}k Capital</div>
-                                                        <div className="text-xs text-gray-500">Revenue from shipping</div>
+                                                        <div className="text-amber-600 font-mono font-bold text-lg">${gameState.lastVictoryReward.capital}k Capital</div>
+                                                        <div className="text-xs text-gray-400">Revenue from shipping</div>
                                                     </div>
                                                 </div>
                                                 {!gameState.lastVictoryReward.goldCollected ? (
                                                     <button
                                                         onClick={handleTakeGold}
-                                                        className="bg-warning/20 border border-warning text-warning px-4 py-2 rounded font-mono text-sm hover:bg-warning hover:text-black transition-colors"
+                                                        className="bg-amber-100 border border-amber-300 text-amber-600 px-4 py-2 rounded-lg font-mono text-sm hover:bg-amber-200 transition-colors"
                                                     >
                                                         Collect
                                                     </button>
@@ -3762,10 +3973,13 @@ const App: React.FC = () => {
 
                                             {/* Card Reward */}
                                             {gameState.lastVictoryReward.cardRewards.length > 0 && (
-                                                <div className={`bg-black/40 p-4 rounded-lg ${gameState.lastVictoryReward.cardCollected ? 'opacity-50' : ''}`}>
+                                                <div
+                                                    className={`bg-white p-4 rounded-xl border border-gray-200 ${gameState.lastVictoryReward.cardCollected ? 'opacity-50' : ''}`}
+                                                    style={{ boxShadow: '6px 6px 12px #C8CED3, -6px -6px 12px #FFFFFF' }}
+                                                >
                                                     <div className="flex items-center gap-2 mb-4">
                                                         <Gift size={20} className="text-primary" />
-                                                        <span className="text-white font-mono">New Feature Unlocked</span>
+                                                        <span className="text-gray-800 font-mono">New Feature Unlocked</span>
                                                         {gameState.lastVictoryReward.cardCollected && (
                                                             <span className="text-primary font-mono text-sm ml-auto">✓ Added</span>
                                                         )}
@@ -3785,13 +3999,13 @@ const App: React.FC = () => {
                                                             </div>
                                                             <button
                                                                 onClick={handleSkipCard}
-                                                                className="text-gray-500 hover:text-white font-mono text-xs flex items-center gap-1 mx-auto"
+                                                                className="text-gray-400 hover:text-gray-600 font-mono text-xs flex items-center gap-1 mx-auto"
                                                             >
                                                                 Skip <ArrowRight size={12} />
                                                             </button>
                                                         </>
                                                     ) : (
-                                                        <div className="text-gray-500 text-sm italic">Feature added to deck</div>
+                                                        <div className="text-gray-400 text-sm italic">Feature added to deck</div>
                                                     )}
                                                 </div>
                                             )}
@@ -3801,25 +4015,26 @@ const App: React.FC = () => {
                                                 <div
                                                     onClick={!gameState.lastVictoryReward.relicCollected ? handleTakeRelic : undefined}
                                                     className={`
-                                                        bg-gradient-to-r from-purple-900/40 to-purple-800/20 border border-purple-500/50 p-4 rounded-lg 
-                                                        ${gameState.lastVictoryReward.relicCollected ? 'opacity-50' : 'cursor-pointer hover:border-purple-400 hover:from-purple-900/60 hover:to-purple-800/40 transition-all'}
+                                                        bg-white border border-purple-200 p-4 rounded-xl
+                                                        ${gameState.lastVictoryReward.relicCollected ? 'opacity-50' : 'cursor-pointer hover:border-purple-400 transition-all'}
                                                     `}
+                                                    style={{ boxShadow: '6px 6px 12px #C8CED3, -6px -6px 12px #FFFFFF' }}
                                                 >
                                                     <div className="flex items-center gap-4">
-                                                        <div className="text-3xl bg-purple-900/50 p-2.5 rounded-lg border border-purple-500/30">
+                                                        <div className="text-3xl bg-purple-100 p-2.5 rounded-lg border border-purple-200">
                                                             {gameState.lastVictoryReward.relic.icon}
                                                         </div>
                                                         <div className="flex-1 text-left">
-                                                            <div className="text-purple-200 font-bold flex items-center gap-2">
+                                                            <div className="text-purple-600 font-bold flex items-center gap-2">
                                                                 {gameState.lastVictoryReward.relic.name}
-                                                                <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">Perk</span>
+                                                                <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-purple-100 text-purple-500">Perk</span>
                                                             </div>
-                                                            <div className="text-sm text-gray-400">{gameState.lastVictoryReward.relic.description}</div>
+                                                            <div className="text-sm text-gray-500">{gameState.lastVictoryReward.relic.description}</div>
                                                         </div>
                                                         {gameState.lastVictoryReward.relicCollected ? (
                                                             <span className="text-primary font-mono text-sm">✓ Unlocked</span>
                                                         ) : (
-                                                            <span className="text-purple-400 text-sm font-mono">Click to unlock</span>
+                                                            <span className="text-purple-500 text-sm font-mono">Click to unlock</span>
                                                         )}
                                                     </div>
                                                 </div>
@@ -3827,35 +4042,38 @@ const App: React.FC = () => {
 
                                             {/* Stash Reward */}
                                             {gameState.pendingPotionReward && (
-                                                <div className="bg-gradient-to-r from-info/20 to-info/5 border border-info/50 p-4 rounded-lg">
+                                                <div
+                                                    className="bg-white border border-blue-200 p-4 rounded-xl"
+                                                    style={{ boxShadow: '6px 6px 12px #C8CED3, -6px -6px 12px #FFFFFF' }}
+                                                >
                                                     <div className="flex items-center gap-4">
-                                                        <div className="text-3xl bg-info/20 p-2.5 rounded-lg border border-info/30">
+                                                        <div className="text-3xl bg-blue-100 p-2.5 rounded-lg border border-blue-200">
                                                             {gameState.pendingPotionReward.icon}
                                                         </div>
                                                         <div className="flex-1 text-left">
-                                                            <div className="text-info font-bold flex items-center gap-2">
+                                                            <div className="text-blue-600 font-bold flex items-center gap-2">
                                                                 {gameState.pendingPotionReward.name}
-                                                                <span className={`text-[10px] uppercase px-1.5 py-0.5 rounded ${gameState.pendingPotionReward.rarity === 'rare' ? 'bg-warning/20 text-warning' :
-                                                                    gameState.pendingPotionReward.rarity === 'uncommon' ? 'bg-info/20 text-info' :
-                                                                        'bg-white/10 text-gray-400'
+                                                                <span className={`text-[10px] uppercase px-1.5 py-0.5 rounded ${gameState.pendingPotionReward.rarity === 'rare' ? 'bg-amber-100 text-amber-600' :
+                                                                    gameState.pendingPotionReward.rarity === 'uncommon' ? 'bg-blue-100 text-blue-600' :
+                                                                        'bg-gray-100 text-gray-500'
                                                                     }`}>{gameState.pendingPotionReward.rarity}</span>
                                                             </div>
-                                                            <div className="text-sm text-gray-400">{gameState.pendingPotionReward.description}</div>
+                                                            <div className="text-sm text-gray-500">{gameState.pendingPotionReward.description}</div>
                                                         </div>
                                                         <div className="flex flex-col gap-2">
                                                             <button
                                                                 onClick={handleTakePotion}
                                                                 disabled={!canAcquirePotion(gameState.potions)}
-                                                                className={`px-4 py-2 rounded font-mono text-sm transition-colors ${canAcquirePotion(gameState.potions)
-                                                                    ? 'bg-info/20 border border-info text-info hover:bg-info hover:text-black'
-                                                                    : 'bg-gray-800 border border-gray-600 text-gray-500 cursor-not-allowed'
+                                                                className={`px-4 py-2 rounded-lg font-mono text-sm transition-colors ${canAcquirePotion(gameState.potions)
+                                                                    ? 'bg-blue-100 border border-blue-300 text-blue-600 hover:bg-blue-200'
+                                                                    : 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
                                                                     }`}
                                                             >
                                                                 {canAcquirePotion(gameState.potions) ? 'Take' : 'Full'}
                                                             </button>
                                                             <button
                                                                 onClick={handleSkipPotion}
-                                                                className="text-gray-500 hover:text-white font-mono text-xs"
+                                                                className="text-gray-400 hover:text-gray-600 font-mono text-xs"
                                                             >
                                                                 Skip
                                                             </button>
@@ -3869,13 +4087,14 @@ const App: React.FC = () => {
                                     {/* Next Challenge Button */}
                                     <button
                                         onClick={handleVictoryProceed}
-                                        className="group bg-primary text-black font-bold py-4 px-10 rounded-lg hover:bg-white transition-all duration-200 font-mono text-sm uppercase tracking-wider flex items-center gap-3 shadow-[0_0_20px_rgba(0,255,136,0.3)]"
+                                        className="group bg-primary text-white font-bold py-4 px-10 rounded-xl hover:bg-green-600 transition-all duration-200 font-mono text-sm uppercase tracking-wider flex items-center gap-3"
+                                        style={{ boxShadow: '8px 8px 16px #C8CED3, -8px -8px 16px #FFFFFF, 0 0 20px rgba(0,214,126,0.3)' }}
                                     >
                                         <span>Next Challenge</span>
                                         <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
                                     </button>
 
-                                    <p className="text-gray-600 text-xs mt-4 font-mono">Keep building. Keep shipping. 🚀</p>
+                                    <p className="text-gray-400 text-xs mt-4 font-mono">Keep building. Keep shipping. 🚀</p>
                                 </>
                             )}
                         </div>
@@ -3883,8 +4102,11 @@ const App: React.FC = () => {
                 )}
 
                 {gameState.status === 'REWARD_SELECTION' && (
-                    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-                        <h2 className="text-2xl font-display font-bold text-white mb-8 flex items-center gap-2">
+                    <div
+                        className="absolute inset-0 z-30 flex flex-col items-center justify-center backdrop-blur-md animate-in fade-in duration-200"
+                        style={{ background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.95) 0%, rgba(245,247,250,0.95) 40%, rgba(232,236,239,0.95) 100%)' }}
+                    >
+                        <h2 className="text-2xl font-display font-bold text-gray-800 mb-8 flex items-center gap-2">
                             <Gift className="text-primary" /> Select Reward
                         </h2>
 
@@ -3902,7 +4124,7 @@ const App: React.FC = () => {
 
                         <button
                             onClick={() => handleSelectReward(null)}
-                            className="text-gray-500 hover:text-white font-mono text-sm flex items-center gap-2 border border-transparent hover:border-white/20 px-4 py-2 rounded transition-all"
+                            className="text-gray-400 hover:text-gray-600 font-mono text-sm flex items-center gap-2 border border-transparent hover:border-gray-300 px-4 py-2 rounded-lg transition-all"
                         >
                             Skip Reward <ArrowRight size={14} />
                         </button>
@@ -3910,65 +4132,97 @@ const App: React.FC = () => {
                 )}
 
                 {gameState.status === 'GAME_OVER' && (
-                    <PostMortemModal
-                        analysis={postMortemAnalysis}
-                        isLoading={postMortemLoading}
-                        startupName={gameState.startupName || 'Startup'}
-                        floor={gameState.floor}
-                        onRestart={handleRestart}
-                    />
+                    <>
+                        <PostMortemModal
+                            analysis={postMortemAnalysis}
+                            isLoading={postMortemLoading}
+                            startupName={gameState.startupName || 'Startup'}
+                            floor={gameState.floor}
+                            onRestart={handleRestart}
+                        />
+                        {/* Share Story Card button that overlays on top */}
+                        {storyCard && !showStoryCard && (
+                            <button
+                                onClick={() => setShowStoryCard(true)}
+                                className="fixed bottom-8 right-8 z-30 px-4 py-2 bg-primary/20 border border-primary/50 text-primary rounded-full font-mono text-sm flex items-center gap-2 hover:bg-primary/30 transition-all"
+                            >
+                                <Share2 size={16} />
+                                Share Run
+                            </button>
+                        )}
+                        {showStoryCard && storyCard && (
+                            <StoryCardModal
+                                card={storyCard}
+                                onContinue={() => setShowStoryCard(false)}
+                                onRestart={handleRestart}
+                            />
+                        )}
+                    </>
                 )}
 
             </main>
 
-            <footer className="h-72 border-t border-border bg-[#050505] relative flex justify-between items-end px-12 pb-8">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
+            <footer
+                className="h-72 relative flex items-end px-6 pb-6"
+                style={{
+                    background: 'transparent',
+                }}
+            >
+                {/* Far Left: Discard + Archive Piles */}
+                <div className="w-24 flex flex-col items-center gap-2 mb-4">
+                    {/* Discard Pile - Clickable */}
+                    <button
+                        onClick={() => setViewingPile('discard')}
+                        className="flex flex-col items-center gap-1 text-xs font-mono text-gray-500 group relative hover:text-gray-700 transition-colors"
+                    >
+                        <div className="w-14 h-18 border-2 border-gray-400 bg-white/80 rounded-lg flex flex-col items-center justify-center gap-1 group-hover:border-gray-600 group-hover:bg-white transition-colors cursor-pointer"
+                            style={{ boxShadow: '4px 4px 8px rgba(0,0,0,0.2), -2px -2px 4px rgba(255,255,255,0.5)' }}>
+                            <Archive size={18} className="text-gray-600" />
+                            <span className="font-bold text-gray-800 text-lg">{gameState.discardPile.length}</span>
+                        </div>
+                        <span className="text-[10px] uppercase tracking-wider text-gray-500">Discard</span>
+                    </button>
 
-                <div className="w-48 flex flex-col gap-2 mb-4">
-                    <div className="flex items-center gap-3 text-warning mb-2">
+                    {/* Exhaust/Archive Pile - Clickable */}
+                    <button
+                        onClick={() => setViewingPile('exhaust')}
+                        className="flex flex-col items-center gap-1 text-xs font-mono text-gray-400 group relative hover:text-purple-600 transition-colors"
+                    >
+                        <div className="w-10 h-12 border border-purple-300 bg-purple-50/80 rounded flex flex-col items-center justify-center gap-0.5 group-hover:border-purple-500 group-hover:bg-purple-100 transition-colors cursor-pointer"
+                            style={{ boxShadow: '2px 2px 4px rgba(0,0,0,0.15), -1px -1px 2px rgba(255,255,255,0.5)' }}>
+                            <Ghost size={12} className="text-purple-400" />
+                            <span className="font-bold text-purple-600 text-xs">{gameState.exhaustPile.length}</span>
+                        </div>
+                        <span className="text-[9px] uppercase tracking-wider text-gray-400">Archive</span>
+                    </button>
+                </div>
+
+                {/* Left-Center: Energy/Bandwidth */}
+                <div className="w-32 flex flex-col items-center gap-2 mb-4 ml-4">
+                    <div className="flex items-center gap-2 text-amber-600">
                         <div className="relative">
-                            <Battery size={48} className="stroke-1" />
-                            <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center pl-1 pr-3 gap-0.5">
+                            <Battery size={44} className="stroke-1" />
+                            <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center pl-1 pr-2.5 gap-0.5">
                                 {getBandwidthSegments().map((active, i) => (
                                     <div
                                         key={i}
-                                        className={`h-6 w-3 rounded-sm transition-all duration-300 ${active ? 'bg-warning shadow-[0_0_10px_rgba(255,170,0,0.5)]' : 'bg-white/10'}`}
+                                        className={`h-5 w-2.5 rounded-sm transition-all duration-300 ${active ? 'bg-amber-500 shadow-[0_0_6px_rgba(221,107,32,0.5)]' : 'bg-gray-300'}`}
                                     />
                                 ))}
                             </div>
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-3xl font-bold font-mono leading-none">{gameState.playerStats.bandwidth}</span>
-                            <span className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Bandwidth</span>
+                            <span className="text-2xl font-bold font-mono leading-none">{gameState.playerStats.bandwidth}</span>
+                            <span className="text-[9px] text-gray-500 font-mono uppercase tracking-widest">Bandwidth</span>
                         </div>
                     </div>
                 </div>
 
+                {/* Center: Hand of Cards */}
                 <div className="flex-1 flex flex-col items-center justify-end relative h-full">
-                    <div className="mb-6">
-                        <button
-                            onClick={handleEndTurn}
-                            disabled={gameState.status !== 'PLAYING'}
-                            className={`
-                        flex items-center gap-2 px-8 py-3 rounded-full font-mono text-sm font-bold uppercase tracking-wider shadow-xl transition-all duration-150
-                        ${gameState.status === 'PLAYING'
-                                    ? 'bg-primary text-black hover:bg-white hover:scale-105 active:scale-95'
-                                    : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-white/5'}
-                    `}
-                        >
-                            {gameState.status === 'ENEMY_TURN' ? (
-                                <>Running Exploit...</>
-                            ) : (
-                                <>
-                                    End Sprint <Play size={14} className="fill-current" />
-                                </>
-                            )}
-                        </button>
-                    </div>
-
                     <div
                         className="flex items-end justify-center min-h-[240px] px-4"
-                        style={{ maxWidth: '900px', margin: '0 auto' }}
+                        style={{ maxWidth: '800px', margin: '0 auto' }}
                     >
                         {gameState.hand.map((card, index) => {
                             const isXCost = card.cost === -1;
@@ -3999,7 +4253,8 @@ const App: React.FC = () => {
                                         transform: `translateY(${index % 2 === 0 ? '0px' : '4px'}) rotate(${(index - handSize / 2) * 2}deg)`,
                                         zIndex: index,
                                         animationDelay: `${index * 30}ms`,
-                                        marginLeft: index === 0 ? '0' : `-${overlapAmount}px`
+                                        marginLeft: index === 0 ? '0' : `-${overlapAmount}px`,
+                                        filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.3))'
                                     }}
                                     onClick={() => handleCardClick(card)}
                                 >
@@ -4022,49 +4277,55 @@ const App: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="w-48 flex flex-col items-end gap-2 mb-4">
+                {/* Right-Center: End Turn Button */}
+                <div className="w-32 flex flex-col items-center justify-end mb-4 mr-4">
+                    <button
+                        onClick={handleEndTurn}
+                        disabled={gameState.status !== 'PLAYING'}
+                        className={`
+                            flex items-center gap-2 px-6 py-3 rounded-xl font-mono text-sm font-bold uppercase tracking-wider transition-all duration-150
+                            ${gameState.status === 'PLAYING'
+                                ? 'bg-primary text-white hover:bg-green-600 hover:scale-105 active:scale-95'
+                                : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300'}
+                        `}
+                        style={{
+                            boxShadow: gameState.status === 'PLAYING'
+                                ? '4px 4px 8px rgba(0,0,0,0.3), -2px -2px 4px rgba(255,255,255,0.2), 0 0 20px rgba(0, 214, 126, 0.4)'
+                                : '2px 2px 4px rgba(0,0,0,0.1), -1px -1px 2px rgba(255,255,255,0.5)',
+                        }}
+                    >
+                        {gameState.status === 'ENEMY_TURN' ? (
+                            <>Running...</>
+                        ) : (
+                            <>
+                                End <Play size={14} className="fill-current" />
+                            </>
+                        )}
+                    </button>
+                </div>
+
+                {/* Far Right: Draw Pile */}
+                <div className="w-24 flex flex-col items-center gap-2 mb-4">
                     {/* Draw Pile - Clickable */}
                     <button
                         onClick={() => setViewingPile('draw')}
-                        className="flex items-center gap-3 text-xs font-mono text-gray-500 group relative hover:text-white transition-colors"
+                        className="flex flex-col items-center gap-1 text-xs font-mono text-gray-500 group relative hover:text-primary transition-colors"
                     >
-                        <span className="opacity-0 group-hover:opacity-100 transition-opacity">Draw Pile</span>
-                        <div className="w-16 h-20 border border-gray-700 bg-gray-900 rounded flex flex-col items-center justify-center gap-1 shadow-lg group-hover:border-primary/50 group-hover:bg-primary/5 transition-colors cursor-pointer">
-                            <Layers size={20} />
-                            <span className="font-bold text-white text-lg">{gameState.drawPile.length}</span>
+                        <div className="w-14 h-18 border-2 border-primary/50 bg-white/80 rounded-lg flex flex-col items-center justify-center gap-1 group-hover:border-primary group-hover:bg-green-50 transition-colors cursor-pointer"
+                            style={{ boxShadow: '4px 4px 8px rgba(0,0,0,0.2), -2px -2px 4px rgba(255,255,255,0.5)' }}>
+                            <Layers size={18} className="text-primary" />
+                            <span className="font-bold text-gray-800 text-lg">{gameState.drawPile.length}</span>
                         </div>
-                    </button>
-
-                    {/* Discard Pile - Clickable */}
-                    <button
-                        onClick={() => setViewingPile('discard')}
-                        className="flex items-center gap-3 text-xs font-mono text-gray-500 group relative hover:text-white transition-colors"
-                    >
-                        <span className="opacity-0 group-hover:opacity-100 transition-opacity">Discard</span>
-                        <div className="w-16 h-20 border border-gray-700 bg-gray-900 rounded flex flex-col items-center justify-center gap-1 shadow-lg group-hover:border-gray-500 group-hover:bg-gray-800/50 transition-colors cursor-pointer">
-                            <Archive size={20} />
-                            <span className="font-bold text-white text-lg">{gameState.discardPile.length}</span>
-                        </div>
-                    </button>
-
-                    {/* Exhaust Pile - Clickable */}
-                    <button
-                        onClick={() => setViewingPile('exhaust')}
-                        className="flex items-center gap-3 text-xs font-mono text-gray-500 group relative hover:text-white transition-colors"
-                    >
-                        <span className="opacity-0 group-hover:opacity-100 transition-opacity">Archive</span>
-                        <div className="w-12 h-14 border border-gray-800 bg-black/60 rounded flex flex-col items-center justify-center gap-1 shadow-lg group-hover:border-purple-500/50 group-hover:bg-purple-900/20 transition-colors cursor-pointer">
-                            <Ghost size={16} />
-                            <span className="font-bold text-gray-400 text-sm">{gameState.exhaustPile.length}</span>
-                        </div>
+                        <span className="text-[10px] uppercase tracking-wider text-gray-500">Draw</span>
                     </button>
 
                     {/* Deck View Button */}
                     <button
                         onClick={() => setViewingPile('deck')}
-                        className="mt-2 px-3 py-1.5 text-xs font-mono bg-surface border border-gray-700 rounded hover:border-primary/50 hover:bg-primary/10 transition-all flex items-center gap-2 text-gray-400 hover:text-white"
+                        className="px-2 py-1 text-[10px] font-mono bg-white/80 border border-gray-300 rounded hover:border-primary/50 hover:bg-primary/10 transition-all flex items-center gap-1 text-gray-500 hover:text-gray-700"
+                        style={{ boxShadow: '2px 2px 4px rgba(0,0,0,0.1), -1px -1px 2px rgba(255,255,255,0.5)' }}
                     >
-                        <Briefcase size={12} />
+                        <Briefcase size={10} />
                         Deck ({gameState.deck.length})
                     </button>
                 </div>
@@ -4078,6 +4339,7 @@ const App: React.FC = () => {
                     onClose={() => setViewingPile(null)}
                     icon="draw"
                     emptyMessage="Draw pile is empty"
+                    getGifUrl={getCardGifUrl}
                 />
             )}
             {viewingPile === 'discard' && (
@@ -4087,6 +4349,7 @@ const App: React.FC = () => {
                     onClose={() => setViewingPile(null)}
                     icon="discard"
                     emptyMessage="Discard pile is empty"
+                    getGifUrl={getCardGifUrl}
                 />
             )}
             {viewingPile === 'exhaust' && (
@@ -4096,6 +4359,7 @@ const App: React.FC = () => {
                     onClose={() => setViewingPile(null)}
                     icon="exhaust"
                     emptyMessage="No exhausted cards"
+                    getGifUrl={getCardGifUrl}
                 />
             )}
             {viewingPile === 'deck' && (
@@ -4105,6 +4369,7 @@ const App: React.FC = () => {
                     onClose={() => setViewingPile(null)}
                     icon="deck"
                     emptyMessage="No cards in deck"
+                    getGifUrl={getCardGifUrl}
                 />
             )}
 
@@ -4118,6 +4383,7 @@ const App: React.FC = () => {
                     emptyMessage="No skill cards in deck"
                     selectable={true}
                     onSelect={handleSecretWeaponCardSelect}
+                    getGifUrl={getCardGifUrl}
                 />
             )}
 

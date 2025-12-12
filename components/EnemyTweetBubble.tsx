@@ -28,19 +28,19 @@ export const EnemyTweetBubble: React.FC<EnemyTweetBubbleProps> = ({
         ? 'border-green-500'
         : tweet.isDefeat
             ? 'border-red-500'
-            : 'border-orange-500';
+            : 'border-amber-500';
 
     const bgColor = tweet.isVictory
-        ? 'bg-green-950/95'
+        ? 'bg-green-50'
         : tweet.isDefeat
-            ? 'bg-red-950/95'
-            : 'bg-gray-900/98';
+            ? 'bg-red-50'
+            : 'bg-white';
 
     const glowColor = tweet.isVictory
-        ? 'shadow-[0_0_20px_rgba(34,197,94,0.3)]'
+        ? 'shadow-[8px_8px_16px_#C8CED3,-8px_-8px_16px_#FFFFFF,0_0_15px_rgba(34,197,94,0.2)]'
         : tweet.isDefeat
-            ? 'shadow-[0_0_20px_rgba(239,68,68,0.3)]'
-            : 'shadow-[0_0_25px_rgba(249,115,22,0.25)]';
+            ? 'shadow-[8px_8px_16px_#C8CED3,-8px_-8px_16px_#FFFFFF,0_0_15px_rgba(239,68,68,0.2)]'
+            : 'shadow-[8px_8px_16px_#C8CED3,-8px_-8px_16px_#FFFFFF]';
 
     return (
         <div
@@ -66,11 +66,11 @@ export const EnemyTweetBubble: React.FC<EnemyTweetBubbleProps> = ({
             >
                 {/* Header */}
                 <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-lg border border-gray-700">
+                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-lg border border-gray-200 shadow-sm">
                         {tweet.avatarEmoji}
                     </div>
                     <div className="flex-1 min-w-0">
-                        <div className="font-bold text-white text-xs truncate">
+                        <div className="font-bold text-gray-800 text-xs truncate">
                             {tweet.displayName}
                         </div>
                         <div className="text-[10px] text-gray-500">{tweet.handle}</div>
@@ -78,31 +78,31 @@ export const EnemyTweetBubble: React.FC<EnemyTweetBubbleProps> = ({
                     {onDismiss && (
                         <button
                             onClick={(e) => { e.stopPropagation(); onDismiss(); }}
-                            className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
                             title="Dismiss"
                         >
-                            <X size={12} className="text-gray-400 hover:text-white" />
+                            <X size={12} className="text-gray-400 hover:text-gray-700" />
                         </button>
                     )}
                 </div>
 
                 {/* Content */}
-                <p className="text-white text-xs leading-relaxed mb-2">
+                <p className="text-gray-800 text-xs leading-relaxed mb-2">
                     {tweet.content}
                 </p>
 
                 {/* Engagement Row */}
-                <div className="flex items-center gap-3 text-gray-500 text-[10px] border-t border-gray-800 pt-2">
-                    <span className="flex items-center gap-1 hover:text-blue-400 transition-colors cursor-pointer">
+                <div className="flex items-center gap-3 text-gray-400 text-[10px] border-t border-gray-200 pt-2">
+                    <span className="flex items-center gap-1 hover:text-blue-500 transition-colors cursor-pointer">
                         <MessageCircle size={10} /> {tweet.replies}
                     </span>
-                    <span className="flex items-center gap-1 hover:text-green-400 transition-colors cursor-pointer">
+                    <span className="flex items-center gap-1 hover:text-green-500 transition-colors cursor-pointer">
                         <Repeat2 size={10} /> {tweet.retweets}
                     </span>
-                    <span className="flex items-center gap-1 hover:text-pink-400 transition-colors cursor-pointer">
+                    <span className="flex items-center gap-1 hover:text-pink-500 transition-colors cursor-pointer">
                         <Heart size={10} /> {tweet.likes}
                     </span>
-                    <span className="ml-auto text-gray-600 text-[9px]">
+                    <span className="ml-auto text-gray-400 text-[9px]">
                         Click to dismiss
                     </span>
                 </div>

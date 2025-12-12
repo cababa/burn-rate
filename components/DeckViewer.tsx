@@ -20,6 +20,7 @@ interface DeckViewerProps {
     disabledFilter?: (card: CardData) => boolean;
     emptyMessage?: string;
     icon?: 'deck' | 'draw' | 'discard' | 'exhaust' | 'remove';
+    getGifUrl?: (cardId: string) => string | undefined;
 }
 
 export const DeckViewer: React.FC<DeckViewerProps> = ({
@@ -30,14 +31,15 @@ export const DeckViewer: React.FC<DeckViewerProps> = ({
     onSelect,
     disabledFilter,
     emptyMessage = "No cards",
-    icon = 'deck'
+    icon = 'deck',
+    getGifUrl
 }) => {
     const getIcon = () => {
         switch (icon) {
             case 'draw': return <Layers size={24} className="text-primary" />;
-            case 'discard': return <Archive size={24} className="text-gray-400" />;
-            case 'exhaust': return <Ghost size={24} className="text-purple-400" />;
-            case 'remove': return <Trash2 size={24} className="text-danger" />;
+            case 'discard': return <Archive size={24} className="text-gray-500" />;
+            case 'exhaust': return <Ghost size={24} className="text-purple-500" />;
+            case 'remove': return <Trash2 size={24} className="text-red-500" />;
             default: return <Layers size={24} className="text-primary" />;
         }
     };
@@ -45,9 +47,9 @@ export const DeckViewer: React.FC<DeckViewerProps> = ({
     const getIconColor = () => {
         switch (icon) {
             case 'draw': return 'border-primary/30';
-            case 'discard': return 'border-gray-600';
-            case 'exhaust': return 'border-purple-500/30';
-            case 'remove': return 'border-danger/30';
+            case 'discard': return 'border-gray-300';
+            case 'exhaust': return 'border-purple-300';
+            case 'remove': return 'border-red-300';
             default: return 'border-primary/30';
         }
     };
@@ -65,32 +67,33 @@ export const DeckViewer: React.FC<DeckViewerProps> = ({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm animate-in fade-in duration-200"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
             onClick={onClose}
         >
             <div
-                className={`relative w-[90vw] max-w-6xl max-h-[85vh] bg-surface border-2 ${getIconColor()} rounded-xl shadow-2xl overflow-hidden flex flex-col`}
+                className={`relative w-[90vw] max-w-6xl max-h-[85vh] bg-white border-2 ${getIconColor()} rounded-2xl overflow-hidden flex flex-col`}
+                style={{ boxShadow: '12px 12px 24px #C8CED3, -12px -12px 24px #FFFFFF' }}
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800 bg-black/50">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
                     <div className="flex items-center gap-3">
                         {getIcon()}
-                        <h2 className="text-xl font-display font-bold text-white">{title}</h2>
-                        <span className="text-sm font-mono text-gray-500">({cards.length} cards)</span>
+                        <h2 className="text-xl font-display font-bold text-gray-800">{title}</h2>
+                        <span className="text-sm font-mono text-gray-400">({cards.length} cards)</span>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 rounded-full hover:bg-white/10 transition-colors text-gray-400 hover:text-white"
+                        className="p-2 rounded-full hover:bg-gray-200 transition-colors text-gray-500 hover:text-gray-800"
                     >
                         <X size={24} />
                     </button>
                 </div>
 
                 {/* Card Grid */}
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="flex-1 overflow-y-auto p-6 bg-white">
                     {cards.length === 0 ? (
-                        <div className="flex items-center justify-center h-48 text-gray-500 font-mono italic">
+                        <div className="flex items-center justify-center h-48 text-gray-400 font-mono italic">
                             {emptyMessage}
                         </div>
                     ) : (
@@ -115,6 +118,7 @@ export const DeckViewer: React.FC<DeckViewerProps> = ({
                                             onDragStart={() => { }}
                                             disabled={!isClickable}
                                             selectable={selectable && !isDisabled}
+                                            gifUrl={getGifUrl ? getGifUrl(card.id) : undefined}
                                         />
                                     </div>
                                 );
@@ -125,8 +129,8 @@ export const DeckViewer: React.FC<DeckViewerProps> = ({
 
                 {/* Footer */}
                 {selectable && (
-                    <div className="px-6 py-3 border-t border-gray-800 bg-black/50 text-center">
-                        <span className="text-sm text-gray-400 font-mono">
+                    <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 text-center">
+                        <span className="text-sm text-gray-500 font-mono">
                             Click a card to select it
                         </span>
                     </div>

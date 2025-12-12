@@ -216,6 +216,21 @@ export interface MesoNarrative {
 }
 
 // ============================================
+// ENEMY MEMORY SYSTEM (Character Persistence)
+// ============================================
+
+/**
+ * Track enemy encounters for callback lines
+ * Creates "We meet again" moments for repeat enemies
+ */
+export interface EnemyMemory {
+    enemyId: string;
+    encounterCount: number;
+    lastFloor: number;
+    wasDefeated: boolean;  // Did player overcome this enemy?
+}
+
+// ============================================
 // PROGRESSIVE STATE
 // ============================================
 

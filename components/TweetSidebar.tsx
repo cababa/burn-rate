@@ -43,10 +43,10 @@ export const TweetSidebar: React.FC<TweetSidebarProps> = ({
                 onClick={() => setIsExpanded(!isExpanded)}
                 className={`
           h-12 w-8 self-start mt-4
-          bg-gray-800/90 border border-gray-700 border-r-0
+          bg-white border border-gray-200 border-r-0
           rounded-l-lg flex items-center justify-center
-          hover:bg-gray-700 transition-colors
-          ${tweets.length > 0 ? 'text-blue-400' : 'text-gray-500'}
+          hover:bg-gray-50 transition-colors shadow-md
+          ${tweets.length > 0 ? 'text-blue-500' : 'text-gray-400'}
         `}
                 title={isExpanded ? 'Hide Timeline' : 'Show Timeline'}
             >
@@ -60,30 +60,30 @@ export const TweetSidebar: React.FC<TweetSidebarProps> = ({
 
             {/* Sidebar Panel */}
             <div className={`
-        bg-gray-900/95 backdrop-blur-md border-l border-gray-700
-        transition-all duration-300 overflow-hidden
+        bg-white border-l border-gray-200
+        transition-all duration-300 overflow-hidden shadow-lg
         ${isExpanded ? 'w-80' : 'w-0'}
       `}>
                 {isExpanded && (
-                    <div className="h-full flex flex-col">
+                    <div className="h-full flex flex-col bg-white">
                         {/* Header */}
-                        <div className="p-3 border-b border-gray-700 flex items-center justify-between">
+                        <div className="p-3 border-b border-gray-200 flex items-center justify-between bg-gray-50">
                             <div>
-                                <h3 className="font-bold text-white text-sm">Timeline</h3>
+                                <h3 className="font-bold text-gray-800 text-sm">Timeline</h3>
                                 <p className="text-xs text-gray-500">{startupName || 'Your Journey'}</p>
                             </div>
-                            <span className="text-xs text-gray-500 font-mono">
+                            <span className="text-xs text-gray-400 font-mono">
                                 {tweets.length} tweet{tweets.length !== 1 ? 's' : ''}
                             </span>
                         </div>
 
                         {/* Current Tweet Highlight */}
                         {currentTweet && (
-                            <div className="border-b-2 border-blue-500 animate-pulse">
-                                <div className="p-3 bg-blue-900/20 relative">
+                            <div className="border-b-2 border-blue-400">
+                                <div className="p-3 bg-blue-50 relative">
                                     <button
                                         onClick={onDismissCurrent}
-                                        className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-700 transition-colors"
+                                        className="absolute top-2 right-2 p-1 rounded-full hover:bg-blue-100 transition-colors"
                                         title="Dismiss"
                                     >
                                         <X size={14} className="text-gray-400" />
@@ -94,11 +94,11 @@ export const TweetSidebar: React.FC<TweetSidebarProps> = ({
                         )}
 
                         {/* Tweet List */}
-                        <div className="flex-1 overflow-y-auto">
+                        <div className="flex-1 overflow-y-auto bg-white">
                             {tweets.slice().reverse().map((tweet, idx) => (
                                 <div
                                     key={tweet.id || idx}
-                                    className="border-b border-gray-800 hover:bg-gray-800/50 transition-colors"
+                                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
                                 >
                                     <div className="p-3">
                                         <CompactTweet tweet={tweet} />
@@ -107,7 +107,7 @@ export const TweetSidebar: React.FC<TweetSidebarProps> = ({
                             ))}
 
                             {tweets.length === 0 && !currentTweet && (
-                                <div className="p-6 text-center text-gray-500 text-sm">
+                                <div className="p-6 text-center text-gray-400 text-sm">
                                     <p>No tweets yet...</p>
                                     <p className="text-xs mt-1">Your story unfolds in combat!</p>
                                 </div>
@@ -133,7 +133,7 @@ const CompactTweet: React.FC<{ tweet: NarrativeTweet; isHighlighted?: boolean }>
             ? 'border-l-red-500'
             : tweet.author === 'enemy'
                 ? 'border-l-orange-500'
-                : 'border-l-blue-500';
+                : 'border-l-blue-400';
 
     return (
         <div className={`border-l-2 pl-3 ${borderClass}`}>
@@ -141,20 +141,20 @@ const CompactTweet: React.FC<{ tweet: NarrativeTweet; isHighlighted?: boolean }>
             <div className="flex items-center gap-2 mb-1">
                 <span className="text-lg">{tweet.avatarEmoji}</span>
                 <div className="flex-1 min-w-0">
-                    <span className={`font-bold text-sm truncate ${isHighlighted ? 'text-blue-300' : 'text-white'}`}>
+                    <span className={`font-bold text-sm truncate ${isHighlighted ? 'text-blue-600' : 'text-gray-800'}`}>
                         {tweet.displayName}
                     </span>
-                    <span className="text-xs text-gray-500 ml-1">{tweet.handle}</span>
+                    <span className="text-xs text-gray-400 ml-1">{tweet.handle}</span>
                 </div>
             </div>
 
             {/* Content */}
-            <p className={`text-sm leading-snug ${isHighlighted ? 'text-white' : 'text-gray-300'}`}>
+            <p className={`text-sm leading-snug ${isHighlighted ? 'text-gray-800' : 'text-gray-600'}`}>
                 {tweet.content}
             </p>
 
             {/* Compact Engagement */}
-            <div className="flex items-center gap-3 mt-2 text-gray-500 text-[10px]">
+            <div className="flex items-center gap-3 mt-2 text-gray-400 text-[10px]">
                 <span className="flex items-center gap-1">
                     <MessageCircle size={10} /> {tweet.replies}
                 </span>

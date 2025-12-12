@@ -24,12 +24,22 @@ import {
 } from './progressiveNarrativeTypes';
 import { NarrativeTweet, StartupContext } from './narrativeTypes';
 import { MapNode, MapLayer, EnemyData } from './types';
+import { getApiKey, hasApiKey as settingsHasApiKey, setApiKey, getReasoningModel, getFastModel } from './settingsService';
 
 // ============================================
 // CONFIGURATION
 // ============================================
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent';
+// Dynamic API URLs based on selected models from settings
+function getReasoningModelApiUrl(): string {
+    const model = getReasoningModel();
+    return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+}
+
+function getFastModelApiUrl(): string {
+    const model = getFastModel();
+    return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+}
 
 // Verbose logging toggle - logs full prompts and responses for debugging
 let VERBOSE_LOGGING = false;
@@ -44,22 +54,19 @@ export function isVerboseLogging(): boolean {
 }
 
 // ============================================
-// API KEY MANAGEMENT (shared with old service)
+// API KEY MANAGEMENT (delegated to settingsService)
 // ============================================
 
 export function getGeminiApiKey(): string | null {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem('gemini_api_key');
+    return getApiKey() || null;
 }
 
 export function setGeminiApiKey(apiKey: string): void {
-    if (typeof window !== 'undefined') {
-        localStorage.setItem('gemini_api_key', apiKey);
-    }
+    setApiKey(apiKey);
 }
 
 export function hasGeminiApiKey(): boolean {
-    return !!getGeminiApiKey();
+    return settingsHasApiKey();
 }
 
 // ============================================
@@ -92,7 +99,98 @@ export function setCachedMeso(nodeId: string, meso: MesoNarrative): void {
 
 export function clearNarrativeCache(): void {
     mesoCache.clear();
+    enemyMemoryCache.clear();
     tweetIdCounter = 0;
+}
+
+// ============================================
+// ENEMY MEMORY SYSTEM (Character Persistence)
+// ============================================
+
+import { EnemyMemory } from './progressiveNarrativeTypes';
+
+const enemyMemoryCache = new Map<string, EnemyMemory>();
+
+/**
+ * Record that the player encountered an enemy
+ */
+export function recordEnemyEncounter(enemyId: string, floor: number, wasDefeated: boolean): void {
+    const existing = enemyMemoryCache.get(enemyId);
+    if (existing) {
+        existing.encounterCount++;
+        existing.lastFloor = floor;
+        existing.wasDefeated = wasDefeated;
+    } else {
+        enemyMemoryCache.set(enemyId, {
+            enemyId,
+            encounterCount: 1,
+            lastFloor: floor,
+            wasDefeated
+        });
+    }
+}
+
+/**
+ * Get enemy memory for callback generation
+ */
+export function getEnemyMemory(enemyId: string): EnemyMemory | null {
+    return enemyMemoryCache.get(enemyId) || null;
+}
+
+/**
+ * Generate callback line for returning enemies
+ */
+function getEnemyCallbackLine(enemyId: string, startupName: string): string | null {
+    const memory = enemyMemoryCache.get(enemyId);
+    if (!memory || memory.encounterCount < 2) return null;
+
+    const callbacks: Record<string, string[]> = {
+        'critical_bug': [
+            "Back again? Still doubting yourselves, I see. 🤨",
+            "Missed me? The doubt never really goes away."
+        ],
+        'burnout': [
+            "Thought you could escape me? The exhaustion always returns. 🔥",
+            "Another late night. I knew you'd be back."
+        ],
+        'fanboy': [
+            "MORE features this time, right? Right?? 📦",
+            "Scope creep never dies. Welcome back!"
+        ],
+        'tech_debt': [
+            "Remember me? All those shortcuts you took? 😴",
+            "The past catches up eventually..."
+        ],
+        'spaghetti_code': [
+            "We meet again. Still copying ideas? 🦜",
+            "Back for more? How original."
+        ],
+        'micromanager': [
+            "Status update? I've been waiting. 🔍",
+            "Need approval again? Of course you do."
+        ]
+    };
+
+    const enemyCallbacks = callbacks[enemyId];
+    if (enemyCallbacks) {
+        const idx = (memory.encounterCount - 2) % enemyCallbacks.length;
+        return enemyCallbacks[idx];
+    }
+
+    // Generic callback for unknown enemies
+    return memory.wasDefeated
+        ? `We meet again, ${startupName}. Lucky last time.`
+        : `Back for more, ${startupName}? Bold.`;
+}
+
+/**
+ * Generate floor recap for "Previously on..." context
+ */
+function getFloorRecap(floor: number, macro: MacroNarrative): string {
+    if (floor <= 1) return '';
+    const prevBeat = macro.floorBeats[floor - 2]; // 0-indexed
+    if (!prevBeat) return '';
+    return `PREVIOUSLY: "${prevBeat.resolution}" (This shapes their current mindset)`;
 }
 
 // ============================================
@@ -154,6 +252,27 @@ LANGUAGE RULES:
 - NO jargon - "it works!" not "the system is stable"
 - The ${role.toUpperCase()} flavor comes through ATTITUDE, not vocabulary
 - Insider energy without insider words
+
+═══════════════════════════════════════════════
+VOCABULARY FILTER (STRICT!)
+═══════════════════════════════════════════════
+❌ BANNED WORDS (never use these):
+pivot, iterate, MVP, TAM, SAM, CAC, LTV, churn, runway, burn rate, PMF, KPIs, 
+scale, synergy, leverage, optimize, vertical, B2B, B2C, SaaS, ARR, MRR
+
+✅ USE INSTEAD:
+- pivot → change direction, try something different
+- iterate → improve, make it better
+- MVP → first version, early version
+- runway → money left, months until broke
+- burn rate → how fast money disappears
+- PMF → people actually want this
+- scale → grow, get bigger
+- churn → people leaving, users quitting
+
+EXPERT DEPTH (show, don't tell):
+❌ "We achieved PMF" (jargon nobody understands)
+✅ "People are signing up without us asking. That's... that's new." (same meaning, anyone gets it)
 
 CRITICAL RULES:
 1. Tweets come from @StartupName account - NOT a personal founder account
@@ -632,7 +751,17 @@ HARD RULES:
 2. NO hashtags
 3. NO jargon ("deployed to prod" → "it's live")
 4. A smart 12-year-old should get every word
-5. Victory = celebrating what they built, NEVER battle language`;
+5. Victory = celebrating what they built, NEVER battle language
+
+═══════════════════════════════════════════════
+VOCABULARY FILTER (STRICT!)
+═══════════════════════════════════════════════
+❌ BANNED: pivot, iterate, MVP, TAM, CAC, churn, runway, burn rate, PMF, KPIs, scale, synergy, leverage
+✅ USE: change direction, improve, first version, money left, people leaving, "people actually want this"
+
+Expert depth comes from SHOWING not TELLING:
+❌ "We found PMF" → ✅ "Someone wants to pay. Without us asking. Is this real?"
+❌ "Reduced churn" → ✅ "People stopped leaving. Finally."`;
 }
 
 function buildMesoUserPrompt(
@@ -643,15 +772,18 @@ function buildMesoUserPrompt(
     enemies: { id: string; name: string; type: string; description?: string; emoji?: string }[],
     nextNodes: { id: string; type: string }[],
     deckCards?: { name: string; type: string; description: string }[],
-    role: PlayerRole = 'cto'
+    role: PlayerRole = 'cto',
+    cardsPlayedThisCombat?: string[]  // Cards that were actually played for cause→effect
 ): string {
     const roleCtx = ROLE_CONTEXT[role];
 
-    // Build obstacle descriptions without exposing IDs
+    // Build obstacle descriptions with callback lines for returning enemies
     const obstacleDetails = enemies.map(e => {
         const personality = getEnemyPersonality(e.id);
+        const callbackLine = getEnemyCallbackLine(e.id, context.name);
+        const callbackSection = callbackLine ? `\n     CALLBACK (they've met before!): "${callbackLine}"` : '';
         return `- ${personality.description}
-     Voice: ${personality.trashTalkStyle}
+     Voice: ${personality.trashTalkStyle}${callbackSection}
      (internal ref: ${e.id})`;  // Internal ref for response matching only
     }).join('\n');
 
@@ -664,6 +796,11 @@ function buildMesoUserPrompt(
     const uniqueSkills = [...new Set(skillCards)].slice(0, 5).join(', ') || 'Rollback, Refactor';
     const uniquePowers = [...new Set(powerCards)].slice(0, 5).join(', ') || 'Network Effects';
 
+    // Cards actually played this combat (for cause→effect in victory tweets)
+    const playedCardsSection = cardsPlayedThisCombat && cardsPlayedThisCombat.length > 0
+        ? `\nCARDS THAT ACTIVATED THIS FIGHT:\n${[...new Set(cardsPlayedThisCombat)].slice(0, 5).join(', ')}\n(Reference these in victory tweets! "The ${cardsPlayedThisCombat[0]} saved us.")`
+        : '';
+
     // Phase labels for the LLM (no floor numbers)
     const phaseLabel = {
         'hope': 'Early days, full of excitement',
@@ -672,6 +809,9 @@ function buildMesoUserPrompt(
         'breakthrough': 'Things are clicking, momentum building',
         'climax': 'The big moment, everything on the line'
     }[floorBeat.storyPhase] || 'On the journey';
+
+    // Floor recap for "Previously on..." continuity
+    const floorRecap = getFloorRecap(floor, macro);
 
     // Infer specific features from the startup's one-liner
     // E.g., "Netflix for serials" -> streaming, episodes, binge-watching
@@ -683,13 +823,13 @@ function buildMesoUserPrompt(
 THE STARTUP: ${context.name}
 WHAT THEY DO: "${context.oneLiner}"
 ═══════════════════════════════════════════════
-
+${floorRecap ? `\n${floorRecap}\n` : ''}
 THIS IS THE STORY RIGHT NOW:
 • SETUP: "${floorBeat.setup}"  
 • CONFLICT: "${floorBeat.conflict}"
 • RESOLUTION: "${floorBeat.resolution}"
 • STAKES: ${floorBeat.stakes}
-
+${playedCardsSection}
 PHASE: ${phaseLabel}
 MOOD SHIFT: ${floorBeat.emotionalArc.replace(/_/g, ' ')}
 
@@ -873,9 +1013,15 @@ async function callGeminiAPI(
     userPrompt: string,
     schema: object,
     apiKey: string,
+    modelType: 'reasoning' | 'fast' = 'fast',  // NEW: Select heavy vs fast model
     maxRetries: number = 2
 ): Promise<any> {
     let lastError: Error | null = null;
+
+    // Select API URL based on model type
+    const apiUrl = modelType === 'reasoning'
+        ? getReasoningModelApiUrl()
+        : getFastModelApiUrl();
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
         if (attempt > 0) {
@@ -884,7 +1030,7 @@ async function callGeminiAPI(
             await new Promise(resolve => setTimeout(resolve, delay));
         }
 
-        console.log('[Progressive] 🚀 Gemini API call starting...');
+        console.log(`[Progressive] 🚀 Gemini API call starting (${modelType} model: ${modelType === 'reasoning' ? getReasoningModel() : getFastModel()})...`);
 
         // Verbose logging: show full prompts
         if (VERBOSE_LOGGING) {
@@ -918,7 +1064,7 @@ async function callGeminiAPI(
         console.log(`[Progressive] ⏱️ Request started at ${new Date().toISOString()}`);
 
         try {
-            const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+            const response = await fetch(`${apiUrl}?key=${apiKey}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody)
@@ -1051,7 +1197,8 @@ export async function generateMacroNarrative(context: StartupContext, role: Play
             buildMacroSystemPrompt(role),
             buildMacroUserPrompt(context, role),
             MACRO_SCHEMA,
-            apiKey
+            apiKey,
+            'reasoning'  // Use heavy model for MACRO (story arc generation)
         );
         const macro = transformMacroResponse(raw, context);
         console.log('[Progressive] ✅ MACRO generated:', macro.theme);
@@ -1278,7 +1425,8 @@ export async function generateMesoNarrative(
             buildMesoSystemPrompt(role),
             buildMesoUserPrompt(context, macro, floor, floorBeat, enemies, nextNodes, deckCards, role),
             MESO_SCHEMA,
-            apiKey
+            apiKey,
+            'fast'  // Use fast model for MESO (per-floor generation)
         );
         const meso = transformMesoResponse(raw, nodeId, floor, nodeType, enemies, context);
         setCachedMeso(nodeId, meso);
