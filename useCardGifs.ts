@@ -16,6 +16,60 @@ interface UseCardGifsOptions {
 }
 
 /**
+ * Normalize a runtime card ID to its base card ID
+ * Runtime IDs look like: commit_0_abc123, stay_focused_2_xyz789, hotfix_abc123
+ * Base IDs look like: cto_commit, cto_stay_focused, cto_hotfix
+ * Also handles status cards: status_legacy_code, status_bug, etc.
+ */
+function normalizeCardId(runtimeId: string): string {
+    // First, check if it's already a valid base ID
+    if (CARD_GIF_SEARCH_TERMS[runtimeId]) {
+        return runtimeId;
+    }
+
+    // Status cards - keep as is if they start with status_
+    if (runtimeId.startsWith('status_')) {
+        // Extract status_xxx from status_xxx_timestamp
+        const statusMatch = runtimeId.match(/^(status_[a-z_]+?)(?:_\d+)?(?:_[a-z0-9]+)?$/);
+        if (statusMatch && CARD_GIF_SEARCH_TERMS[statusMatch[1]]) {
+            return statusMatch[1];
+        }
+        // Try truncating after the last known status ID
+        for (const key of Object.keys(CARD_GIF_SEARCH_TERMS)) {
+            if (key.startsWith('status_') && runtimeId.startsWith(key)) {
+                return key;
+            }
+        }
+    }
+
+    // Try CTO card patterns
+    // Card names like: commit_0_abc123 -> cto_commit
+    //                  stay_focused_2_xyz789 -> cto_stay_focused  
+    //                  hotfix_abc123 -> cto_hotfix
+
+    // Extract the card name by removing numeric suffixes and random IDs
+    // Pattern: cardname_N_randomid or cardname_randomid
+    const parts = runtimeId.split('_');
+
+    // Try progressively shorter combinations with cto_ prefix
+    for (let len = parts.length - 1; len >= 1; len--) {
+        // Skip parts that look like random IDs or pure numbers
+        const candidateParts = parts.slice(0, len).filter(p => !/^[a-z0-9]{9}$/.test(p) && !/^\d+$/.test(p));
+        if (candidateParts.length === 0) continue;
+
+        const candidateName = candidateParts.join('_');
+        const ctoId = `cto_${candidateName}`;
+
+        if (CARD_GIF_SEARCH_TERMS[ctoId]) {
+            return ctoId;
+        }
+    }
+
+    // Fallback: return original ID (might not have a GIF)
+    return runtimeId;
+}
+
+/**
  * Hook to manage card GIF URLs
  * Pre-fetches all card GIFs on mount, returns cached URLs
  */
@@ -37,7 +91,7 @@ export function useCardGifs({ cardIds, enabled = true }: UseCardGifsOptions = {}
             // Load all cached GIFs into state
             const targetCardIds = cardIds || Object.keys(CARD_GIF_SEARCH_TERMS);
             const newGifUrls: CardGifState = {};
-            
+
             for (const cardId of targetCardIds) {
                 const cachedUrl = getCardGif(cardId);
                 newGifUrls[cardId] = cachedUrl;
@@ -52,13 +106,16 @@ export function useCardGifs({ cardIds, enabled = true }: UseCardGifsOptions = {}
     }, [enabled, cardIds?.join(',')]);
 
     // Get GIF URL for a specific card (immediate, from state)
+    // Normalizes runtime IDs to base card IDs for lookup
     const getGifUrl = useCallback((cardId: string): string | null => {
-        // First check state
-        if (gifUrls[cardId] !== undefined) {
-            return gifUrls[cardId];
+        const baseId = normalizeCardId(cardId);
+
+        // First check state with normalized ID
+        if (gifUrls[baseId] !== undefined) {
+            return gifUrls[baseId];
         }
         // Fallback to direct cache lookup (for cards loaded after initial fetch)
-        return getCardGif(cardId);
+        return getCardGif(baseId);
     }, [gifUrls]);
 
     return {
@@ -79,8 +136,11 @@ export function useCardGif(cardId: string, enabled: boolean = true): string | nu
     useEffect(() => {
         if (!enabled || !cardId) return;
 
+        // Normalize the card ID to base ID
+        const baseId = normalizeCardId(cardId);
+
         // Try to get from cache first
-        const cached = getCardGif(cardId);
+        const cached = getCardGif(baseId);
         if (cached) {
             setGifUrl(cached);
             return;
@@ -89,7 +149,7 @@ export function useCardGif(cardId: string, enabled: boolean = true): string | nu
         // If not cached, the prefetch should have loaded it
         // Just re-check after a small delay
         const timer = setTimeout(() => {
-            const url = getCardGif(cardId);
+            const url = getCardGif(baseId);
             setGifUrl(url);
         }, 100);
 
@@ -98,3 +158,4 @@ export function useCardGif(cardId: string, enabled: boolean = true): string | nu
 
     return gifUrl;
 }
+

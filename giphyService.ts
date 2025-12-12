@@ -4,8 +4,11 @@
  * - Enemy GIFs: 5 variations per emoji for visual variety
  * - Card GIFs: 1:1 static mapping for muscle memory
  * - 404 fallback: rotates through URLs, re-fetches if all fail
+ * - Static cache fallback: uses pre-fetched URLs when API is unavailable
  * Persists URLs in localStorage to avoid repeated API calls
  */
+
+import { CARD_GIF_STATIC_CACHE, getStaticCardGif } from './cardGifCache';
 
 const GIPHY_API_KEY = (import.meta as any).env?.VITE_GIPHY_API_KEY || process.env.GIPHY_API_KEY || '';
 const GIPHY_SEARCH_URL = 'https://api.giphy.com/v1/gifs/search';
@@ -271,6 +274,13 @@ function getStoredCardGifUrl(cardId: string): string | null {
         return cache[cardId].url;
     }
 
+    // Fallback to static cache (pre-fetched URLs)
+    const staticUrl = getStaticCardGif(cardId);
+    if (staticUrl) {
+        cardMemoryCache.set(cardId, staticUrl);
+        return staticUrl;
+    }
+
     return null;
 }
 
@@ -450,7 +460,7 @@ export async function prefetchEnemyGifs(emojis: string[]): Promise<void> {
  * Returns single URL (deterministic, first result)
  */
 export async function searchGifByCardId(cardId: string): Promise<string | null> {
-    // 1. Check stored cache
+    // 1. Check stored cache (includes static cache fallback)
     const storedUrl = getStoredCardGifUrl(cardId);
     if (storedUrl) {
         // Background validation
@@ -470,13 +480,14 @@ export async function searchGifByCardId(cardId: string): Promise<string | null> 
     const searchTerm = CARD_GIF_SEARCH_TERMS[cardId];
     if (!searchTerm) {
         console.warn(`[GiphyService] No search term for card "${cardId}"`);
-        return null;
+        // Try static cache as last resort
+        return getStaticCardGif(cardId);
     }
 
-    // 3. If no API key, return null
+    // 3. If no API key, use static cache fallback
     if (!GIPHY_API_KEY) {
-        console.warn('[GiphyService] No GIPHY_API_KEY configured');
-        return null;
+        console.warn('[GiphyService] No GIPHY_API_KEY configured, using static cache');
+        return getStaticCardGif(cardId);
     }
 
     // 4. Fetch from Giphy API (only first result for cards)
@@ -492,8 +503,8 @@ export async function searchGifByCardId(cardId: string): Promise<string | null> 
         const response = await fetch(`${GIPHY_SEARCH_URL}?${params}`);
 
         if (!response.ok) {
-            console.error(`[GiphyService] API error: ${response.status}`);
-            return null;
+            console.error(`[GiphyService] API error: ${response.status}, using static cache`);
+            return getStaticCardGif(cardId);
         }
 
         const data: GiphySearchResponse = await response.json();
@@ -505,11 +516,12 @@ export async function searchGifByCardId(cardId: string): Promise<string | null> 
             return url;
         }
 
-        console.warn(`[GiphyService] No GIF found for card "${cardId}"`);
-        return null;
+        console.warn(`[GiphyService] No GIF found for card "${cardId}", using static cache`);
+        return getStaticCardGif(cardId);
     } catch (error) {
         console.error('[GiphyService] Error fetching card GIF:', error);
-        return null;
+        // Fallback to static cache on any error
+        return getStaticCardGif(cardId);
     }
 }
 
