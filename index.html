@@ -45,11 +45,16 @@
             'draw-card': 'drawCard 0.3s cubic-bezier(0.16, 1, 0.3, 1) backwards',
             'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
             'archive-card': 'archiveCard 0.5s ease-out forwards',
+            'discard-card': 'discardCard 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
           },
           keyframes: {
             drawCard: {
               '0%': { opacity: '0', transform: 'translateX(50px) rotate(5deg) scale(0.9)' },
               '100%': { opacity: '1', transform: 'translateX(0) rotate(0) scale(1)' },
+            },
+            discardCard: {
+              '0%': { opacity: '1', transform: 'translateX(0) rotate(0) scale(1)' },
+              '100%': { opacity: '0', transform: 'translateX(-100px) rotate(-10deg) scale(0.8)' },
             },
             archiveCard: {
               '0%': { opacity: '1', filter: 'blur(0) brightness(1)', transform: 'scale(1)' },

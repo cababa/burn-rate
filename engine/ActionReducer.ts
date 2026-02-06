@@ -30,7 +30,7 @@ import type { PendingChoice, ChoiceResult } from './choices.ts';
 import { ActionQueue } from './ActionQueue.ts';
 import { EventLog } from './EventLog.ts';
 import type { RNGService } from './RNGService.ts';
-import { getCrunchModeStrength } from '../gameLogic.ts';
+import { getCrunchModeStrength, getPressureCookerWeak } from '../gameLogic.ts';
 
 /**
  * Core engine reducer that processes Actions from an ActionQueue, mutates
@@ -264,6 +264,14 @@ export class ActionReducer {
     const hits = payload.hits && payload.hits > 0 ? payload.hits : 1;
     const attackerStatuses = this.state.playerStats.statuses;
 
+    // Emit a BUMP for the attacker
+    if (action.source) {
+      this.emitEvent('BUMP', {
+        targetId: action.source,
+        direction: action.source === 'player' ? 'right' : 'left'
+      }, action.source);
+    }
+
     for (let hit = 0; hit < hits; hit++) {
       const targets = this.getTargetEnemies(payload, enemies);
       if (targets.length === 0) break;
@@ -420,15 +428,25 @@ export class ActionReducer {
     const payload = action.payload as DrawCardsPayload | undefined;
     if (!payload || payload.count <= 0) return;
 
+    // No Draw (Flow State): hard stop any draw effect for this turn.
+    if (this.state.playerStats.statuses.noDraw > 0) {
+      this.emitEvent(
+        'STATUS_CHANGED',
+        {
+          target: 'player',
+          status: 'noDraw',
+          blockedDraw: payload.count,
+        },
+        action.source
+      );
+      return;
+    }
+
     let drawPile = [...this.state.drawPile];
     let discardPile = [...this.state.discardPile];
     const hand = [...this.state.hand];
 
     for (let i = 0; i < payload.count; i++) {
-      if (hand.length >= MAX_HAND_SIZE) {
-        break;
-      }
-
       if (drawPile.length === 0) {
         if (discardPile.length === 0) break;
 
@@ -450,16 +468,34 @@ export class ActionReducer {
       const card = drawPile.pop();
       if (!card) break;
 
-      hand.push(card);
-      this.emitEvent(
-        'CARD_MOVED',
-        {
-          cardId: card.id,
-          from: 'drawPile',
-          to: 'hand',
-        },
-        action.source
-      );
+      if (hand.length < MAX_HAND_SIZE) {
+        hand.push(card);
+        this.emitEvent(
+          'CARD_MOVED',
+          {
+            cardId: card.id,
+            card: card,
+            from: 'drawPile',
+            to: 'hand',
+          },
+          action.source
+        );
+      } else {
+        // StS behavior: overdrawn cards are burned to discard, not skipped.
+        discardPile.push(card);
+        this.emitEvent(
+          'CARD_MOVED',
+          {
+            cardId: card.id,
+            card: card,
+            from: 'drawPile',
+            to: 'discardPile',
+            handFull: true,
+            burned: true,
+          },
+          action.source
+        );
+      }
     }
 
     this.state = {
@@ -577,8 +613,12 @@ export class ActionReducer {
             delta: amount,
             newValue: (enemy.statuses as any)[status],
           },
-          action.source
-        );
+            action.source
+          );
+
+          if (status === 'vulnerable' && amount > 0) {
+            this.applyPressureCookerWeak(enemy, action.source);
+          }
       }
 
       this.state = {
@@ -621,8 +661,12 @@ export class ActionReducer {
               delta: amount,
               newValue: (enemy.statuses as any)[status],
             },
-            action.source
-          );
+              action.source
+            );
+
+          if (status === 'vulnerable' && amount > 0) {
+            this.applyPressureCookerWeak(enemy, action.source);
+          }
         }
       }
 
@@ -697,6 +741,7 @@ export class ActionReducer {
       'CARD_MOVED',
       {
         cardId: cardToExhaust.id,
+        card: cardToExhaust,
         from,
         to: 'exhaustPile',
       },
@@ -2090,6 +2135,98 @@ export class ActionReducer {
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private triggerJuggernautPlaceholder(_blockGained: number): void {
-    // Hook integration will be implemented in a later phase.
+    if (_blockGained <= 0) return;
+
+    const juggernaut = this.state.playerStats.statuses.juggernaut || 0;
+    if (juggernaut <= 0) return;
+
+    const enemies: EnemyData[] = this.state.enemies.map(e => ({
+      ...e,
+      statuses: { ...e.statuses },
+    }));
+    const live = enemies.filter(e => e.hp > 0);
+    if (live.length === 0) return;
+
+    const target = this.rng
+      ? this.rng.pick(live)
+      : live[Math.floor(Math.random() * live.length)];
+
+    let damage = juggernaut;
+    if (target.statuses.vulnerable > 0) {
+      damage = Math.floor(damage * this.getVulnerableMultiplierInternal(this.state.relics));
+    }
+    if (damage <= 0) return;
+
+    let remaining = damage;
+    let blocked = 0;
+    if (target.mitigation > 0) {
+      blocked = Math.min(target.mitigation, remaining);
+      target.mitigation -= blocked;
+      remaining -= blocked;
+    }
+
+    const hpBefore = target.hp;
+    if (remaining > 0) {
+      target.hp = Math.max(0, target.hp - remaining);
+    }
+
+    this.emitEvent(
+      'HIT',
+      {
+        targetId: target.id,
+        enemyName: target.name,
+        amount: remaining,
+        blocked,
+        hpBefore,
+        hpAfter: target.hp,
+        lethal: target.hp === 0,
+        fromJuggernaut: true,
+      },
+      'juggernaut'
+    );
+
+    this.state = {
+      ...this.state,
+      enemies,
+    };
+    this.checkVictoryInternal();
+  }
+
+  private applyPressureCookerWeak(enemy: EnemyData, source?: string): void {
+    const weakToApply = getPressureCookerWeak(this.state.relics);
+    if (weakToApply <= 0) return;
+
+    if (enemy.statuses.artifact > 0) {
+      enemy.statuses.artifact -= 1;
+      this.emitEvent(
+        'STATUS_CHANGED',
+        {
+          target: 'enemy',
+          targetId: enemy.id,
+          status: 'artifact',
+          delta: -1,
+          newValue: enemy.statuses.artifact,
+          blockedStatus: 'weak',
+        },
+        source
+      );
+      return;
+    }
+
+    const weakBefore = enemy.statuses.weak;
+    enemy.statuses.weak += weakToApply;
+    this.emitEvent(
+      'STATUS_CHANGED',
+      {
+        target: 'enemy',
+        targetId: enemy.id,
+        status: 'weak',
+        delta: weakToApply,
+        newValue: enemy.statuses.weak,
+        previousValue: weakBefore,
+        fromRelic: 'pressure_cooker',
+      },
+      source
+    );
   }
 }

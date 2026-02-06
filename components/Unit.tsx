@@ -2,7 +2,20 @@
 import React from 'react';
 import { Terminal, Sword, TrendingUp, ShieldAlert, HelpCircle, Shield, AlertTriangle, Zap, BarChart3, TrendingDown, ArrowUpCircle, ShieldOff, Moon, Layers, Hexagon, Sprout, Ban, RefreshCw, Heart } from 'lucide-react';
 import { EnemyIntent, EntityStatus, EnemyStatuses } from '../types';
+import { FloatingNumbers, useFloatingNumbers } from './FloatingNumbers';
+
 import { STATUS_CONFIG, INTENT_ICONS } from '../constants';
+import { triggerDamageFlash, triggerBumpRight, triggerBumpLeft, triggerShake, ANIMATION_CLASSES, ANIMATION_TIMING } from '../animations';
+
+export interface UnitHandle {
+  flashDamage: () => void;
+  flashBlock: () => void;
+  bump: (direction: 'left' | 'right') => void;
+  shake: () => void;
+  addNumber: (value: number, color: 'damage' | 'block' | 'buff' | 'heal') => void;
+}
+
+
 
 interface UnitProps {
   name: string;
@@ -71,7 +84,7 @@ const StatusIcon: React.FC<{
   );
 };
 
-export const Unit: React.FC<UnitProps> = ({
+export const Unit = React.forwardRef<UnitHandle, UnitProps>(({
   name,
   currentHp,
   maxHp,
@@ -86,7 +99,34 @@ export const Unit: React.FC<UnitProps> = ({
   isTargetable,
   isSelected,
   onClick
-}) => {
+}, ref) => {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const { numbers, addNumber, removeNumber } = useFloatingNumbers();
+
+  React.useImperativeHandle(ref, () => ({
+    flashDamage: () => {
+      triggerDamageFlash(containerRef.current);
+    },
+    flashBlock: () => {
+      if (!containerRef.current) return;
+      containerRef.current.classList.add('anim-block-gain');
+      setTimeout(() => {
+        containerRef.current?.classList.remove('anim-block-gain');
+      }, 300); // block-gain timing
+    },
+    bump: (direction) => {
+      if (direction === 'right') triggerBumpRight(containerRef.current);
+      else triggerBumpLeft(containerRef.current);
+    },
+    shake: () => {
+      triggerShake(containerRef.current);
+    },
+    addNumber: (value, color) => {
+      addNumber(value, color);
+    }
+  }));
+
+
   const hpPercent = Math.max(0, (currentHp / maxHp) * 100);
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -127,6 +167,7 @@ export const Unit: React.FC<UnitProps> = ({
 
   return (
     <div
+      ref={containerRef}
       onDragOver={handleDragOver}
       onDrop={onDrop}
       onClick={onClick}
@@ -143,6 +184,8 @@ export const Unit: React.FC<UnitProps> = ({
         boxShadow: isTargetable ? '8px 8px 16px #C8CED3, -8px -8px 16px #FFFFFF' : 'none',
       }}
     >
+      <FloatingNumbers numbers={numbers} onRemove={removeNumber} />
+
       {/* Mitigation Badge */}
       {mitigation > 0 && (
         <div className={`absolute -top-3 ${isEnemy ? '-right-3' : '-left-3'} z-10 flex items-center justify-center w-10 h-10 bg-blue-500 rounded-full shadow-lg border-2 border-white animate-in zoom-in duration-150 group/mitigation cursor-help`}>
@@ -320,4 +363,4 @@ export const Unit: React.FC<UnitProps> = ({
       )}
     </div>
   );
-};
+});

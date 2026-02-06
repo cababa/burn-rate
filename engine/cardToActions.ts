@@ -59,6 +59,10 @@ const SUPPORTED_EFFECT_TYPES: CardEffect['type'][] = [
 export const SUPPORTED_EFFECT_TYPE_SET = new Set<CardEffect['type']>(SUPPORTED_EFFECT_TYPES);
 
 export const isEffectTypeSupported = (effect: CardEffect | CardEffect['type']): boolean => {
+  if (typeof effect !== 'string' && effect.type === 'upgrade_hand' && (effect.value || 0) > 1) {
+    // Upgrade-all flows still rely on legacy resolver behavior.
+    return false;
+  }
   const type = typeof effect === 'string' ? effect : effect.type;
   return SUPPORTED_EFFECT_TYPE_SET.has(type);
 };

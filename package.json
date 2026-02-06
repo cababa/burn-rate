@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:mechanics": "node --loader ts-node/esm/transpile-only mechanicsRegressionTests.ts"
   },
   "dependencies": {
     "lucide-react": "^0.554.0",

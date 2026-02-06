@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Unit } from './components/Unit';
+import { Unit, UnitHandle } from './components/Unit';
 import { EnemyCard } from './components/EnemyCard';
+import { injectAnimationCSS, triggerScreenShake } from './animations';
+
 import { Card } from './components/Card';
 import { MapScreen } from './components/MapScreen';
 import { DeckViewer } from './components/DeckViewer';
@@ -85,7 +87,7 @@ const App: React.FC = () => {
 
     const [gameState, setGameState] = useState<GameState>({
         playerStats: GAME_DATA.character.stats, // Placeholder until start
-        enemies: [], // Was enemy: null
+        enemies: [],
         hand: [],
         drawPile: [],
         discardPile: [],
@@ -93,21 +95,23 @@ const App: React.FC = () => {
         relics: [],
         turn: 0,
         floor: 0,
-        status: 'MENU', // Start at Menu
+        status: 'MENU',
         rewardOptions: [],
         message: "",
         map: [],
         currentMapPosition: null,
         vendorStock: [],
         pendingDiscard: 0,
-        // Potion system
         potions: [null, null, null],
         potionSlotCount: 3,
         potionDropChance: 40,
         duplicateNextCard: false,
-        // Seed system
         seed: ''
     });
+
+    const playerRef = useRef<UnitHandle>(null);
+    const enemyRefs = useRef<Map<string, UnitHandle>>(new Map());
+    const appContainerRef = useRef<HTMLDivElement>(null);
 
     const [viewingDeckForUpgrade, setViewingDeckForUpgrade] = useState(false);
     const [showDevPanel, setShowDevPanel] = useState(false);
@@ -147,6 +151,7 @@ const App: React.FC = () => {
     const [showApproachOverlay, setShowApproachOverlay] = useState(false); // Combat start overlay
     const [victoryPhase, setVictoryPhase] = useState<'tweet' | 'rewards'>('tweet'); // Victory screen phase
     const [founderTweet, setFounderTweet] = useState<NarrativeTweet | null>(null); // Founder tweet on turn end
+    const [exhaustingCards, setExhaustingCards] = useState<CardData[]>([]);
 
     // === POST-MORTEM ANALYSIS STATE ===
     const [postMortemAnalysis, setPostMortemAnalysis] = useState<PostMortemAnalysis | null>(null);
@@ -175,7 +180,99 @@ const App: React.FC = () => {
     // Pre-fetch card GIFs on app mount
     useEffect(() => {
         prefetchCardGifs();
+        injectAnimationCSS();
     }, []);
+
+    // --- Combat Animation Engine ---
+
+    useEffect(() => {
+        if (gameState.pendingEvents && gameState.pendingEvents.length > 0) {
+            const eventsToProcess = [...gameState.pendingEvents];
+            
+            // Clear events from state so we don't process them again
+            setGameState(prev => ({
+                ...prev,
+                pendingEvents: []
+            }));
+
+            // Handle events sequentially
+            const runQueue = async () => {
+                for (const event of eventsToProcess) {
+                    await processGameEvent(event);
+                    // Standard gap between events (snappy but readable)
+                    await new Promise(resolve => setTimeout(resolve, 80));
+                }
+            };
+
+            runQueue();
+        }
+    }, [gameState.pendingEvents]);
+
+    const processGameEvent = async (event: any) => {
+        switch (event.type) {
+            case 'HIT': {
+                const { targetId, amount, blocked } = event.payload;
+                const ref = targetId === 'player' ? playerRef.current : enemyRefs.current.get(targetId);
+                
+                if (ref) {
+                    if (amount > 0) {
+                        ref.shake();
+                        ref.flashDamage();
+                        ref.addNumber(amount, 'damage');
+
+                        // Screen Shake for heavy hits
+                        if (amount >= 8) {
+                            triggerScreenShake(appContainerRef.current);
+                        }
+                    } else if (blocked > 0) {
+                        // Fully blocked hit
+                        ref.addNumber(0, 'block');
+                    }
+                }
+                break;
+            }
+            case 'BLOCK_GAINED': {
+                const { amount } = event.payload;
+                playerRef.current?.flashBlock();
+                playerRef.current?.addNumber(amount, 'block');
+                break;
+            }
+            case 'STATUS_CHANGED': {
+                const { target, targetId, status, delta } = event.payload;
+                const ref = target === 'player' ? playerRef.current : enemyRefs.current.get(targetId);
+                if (ref && delta !== 0) {
+                    const statusLower = status.toLowerCase();
+                    const isDebuff = ['vulnerable', 'weak', 'frail', 'exposed', 'drained'].includes(statusLower);
+                    ref.addNumber(Math.abs(delta), (isDebuff && delta > 0) ? 'damage' : 'buff');
+                }
+                break;
+            }
+            case 'SHAKE': {
+                const { targetId } = event.payload;
+                const ref = targetId === 'player' ? playerRef.current : enemyRefs.current.get(targetId);
+                ref?.shake();
+                break;
+            }
+            case 'BUMP': {
+                const { targetId, direction } = event.payload;
+                const ref = targetId === 'player' ? playerRef.current : enemyRefs.current.get(targetId);
+                ref?.bump(direction || (targetId === 'player' ? 'right' : 'left'));
+                break;
+            }
+            case 'CARD_MOVED': {
+                const { card, to } = event.payload;
+                if (to === 'exhaustPile' && card) {
+                    setExhaustingCards(prev => [...prev, card]);
+                    setTimeout(() => {
+                        setExhaustingCards(prev => prev.filter(c => c.id !== card.id));
+                    }, 400); // Wait for card-exhaust animation
+                }
+                break;
+            }
+            default:
+                break;
+        }
+    };
 
     // Startup input form state
     const [startupNameInput, setStartupNameInput] = useState('');
@@ -875,7 +972,7 @@ const App: React.FC = () => {
 
         if (gameState.status !== 'PLAYING') return;
         setGameState(prev => resolveEndTurn(prev));
-        setTimeout(processEnemyTurn, 1000);
+        setTimeout(processEnemyTurn, 400);
     };
 
 
@@ -1114,63 +1211,7 @@ const App: React.FC = () => {
     // --- Turn Management ---
 
     const handleEndTurn = () => {
-        if (gameState.status !== 'PLAYING') return;
-
-        let nextPlayerStatuses = { ...gameState.playerStats.statuses };
-        let nextMitigation = gameState.playerStats.mitigation;
-        let endTurnMessage = 'Enemy is executing intent...';
-
-        // Status Decay
-        if (nextPlayerStatuses.vulnerable > 0) nextPlayerStatuses.vulnerable--;
-        if (nextPlayerStatuses.weak > 0) nextPlayerStatuses.weak--;
-        if (nextPlayerStatuses.noDraw > 0) nextPlayerStatuses.noDraw = 0; // Clear NoDraw at end of turn
-
-        // Turn End Powers
-        if (nextPlayerStatuses.metallicize > 0) {
-            nextMitigation += nextPlayerStatuses.metallicize;
-        }
-
-        // Handle Ethereal Cards (Exhaust them) & Retain Cards
-        const cardsToDiscard: CardData[] = [];
-        const cardsToExhaust: CardData[] = [];
-        const cardsToRetain: CardData[] = [];
-
-        // Check if player has Memory Bank relic (retain all cards)
-        const retainAllCards = hasRetainHand(gameState.relics);
-
-        gameState.hand.forEach(card => {
-            if (card.ethereal) {
-                cardsToExhaust.push(card);
-            } else if (card.retain || retainAllCards) {
-                // Retain if card has retain OR if relic gives global retain
-                cardsToRetain.push(card);
-            } else {
-                cardsToDiscard.push(card);
-            }
-        });
-
-        if (cardsToExhaust.length > 0) {
-            endTurnMessage += ` ${cardsToExhaust.length} card(s) faded away.`;
-            if (nextPlayerStatuses.feelNoPain > 0) {
-                nextMitigation += (nextPlayerStatuses.feelNoPain * cardsToExhaust.length);
-            }
-        }
-
-        if (cardsToRetain.length > 0) {
-            endTurnMessage += ` Retained ${cardsToRetain.length} card(s).`;
-        }
-
-        setGameState(prev => ({
-            ...prev,
-            playerStats: { ...prev.playerStats, statuses: nextPlayerStatuses, mitigation: nextMitigation },
-            discardPile: [...prev.discardPile, ...cardsToDiscard],
-            exhaustPile: [...prev.exhaustPile, ...cardsToExhaust],
-            hand: cardsToRetain, // Keep retained cards in hand
-            status: 'ENEMY_TURN',
-            message: endTurnMessage
-        }));
-
-        setTimeout(processEnemyTurn, 1000);
+        endTurn();
     };
 
     const processEnemyTurn = () => {
@@ -3513,7 +3554,7 @@ const App: React.FC = () => {
     // --- PLAYING UI ---
 
     return (
-        <div className="min-h-screen bg-background text-gray-800 font-sans selection:bg-primary/30 overflow-hidden flex flex-col">
+        <div ref={appContainerRef} className="min-h-screen text-gray-800 font-sans selection:bg-primary/30 overflow-hidden flex flex-col">
             <header
                 className="h-14 border-b border-gray-200 flex items-center justify-between px-6 z-10"
                 style={{
@@ -3618,7 +3659,7 @@ const App: React.FC = () => {
             <main
                 className="flex-1 relative flex flex-col items-center justify-end pt-32 pb-8"
                 style={{
-                    background: 'radial-gradient(ellipse at center, #F5F7FA 0%, #E8ECEF 50%, #DCE2E8 100%)',
+                    background: 'transparent',
                 }}
             >
 
@@ -3639,6 +3680,7 @@ const App: React.FC = () => {
                         {/* Player Unit */}
                         <div className="flex flex-col gap-4">
                             <Unit
+                                ref={playerRef}
                                 name={GAME_DATA.character.name}
                                 currentHp={gameState.playerStats.hp}
                                 maxHp={gameState.playerStats.maxHp}
@@ -3713,6 +3755,10 @@ const App: React.FC = () => {
                             {gameState.enemies.map((enemy, index) => (
                                 <div key={enemy.id} className="relative">
                                     <EnemyCard
+                                        ref={(el) => {
+                                            if (el) enemyRefs.current.set(enemy.id, el);
+                                            else enemyRefs.current.delete(enemy.id);
+                                        }}
                                         name={enemy.name}
                                         currentHp={enemy.hp}
                                         maxHp={enemy.maxHp}
@@ -4269,6 +4315,26 @@ const App: React.FC = () => {
                             )
                         })}
 
+                        {exhaustingCards.map((card, index) => (
+                            <div
+                                key={`exhaust_${card.id}`}
+                                className="anim-card-exhaust"
+                                style={{
+                                    transform: `translateY(0px) rotate(0deg)`,
+                                    zIndex: 200,
+                                    marginLeft: '-20px',
+                                    filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.3))'
+                                }}
+                            >
+                                <Card
+                                    card={card}
+                                    onDragStart={() => {}}
+                                    disabled={true}
+                                    gifUrl={getCardGifUrl(card.id)}
+                                />
+                            </div>
+                        ))}
+
                         {gameState.hand.length === 0 && gameState.status === 'PLAYING' && (
                             <div className="text-gray-600 font-mono text-sm italic mb-12">
                                 No execution bandwidth remaining...
@@ -4280,7 +4346,7 @@ const App: React.FC = () => {
                 {/* Right-Center: End Turn Button */}
                 <div className="w-32 flex flex-col items-center justify-end mb-4 mr-4">
                     <button
-                        onClick={handleEndTurn}
+                        onClick={endTurn}
                         disabled={gameState.status !== 'PLAYING'}
                         className={`
                             flex items-center gap-2 px-6 py-3 rounded-xl font-mono text-sm font-bold uppercase tracking-wider transition-all duration-150

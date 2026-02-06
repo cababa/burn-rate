@@ -161,7 +161,7 @@ export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selecta
         if (isPlayable) onDragStart(e, card);
       }}
       className={`
-        relative group select-none transition-all duration-200 ease-out
+        relative group select-none transition-all duration-200 ease-out anim-card-draw
         ${!isPlayable
           ? 'opacity-50 grayscale cursor-not-allowed'
           : `${selectable ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'} hover:-translate-y-3 hover:scale-105 z-0 hover:z-20`
@@ -252,6 +252,7 @@ export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selecta
               alt={card.name}
               className={`w-full h-full object-cover transition-transform duration-200 ${isPlayable && 'group-hover:scale-110'}`}
               loading="lazy"
+              draggable="false"
             />
           ) : (
             <div className={`w-full h-full flex items-center justify-center text-5xl transition-transform duration-200 ${isPlayable && 'group-hover:scale-110'}`}>

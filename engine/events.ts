@@ -22,7 +22,10 @@ export type GameEventType =
   | 'VICTORY'
   | 'DEFEAT'
   | 'NUMBER_POP'
-  | 'SHAKE';
+  | 'SHAKE'
+  | 'BUMP'
+  | 'ATTACK';
+
 
 export interface GameEvent {
   type: GameEventType;

@@ -8,6 +8,11 @@ import React from 'react';
 import { Shield, Zap, Target, TrendingUp, HelpCircle } from 'lucide-react';
 import { EnemyIntent, EnemyStatuses } from '../types';
 import { STATUS_CONFIG, INTENT_ICONS } from '../constants';
+import { triggerDamageFlash, triggerBumpRight, triggerBumpLeft, triggerShake } from '../animations';
+import { UnitHandle } from './Unit';
+import { FloatingNumbers, useFloatingNumbers } from './FloatingNumbers';
+
+
 
 interface EnemyCardProps {
     name: string;
@@ -68,7 +73,7 @@ const StatusBadge: React.FC<{
     );
 };
 
-export const EnemyCard: React.FC<EnemyCardProps> = ({
+export const EnemyCard = React.forwardRef<UnitHandle, EnemyCardProps>(({
     name,
     currentHp,
     maxHp,
@@ -82,7 +87,34 @@ export const EnemyCard: React.FC<EnemyCardProps> = ({
     isTargetable,
     isSelected,
     onClick
-}) => {
+}, ref) => {
+    const containerRef = React.useRef<HTMLDivElement>(null);
+    const { numbers, addNumber, removeNumber } = useFloatingNumbers();
+
+    React.useImperativeHandle(ref, () => ({
+        flashDamage: () => {
+            triggerDamageFlash(containerRef.current);
+        },
+        flashBlock: () => {
+            if (!containerRef.current) return;
+            containerRef.current.classList.add('anim-block-gain');
+            setTimeout(() => {
+                containerRef.current?.classList.remove('anim-block-gain');
+            }, 300);
+        },
+        bump: (direction) => {
+            if (direction === 'right') triggerBumpRight(containerRef.current);
+            else triggerBumpLeft(containerRef.current);
+        },
+        shake: () => {
+            triggerShake(containerRef.current);
+        },
+        addNumber: (value, color) => {
+            addNumber(value, color);
+        }
+    }));
+
+
     const hpPercent = Math.max(0, (currentHp / maxHp) * 100);
     const isDead = currentHp <= 0;
 
@@ -146,6 +178,7 @@ export const EnemyCard: React.FC<EnemyCardProps> = ({
         >
             {/* Card Frame - Neomorphism Light Style */}
             <div
+                ref={containerRef}
                 className={`
                     relative rounded-2xl overflow-hidden
                     transition-all duration-200
@@ -161,6 +194,8 @@ export const EnemyCard: React.FC<EnemyCardProps> = ({
                     border: '1px solid rgba(255,255,255,0.5)',
                 }}
             >
+                <FloatingNumbers numbers={numbers} onRemove={removeNumber} />
+
                 {/* Mitigation Badge - Top Right */}
                 {mitigation > 0 && (
                     <div className="absolute top-2 right-2 z-20 flex items-center gap-1 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-bold shadow-md">
@@ -277,6 +312,6 @@ export const EnemyCard: React.FC<EnemyCardProps> = ({
             </div>
         </div>
     );
-};
+});
 
 export default EnemyCard;

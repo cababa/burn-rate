@@ -30,7 +30,8 @@ export interface ModelOption {
 }
 
 export type TextModelOption =
-    | 'gemini-3-pro-preview'     // Newest preview model (Dec 2025)
+    | 'gemini-3-flash-preview'   // Newest Flash preview model (Dec 2025)
+    | 'gemini-3-pro-preview'     // Newest Pro preview model (Dec 2025)
     | 'gemini-2.5-pro'           // State-of-the-art thinking model
     | 'gemini-2.5-flash'         // Best price-performance, stable
     | 'gemini-2.5-flash-lite'    // Fastest, cost-efficient
@@ -46,6 +47,12 @@ export type ImageModelOption =
 // ============================================
 
 export const TEXT_MODELS: Record<TextModelOption, ModelOption> = {
+    'gemini-3-flash-preview': {
+        id: 'gemini-3-flash-preview',
+        name: 'Gemini 3 Flash (Preview)',
+        description: 'Newest and most capable Flash model (Preview)',
+        tier: 'standard'
+    },
     'gemini-3-pro-preview': {
         id: 'gemini-3-pro-preview',
         name: 'Gemini 3 Pro (Preview)',
@@ -105,8 +112,8 @@ export const IMAGE_MODELS: Record<ImageModelOption, ModelOption> = {
 
 const DEFAULT_SETTINGS: GameSettings = {
     geminiApiKey: '',
-    reasoningModel: 'gemini-2.5-pro',      // Heavy for MACRO + Post-Mortem
-    fastModel: 'gemini-2.5-flash-lite',     // Fast for MESO per-floor
+    reasoningModel: 'gemini-3-flash-preview',      // Heavy for MACRO + Post-Mortem
+    fastModel: 'gemini-3-flash-preview',     // Fast for MESO per-floor
     imageModel: 'gemini-2.5-flash-image',
     enableNarrativeLogging: false,
     autoSkipTweets: false

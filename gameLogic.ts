@@ -2019,6 +2019,8 @@ export const resolveEnemyTurn = (prev: GameState, rng?: SeededRandom): GameState
     let newEnemies = prev.enemies.map(e => ({ ...e, statuses: { ...e.statuses } }));
     const enemiesToSpawn: EnemyData[] = [];
     let nextDrawPile = [...prev.drawPile];
+    let nextDiscardPile = [...prev.discardPile];
+    let bonusDrawFromHpLoss = 0;
 
     newEnemies.forEach(enemy => {
         if (enemy.hp <= 0) return;
@@ -2095,11 +2097,20 @@ export const resolveEnemyTurn = (prev: GameState, rng?: SeededRandom): GameState
                     newMessage += ` ${hpLossEffects.messages.join(' ')}`;
                 }
                 if (hpLossEffects.drawCards > 0) {
-                    // Data-Driven: Draw cards when taking damage
-                    const result = drawCards(nextDrawPile, prev.discardPile, hpLossEffects.drawCards);
-                    nextDrawPile = result.newDraw;
-                    // Note: Cards drawn mid-enemy turn go to hand next player turn
+                    // Data-Driven: queue extra draws for next player draw step.
+                    // This avoids losing cards by drawing into an unseen zone during enemy turn.
+                    bonusDrawFromHpLoss += hpLossEffects.drawCards;
                     newMessage += ` ${hpLossEffects.messages.join(' ')}`;
+                }
+
+                // Thick Skin-style relics: reflect damage to current attacker.
+                const onDamagedEffects = applyOnDamagedRelics(prev.relics, unblockedDamage, enemy.id);
+                if (onDamagedEffects.thornsDamage > 0) {
+                    enemy.hp = Math.max(0, enemy.hp - onDamagedEffects.thornsDamage);
+                    newMessage += ` ${enemy.name} took ${onDamagedEffects.thornsDamage} reflected damage.`;
+                    if (onDamagedEffects.messages.length > 0) {
+                        newMessage += ` ${onDamagedEffects.messages.join(' ')}`;
+                    }
                 }
             } else {
                 newMessage += ` Blocked ${enemy.name}.`;
@@ -2260,7 +2271,7 @@ export const resolveEnemyTurn = (prev: GameState, rng?: SeededRandom): GameState
 
     let earnedCapital = 0;
     let earnedRelic: RelicData | undefined;
-    let newRelics = [...prev.relics];
+    let newRelics = prev.relics.map(relic => ({ ...relic }));
 
     if (newEnemies.every(e => e.hp <= 0) && newStatus !== 'GAME_OVER') {
         newStatus = 'VICTORY';
@@ -2315,7 +2326,7 @@ export const resolveEnemyTurn = (prev: GameState, rng?: SeededRandom): GameState
         newMessage += ` Hypergrowth: +${newPlayerStatuses.berserk} Bandwidth.`;
     }
 
-    let bonusDraw = 0;
+    let bonusDraw = bonusDrawFromHpLoss;
     if (newPlayerStatuses.brutality > 0) {
         newPlayerHp = Math.max(0, newPlayerHp - newPlayerStatuses.brutality);
         bonusDraw += newPlayerStatuses.brutality;
@@ -2390,6 +2401,8 @@ export const resolveEnemyTurn = (prev: GameState, rng?: SeededRandom): GameState
         playerStats: nextPlayerStats,
         relics: newRelics,
         enemies: newEnemies,
+        drawPile: nextDrawPile,
+        discardPile: nextDiscardPile,
         turn: nextTurn,
         status: newStatus,
         message: newMessage,
@@ -2407,7 +2420,7 @@ export const resolveEnemyTurn = (prev: GameState, rng?: SeededRandom): GameState
 
     if (newStatus === 'PLAYING') {
         const drawTotal = 5 + bonusDraw;
-        const { drawn, newDraw, newDiscard } = drawCards(nextDrawPile, prev.discardPile, drawTotal);
+        const { drawn, newDraw, newDiscard } = drawCards(nextDrawPile, nextDiscardPile, drawTotal);
 
         const processed = processDrawnCards(drawn, prev.hand, newDiscard, newDraw, nextPlayerStats, newMessage);
 
@@ -2452,6 +2465,95 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
     const unsupportedEffects = (card.effects || []).filter(effect => !isEffectTypeSupported(effect));
     const shouldUseNewEngine = USE_NEW_CARD_RESOLVER && unsupportedEffects.length === 0;
 
+    const countAliveEnemies = (enemies: EnemyData[]): number => enemies.filter(e => e.hp > 0).length;
+
+    const applyEnemyDeathRelicEffects = (state: GameState, defeatedEnemies: number): GameState => {
+        if (defeatedEnemies <= 0) return state;
+
+        let updatedStats = { ...state.playerStats, statuses: { ...state.playerStats.statuses } };
+        let totalDraw = 0;
+        const messages: string[] = [];
+
+        for (let i = 0; i < defeatedEnemies; i++) {
+            const trigger = applyOnEnemyDeathRelics(state.relics, updatedStats);
+            updatedStats = { ...trigger.stats, statuses: { ...trigger.stats.statuses } };
+            totalDraw += trigger.drawCards;
+            messages.push(...trigger.messages);
+        }
+
+        let nextState: GameState = {
+            ...state,
+            playerStats: updatedStats,
+        };
+        let nextMessage = state.message;
+
+        if (totalDraw > 0 && state.status === 'PLAYING') {
+            if (updatedStats.statuses.noDraw > 0) {
+                nextMessage += ` (Draw prevented)`;
+            } else {
+                const result = drawCards(state.drawPile, state.discardPile, totalDraw);
+                const processed = processDrawnCards(
+                    result.drawn,
+                    state.hand,
+                    result.newDiscard,
+                    result.newDraw,
+                    updatedStats,
+                    nextMessage
+                );
+                nextState = {
+                    ...nextState,
+                    hand: processed.hand,
+                    drawPile: processed.drawPile,
+                    discardPile: processed.discard,
+                    playerStats: processed.stats,
+                };
+                nextMessage = processed.message;
+            }
+        }
+
+        if (messages.length > 0) {
+            nextMessage += ` ${messages.join(' ')}`;
+        }
+
+        nextState.message = nextMessage.trim();
+        return nextState;
+    };
+
+    const applyFirstAttackBonusToActions = (actions: any[], bonusDamage: number): { actions: any[], applied: boolean } => {
+        if (bonusDamage <= 0) return { actions, applied: false };
+
+        let applied = false;
+        const boosted = actions.map(action => {
+            if (applied) return action;
+            if (!action || !action.payload) return action;
+
+            if (action.type === 'DEAL_DAMAGE') {
+                applied = true;
+                return { ...action, payload: { ...action.payload, amount: (action.payload.amount || 0) + bonusDamage } };
+            }
+            if (action.type === 'DEAL_DAMAGE_PER_MATCHES') {
+                applied = true;
+                return { ...action, payload: { ...action.payload, base: (action.payload.base || 0) + bonusDamage } };
+            }
+            if (action.type === 'DEAL_DAMAGE_RAMPAGE') {
+                applied = true;
+                return { ...action, payload: { ...action.payload, base: (action.payload.base || 0) + bonusDamage } };
+            }
+            if (action.type === 'DEAL_DAMAGE_LIFESTEAL') {
+                applied = true;
+                return { ...action, payload: { ...action.payload, amount: (action.payload.amount || 0) + bonusDamage } };
+            }
+            if (action.type === 'DEAL_DAMAGE_FEED') {
+                applied = true;
+                return { ...action, payload: { ...action.payload, amount: (action.payload.amount || 0) + bonusDamage } };
+            }
+
+            return action;
+        });
+
+        return { actions: boosted, applied };
+    };
+
     // === NEW ENGINE PATH ===
     if (shouldUseNewEngine) {
         getGlobalLogger().log('CARD_PLAY', `[NEW ENGINE] Playing ${card.name}`, { cardId: card.id, cost: costPaid });
@@ -2474,18 +2576,41 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
         }
 
         // Build initial state with status updates
+        const workingRelics = prev.relics.map(relic => ({ ...relic }));
+        let workingStats = {
+            ...prev.playerStats,
+            statuses: playerStatuses,
+            mitigation: rageMitigation,
+        };
+        let attackRelicBonusDamage = 0;
+        let attackRelicMessages: string[] = [];
+
+        if (card.type === 'attack') {
+            const attackRelicResult = applyOnAttackRelics(workingRelics, workingStats);
+            workingStats = {
+                ...attackRelicResult.stats,
+                statuses: { ...attackRelicResult.stats.statuses }
+            };
+            attackRelicBonusDamage = attackRelicResult.bonusDamage;
+            attackRelicMessages = attackRelicResult.messages;
+        }
+
         let workingState: GameState = {
             ...prev,
+            relics: workingRelics,
+            hand: prev.hand.filter(c => c !== card),
             playerStats: {
-                ...prev.playerStats,
-                statuses: playerStatuses,
-                mitigation: rageMitigation,
+                ...workingStats,
             },
         };
+        let pendingAttackBonusDamage = attackRelicBonusDamage;
 
         // Process card effects (potentially multiple times for doubleTap)
         for (let r = 0; r < repeatCount; r++) {
-            const actions = cardToActions(card, target, targetEnemyId, r === 0 ? costPaid : 0);
+            const actionsRaw = cardToActions(card, target, targetEnemyId, r === 0 ? costPaid : 0);
+            const bonusResult = applyFirstAttackBonusToActions(actionsRaw, pendingAttackBonusDamage);
+            const actions = bonusResult.actions;
+            if (bonusResult.applied) pendingAttackBonusDamage = 0;
             const queue = new ActionQueue();
             queue.enqueueMany(actions);
 
@@ -2502,7 +2627,7 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
         // Attach final message
         let finalState: GameState = {
             ...workingState,
-            message: `Deployed ${card.name}.`,
+            message: `Deployed ${card.name}.${attackRelicMessages.length > 0 ? ` ${attackRelicMessages.join(' ')}` : ''}`,
         };
 
         // Handle card destination (exhaust or discard)
@@ -2512,6 +2637,11 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
             finalState.exhaustPile = [...finalState.exhaustPile, card];
         } else {
             finalState.discardPile = [...finalState.discardPile, card];
+        }
+
+        const enemiesDefeatedThisCard = Math.max(0, countAliveEnemies(prev.enemies) - countAliveEnemies(finalState.enemies));
+        if (enemiesDefeatedThisCard > 0) {
+            finalState = applyEnemyDeathRelicEffects(finalState, enemiesDefeatedThisCard);
         }
 
         // === NEW ENGINE: Calculate victory rewards (matching legacy behavior) ===
@@ -2634,6 +2764,35 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
     let newExhaustPile = [...prev.exhaustPile];
     // Fix: Remove specific card instance by reference to avoid removing duplicates with same ID
     let currentHand = prev.hand.filter(c => c !== card);
+    let pendingAttackBonusDamage = 0;
+
+    if (card.type === 'attack') {
+        const attackRelicResult = applyOnAttackRelics(
+            newRelics,
+            {
+                ...prev.playerStats,
+                hp: newHp,
+                maxHp: newMaxHp,
+                mitigation: newMitigation,
+                bandwidth: newBandwidth,
+                statuses: newPlayerStatuses
+            }
+        );
+        newMitigation = attackRelicResult.stats.mitigation;
+        newBandwidth = attackRelicResult.stats.bandwidth;
+        newPlayerStatuses = { ...attackRelicResult.stats.statuses };
+        pendingAttackBonusDamage = attackRelicResult.bonusDamage;
+        if (attackRelicResult.messages.length > 0) {
+            newMessage += ` ${attackRelicResult.messages.join(' ')}`;
+        }
+    }
+
+    const consumeAttackBonusDamage = (): number => {
+        if (pendingAttackBonusDamage <= 0) return 0;
+        const bonus = pendingAttackBonusDamage;
+        pendingAttackBonusDamage = 0;
+        return bonus;
+    };
 
     const applyJuggernaut = (blockGained: number) => {
         if (blockGained <= 0 || newPlayerStatuses.juggernaut <= 0) return;
@@ -2740,7 +2899,8 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                         ? { ...newPlayerStatuses, strength: newPlayerStatuses.strength + crunchBonus }
                         : newPlayerStatuses;
 
-                    let finalDamage = calculateDamage(effect.value, effectiveStatuses, t.statuses, effect.strengthMultiplier || 1, newRelics);
+                    const baseDamage = effect.value + consumeAttackBonusDamage();
+                    let finalDamage = calculateDamage(baseDamage, effectiveStatuses, t.statuses, effect.strengthMultiplier || 1, newRelics);
                     if (t.statuses.vulnerable > 0) newMessage += " (Exposed!)";
                     if (newPlayerStatuses.weak > 0) newMessage += " (Drained...)";
 
@@ -2794,7 +2954,7 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                 }
             } else if (effect.type === 'damage_scale_mitigation') {
                 // Body Slam: Damage = Mitigation
-                const dmg = prev.playerStats.mitigation;
+                const dmg = newMitigation + consumeAttackBonusDamage();
                 let targets: EnemyData[] = [];
                 if (target === 'enemy' && targetEnemy) targets = [targetEnemy];
 
@@ -2824,7 +2984,7 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                 const combatDeck = [...currentHand, ...newDrawPile, ...newDiscardPile, ...newExhaustPile, card];
                 const matches = countCardsMatches(combatDeck, matchString);
                 const bonus = matches * (effect.value === 6 ? 2 : 2); // Hardcoded +2 per match for now based on description
-                const totalDmg = effect.value + bonus;
+                const totalDmg = effect.value + bonus + consumeAttackBonusDamage();
                 getGlobalLogger().log('CARD_EFFECT_SPECIAL', `Damage scaled by matches: ${matches} matches, total damage ${totalDmg}.`);
 
                 let targets: EnemyData[] = [];
@@ -3141,7 +3301,7 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                 let targets: EnemyData[] = [];
                 if (target === 'enemy' && targetEnemy) targets = [targetEnemy];
                 const bonus = (card as any).rampageBonus || 0;
-                const totalDamage = effect.value + bonus;
+                const totalDamage = effect.value + bonus + consumeAttackBonusDamage();
                 targets.forEach(t => {
                     const crunchBonus = getCrunchModeStrength(newRelics, prev.playerStats.hp, prev.playerStats.maxHp);
                     const effectiveStatuses = crunchBonus > 0
@@ -3162,7 +3322,7 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                 newMessage += ` Velocity doubled!`;
             } else if (effect.type === 'damage_feed') {
                 if (targetEnemy) {
-                    const damage = calculateDamage(effect.value, newPlayerStatuses, targetEnemy.statuses, 1, newRelics);
+                    const damage = calculateDamage(effect.value + consumeAttackBonusDamage(), newPlayerStatuses, targetEnemy.statuses, 1, newRelics);
                     const blocked = Math.min(targetEnemy.mitigation, damage);
                     targetEnemy.mitigation -= blocked;
                     const finalDamage = damage - blocked;
@@ -3182,8 +3342,9 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                 }
             } else if (effect.type === 'damage_lifesteal') {
                 let totalHeal = 0;
+                const lifestealBaseDamage = effect.value + consumeAttackBonusDamage();
                 newEnemies.forEach(t => {
-                    const damage = calculateDamage(effect.value, newPlayerStatuses, t.statuses, 1, newRelics);
+                    const damage = calculateDamage(lifestealBaseDamage, newPlayerStatuses, t.statuses, 1, newRelics);
                     const blocked = Math.min(t.mitigation, damage);
                     t.mitigation -= blocked;
                     const finalDamage = damage - blocked;
@@ -3203,7 +3364,7 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                 const exhaustedCount = currentHand.length;
                 currentHand.slice().forEach(c => exhaustCard(c));
                 currentHand = [];
-                let totalDamage = effect.value * exhaustedCount;
+                let totalDamage = (effect.value * exhaustedCount) + consumeAttackBonusDamage();
                 if (targetEnemy) {
                     const damage = calculateDamage(totalDamage, newPlayerStatuses, targetEnemy.statuses, 1, newRelics);
                     const blocked = Math.min(targetEnemy.mitigation, damage);
@@ -3284,6 +3445,64 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
         exhaustCard(card);
     } else {
         newDiscardPile.push(card);
+    }
+
+    const enemiesDefeatedThisCard = Math.max(0, countAliveEnemies(prev.enemies) - countAliveEnemies(newEnemies));
+    if (enemiesDefeatedThisCard > 0) {
+        let deathTriggerStats = {
+            ...prev.playerStats,
+            hp: newHp,
+            maxHp: newMaxHp,
+            mitigation: newMitigation,
+            bandwidth: newBandwidth,
+            statuses: newPlayerStatuses
+        };
+        let totalDeathDraw = 0;
+        const deathMessages: string[] = [];
+
+        for (let i = 0; i < enemiesDefeatedThisCard; i++) {
+            const deathRelicTrigger = applyOnEnemyDeathRelics(newRelics, deathTriggerStats);
+            deathTriggerStats = {
+                ...deathRelicTrigger.stats,
+                statuses: { ...deathRelicTrigger.stats.statuses }
+            };
+            totalDeathDraw += deathRelicTrigger.drawCards;
+            deathMessages.push(...deathRelicTrigger.messages);
+        }
+
+        newMitigation = deathTriggerStats.mitigation;
+        newBandwidth = deathTriggerStats.bandwidth;
+        newPlayerStatuses = { ...deathTriggerStats.statuses };
+
+        if (totalDeathDraw > 0 && newStatus === 'PLAYING') {
+            if (newPlayerStatuses.noDraw > 0) {
+                newMessage += ` (Draw prevented)`;
+            } else {
+                const drawRes = drawCards(newDrawPile, newDiscardPile, totalDeathDraw);
+                const currentStats = {
+                    ...prev.playerStats,
+                    hp: newHp,
+                    maxHp: newMaxHp,
+                    mitigation: newMitigation,
+                    bandwidth: newBandwidth,
+                    statuses: newPlayerStatuses
+                };
+                const processed = processDrawnCards(drawRes.drawn, currentHand, drawRes.newDiscard, drawRes.newDraw, currentStats, newMessage);
+                currentHand = processed.hand;
+                newDrawPile = processed.drawPile;
+                newDiscardPile = processed.discard;
+                newMitigation = processed.stats.mitigation;
+                newBandwidth = processed.stats.bandwidth;
+                newPlayerStatuses = { ...processed.stats.statuses };
+                newMessage = processed.message;
+                triggerFireBreathing(processed.drawnCards);
+                drawnCards.push(...processed.drawnCards);
+            }
+        }
+
+        if (deathMessages.length > 0) {
+            newMessage += ` ${deathMessages.join(' ')}`;
+        }
     }
 
     let earnedCapital = 0;

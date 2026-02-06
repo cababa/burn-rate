@@ -15,7 +15,7 @@
 export const ANIMATION_TIMING = {
     // Damage feedback
     DAMAGE_FLASH_MS: 100,           // How long unit flashes red
-    DAMAGE_NUMBER_MS: 400,          // How long floating number visible
+    DAMAGE_NUMBER_MS: 200,          // How long floating number visible
 
     // Multi-hit attacks
     MULTI_HIT_DELAY_MS: 80,         // Delay between hits (fast!)
@@ -24,14 +24,18 @@ export const ANIMATION_TIMING = {
     TARGET_HIGHLIGHT_MS: 100,       // Pre-damage highlight pulse
 
     // Status effects
-    STATUS_POP_MS: 150,             // Status icon pop animation
+    STATUS_POP_MS: 100,             // Status icon pop animation
 
     // Block/buff gain
     BUFF_FLASH_MS: 100,             // Self-buff indicator
 
     // Card animations
     CARD_DRAW_MS: 100,              // Card sliding in
-    CARD_EXHAUST_MS: 150,           // Card fading out
+    CARD_EXHAUST_MS: 100,           // Card fading out
+
+    // Combat interaction
+    ATTACK_BUMP_MS: 150,             // Unit bumps forward
+    SHAKE_MS: 150,                   // Unit shakes when hit
 } as const;
 
 // ============================================
@@ -56,6 +60,11 @@ export const ANIMATION_CLASSES = {
     // Cards
     cardDraw: 'anim-card-draw',
     cardExhaust: 'anim-card-exhaust',
+
+    // Combat
+    attackBumpRight: 'anim-attack-bump-right',
+    attackBumpLeft: 'anim-attack-bump-left',
+    shake: 'anim-shake',
 } as const;
 
 // ============================================
@@ -200,7 +209,77 @@ const ANIMATION_CSS = `
     100% { transform: scale(1); filter: brightness(1); }
 }
 
+@keyframes bump-right {
+    0% { transform: translateX(0) scale(1); }
+    10% { transform: translateX(-10px) scale(0.95); } /* Windup */
+    40% { transform: translateX(60px) scale(1.1); } /* Impact */
+    100% { transform: translateX(0) scale(1); }
+}
+
+@keyframes bump-left {
+    0% { transform: translateX(0) scale(1); }
+    10% { transform: translateX(10px) scale(0.95); } /* Windup */
+    40% { transform: translateX(-60px) scale(1.1); } /* Impact */
+    100% { transform: translateX(0) scale(1); }
+}
+
+@keyframes shake {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    10% { transform: translate(-8px, -8px) rotate(-3deg); }
+    30% { transform: translate(8px, 6px) rotate(3deg); }
+    50% { transform: translate(-6px, 4px) rotate(-2deg); }
+    70% { transform: translate(4px, -4px) rotate(1deg); }
+    90% { transform: translate(-2px, 2px) rotate(0deg); }
+    100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+@keyframes screen-shake {
+    0% { transform: translate(0, 0); }
+    10% { transform: translate(-4px, -4px); }
+    30% { transform: translate(4px, 2px); }
+    50% { transform: translate(-2px, 4px); }
+    70% { transform: translate(2px, -2px); }
+    90% { transform: translate(-1px, 1px); }
+    100% { transform: translate(0, 0); }
+}
+
+
+@keyframes card-draw {
+    0% { transform: translateY(100px) scale(0.5); opacity: 0; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes card-exhaust {
+    0% { transform: scale(1); opacity: 1; filter: sepia(0) brightness(1); }
+    100% { transform: scale(1.2) translateY(-50px); opacity: 0; filter: sepia(1) brightness(0.5); }
+}
+
 /* Applied classes */
+.anim-attack-bump-right {
+    animation: bump-right 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.anim-attack-bump-left {
+    animation: bump-left 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.anim-shake {
+    animation: shake 250ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+.anim-screen-shake {
+    animation: screen-shake 200ms ease-out;
+}
+
+
+.anim-card-draw {
+    animation: card-draw 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.anim-card-exhaust {
+    animation: card-exhaust 300ms ease-in forwards;
+}
+
 .${ANIMATION_CLASSES.damageFlash} {
     animation: damage-flash ${ANIMATION_TIMING.DAMAGE_FLASH_MS}ms ease-out;
 }
@@ -309,3 +388,50 @@ export function triggerStatusPop(element: HTMLElement | null): (() => void) | nu
     setTimeout(cleanup, ANIMATION_TIMING.STATUS_POP_MS);
     return cleanup;
 }
+
+/**
+ * Trigger an attack bump animation (right)
+ */
+export function triggerBumpRight(element: HTMLElement | null): (() => void) | null {
+    if (!element) return null;
+    element.classList.add(ANIMATION_CLASSES.attackBumpRight);
+    const cleanup = () => element.classList.remove(ANIMATION_CLASSES.attackBumpRight);
+    setTimeout(cleanup, ANIMATION_TIMING.ATTACK_BUMP_MS);
+    return cleanup;
+}
+
+/**
+ * Trigger an attack bump animation (left)
+ */
+export function triggerBumpLeft(element: HTMLElement | null): (() => void) | null {
+    if (!element) return null;
+    element.classList.add(ANIMATION_CLASSES.attackBumpLeft);
+    const cleanup = () => element.classList.remove(ANIMATION_CLASSES.attackBumpLeft);
+    setTimeout(cleanup, ANIMATION_TIMING.ATTACK_BUMP_MS);
+    return cleanup;
+}
+
+/**
+ * Trigger a shake animation
+ */
+export function triggerShake(element: HTMLElement | null): (() => void) | null {
+    if (!element) return null;
+    element.classList.remove(ANIMATION_CLASSES.shake);
+    void element.offsetWidth; // Force reflow
+    element.classList.add(ANIMATION_CLASSES.shake);
+    const cleanup = () => element.classList.remove(ANIMATION_CLASSES.shake);
+    setTimeout(cleanup, ANIMATION_TIMING.SHAKE_MS);
+    return cleanup;
+}
+
+export function triggerScreenShake(element: HTMLElement | null): (() => void) | null {
+    if (!element) return null;
+    element.classList.remove('anim-screen-shake');
+    void element.offsetWidth; // Force reflow
+    element.classList.add('anim-screen-shake');
+    const cleanup = () => element.classList.remove('anim-screen-shake');
+    setTimeout(cleanup, 200);
+    return cleanup;
+}
+
+
