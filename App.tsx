@@ -13,7 +13,7 @@ import {
     calculateDamage, countCardsMatches, generateStarterDeck, getRandomRewardCards, shuffle, drawCards, drawCardsWithInnate, upgradeCard,
     applyCombatStartRelics, applyCombatEndRelics, getTurnStartBandwidth, generateMap, resolveCardEffect, resolveEnemyTurn, resolveEndTurn, processDrawnCards,
     applyOnAttackRelics, applyOnEnemyDeathRelics, applyTurnEndRelics, hasRetainHand, getCardLimit, canRestAtSite,
-    getRelicWoundsToAdd, applyOnCardReward, getSecretWeaponCard, getEncounterForFloor, getEliteEncounter, getBossEncounter,
+    getRelicWoundsToAdd, applyOnCardReward, getSecretWeaponCard, getEncounterForFloor, getEliteEncounter, getBossEncounter, getBossRelicChoices, getTreasureRelic,
     // Potion functions
     resolvePotionEffect, checkPotionDrop, generateRandomPotion, addPotionToSlot, removePotionFromSlot, canAcquirePotion, canUseExitStrategy,
     // Progressive narrative helper
@@ -101,6 +101,9 @@ const App: React.FC = () => {
         map: [],
         currentMapPosition: null,
         vendorStock: [],
+        vendorRelics: [],
+        vendorPotions: [],
+        cardRemovalCost: 75,
         pendingDiscard: 0,
         potions: [null, null, null],
         potionSlotCount: 3,
@@ -149,7 +152,11 @@ const App: React.FC = () => {
     const [currentMeso, setCurrentMeso] = useState<MesoNarrative | null>(null);
     const [useProgressiveNarrative, setUseProgressiveNarrative] = useState(true); // Feature flag
     const [showApproachOverlay, setShowApproachOverlay] = useState(false); // Combat start overlay
-    const [victoryPhase, setVictoryPhase] = useState<'tweet' | 'rewards'>('tweet'); // Victory screen phase
+    const [victoryPhase, setVictoryPhase] = useState<'tweet' | 'rewards' | 'bossRelic'>('tweet'); // Victory screen phase
+    const [bossRelicChoices, setBossRelicChoices] = useState<RelicData[]>([]);
+    const [bossRelicResolved, setBossRelicResolved] = useState(false);
+    const [bossRelicSkipped, setBossRelicSkipped] = useState(false);
+    const [selectedBossRelicId, setSelectedBossRelicId] = useState<string | null>(null);
     const [founderTweet, setFounderTweet] = useState<NarrativeTweet | null>(null); // Founder tweet on turn end
     const [exhaustingCards, setExhaustingCards] = useState<CardData[]>([]);
 
@@ -526,6 +533,10 @@ const App: React.FC = () => {
     useEffect(() => {
         if (gameState.status === 'VICTORY') {
             setVictoryPhase('tweet'); // Start with tweet phase
+            setBossRelicChoices([]);
+            setBossRelicResolved(false);
+            setBossRelicSkipped(false);
+            setSelectedBossRelicId(null);
         }
     }, [gameState.status]);
 
@@ -571,6 +582,26 @@ const App: React.FC = () => {
             console.log('[StoryCard] 📇 Defeat story card generated');
         }
     }, [gameState.status, gameState.floor, gameState.startupName, gameState.startupOneLiner, postMortemLoading, postMortemAnalysis]);
+
+    useEffect(() => {
+        if (gameState.status === 'VICTORY_ALL' && !storyCard) {
+            const context = {
+                name: gameState.startupName || 'Startup',
+                oneLiner: gameState.startupOneLiner || 'Building something great'
+            };
+            const card = generateStoryCard(
+                context,
+                macroNarrative,
+                gameState.floor,
+                'victory',
+                cardPlayCounts,
+                gameState.seed || 'NOSEED',
+                runStartTimeRef.current
+            );
+            setStoryCard(card);
+            console.log('[StoryCard] 📇 Victory story card generated');
+        }
+    }, [gameState.status, gameState.floor, gameState.startupName, gameState.startupOneLiner, storyCard, macroNarrative, cardPlayCounts, gameState.seed]);
 
     // Reset post-mortem state when starting new game
     const resetPostMortemState = () => {
@@ -780,6 +811,13 @@ const App: React.FC = () => {
         const initialRelics = [GAME_DATA.relics.git_repository];
         const initialStats = { ...GAME_DATA.character.stats };
 
+        setStoryCard(null);
+        setShowStoryCard(false);
+        setBossRelicChoices([]);
+        setBossRelicResolved(false);
+        setBossRelicSkipped(false);
+        setSelectedBossRelicId(null);
+
         setGameState({
             playerStats: initialStats,
             enemies: [],
@@ -796,6 +834,9 @@ const App: React.FC = () => {
             message: 'Friends & Family Round...',
             map: generateMap(rng.map),
             currentMapPosition: null,
+            vendorRelics: [],
+            vendorPotions: [],
+            cardRemovalCost: 75,
             lastVictoryReward: undefined,
             pendingDiscard: 0,
             // Potion system
@@ -1293,6 +1334,40 @@ const App: React.FC = () => {
         });
     };
 
+    const handleTakeBossRelic = (relic: RelicData) => {
+        if (bossRelicResolved) return;
+
+        setSelectedBossRelicId(relic.id);
+        setBossRelicResolved(true);
+        setBossRelicSkipped(false);
+
+        if (relic.effect.type === 'start_with_card') {
+            setPendingSecretWeaponRelic({ ...relic });
+            setGameState(prev => ({
+                ...prev,
+                message: `Select a skill card for ${relic.name}...`
+            }));
+            return;
+        }
+
+        setGameState(prev => ({
+            ...prev,
+            relics: [...prev.relics, relic],
+            message: `Boss perk unlocked: ${relic.name}!`
+        }));
+    };
+
+    const handleSkipBossRelic = () => {
+        if (bossRelicResolved) return;
+        setSelectedBossRelicId(null);
+        setBossRelicResolved(true);
+        setBossRelicSkipped(true);
+        setGameState(prev => ({
+            ...prev,
+            message: 'Skipped boss perk.'
+        }));
+    };
+
     // Handler for Secret Weapon skill card selection
     const handleSecretWeaponCardSelect = (card: CardData) => {
         if (!pendingSecretWeaponRelic) return;
@@ -1411,6 +1486,56 @@ const App: React.FC = () => {
             });
         }
 
+        const isBossVictory = gameState.enemies.some(e => e.type === 'boss');
+
+        if (isBossVictory) {
+            if (victoryPhase === 'rewards') {
+                if (bossRelicChoices.length === 0) {
+                    setBossRelicChoices(getBossRelicChoices(gameState.relics.map(r => r.id)));
+                }
+                setVictoryPhase('bossRelic');
+                return;
+            }
+
+            if (victoryPhase === 'bossRelic') {
+                if (pendingSecretWeaponRelic) {
+                    setGameState(prev => ({
+                        ...prev,
+                        message: `Select a skill card for ${pendingSecretWeaponRelic.name} before finishing the act.`
+                    }));
+                    return;
+                }
+
+                if (!bossRelicResolved) {
+                    setGameState(prev => ({
+                        ...prev,
+                        message: 'Choose a boss perk or skip it before finishing the act.'
+                    }));
+                    return;
+                }
+
+                if (macroNarrative?.bossVictoryTweet) {
+                    setTweetHistory(hist => {
+                        const isDup = hist.some(t => t.content === macroNarrative.bossVictoryTweet.content);
+                        return isDup ? hist : [...hist, macroNarrative.bossVictoryTweet];
+                    });
+                }
+
+                setGameState(prev => ({
+                    ...prev,
+                    status: 'VICTORY_ALL',
+                    message: 'Act 1 complete.',
+                    lastVictoryReward: undefined,
+                    pendingPotionReward: undefined,
+                    hand: [],
+                    drawPile: [],
+                    discardPile: [],
+                    exhaustPile: []
+                }));
+                return;
+            }
+        }
+
         // Proceed to map
         setGameState(prev => {
             // Mark current node as completed
@@ -1456,13 +1581,18 @@ const App: React.FC = () => {
                 return { ...newState, status: 'RETROSPECTIVE', message: 'Sprint Retrospective: Optimize or Recover?' };
             }
             if (node.type === 'vendor') {
-                const stock = getRandomRewardCards(3);
-                return { ...newState, status: 'VENDOR', vendorStock: stock, message: 'Vendor: Acquire new assets.' };
+                const inventory = createVendorInventory(prev.relics.map(r => r.id));
+                return {
+                    ...newState,
+                    status: 'VENDOR',
+                    vendorStock: inventory.cards,
+                    vendorRelics: inventory.relics,
+                    vendorPotions: inventory.potions,
+                    message: 'Vendor: Acquire new assets.'
+                };
             }
             if (node.type === 'treasure') {
-                // Grant a random relic and go back to map
-                const availableRelics = Object.values(GAME_DATA.relics).filter(r => !prev.relics.some(pr => pr.id === r.id));
-                const relic = availableRelics.length > 0 ? availableRelics[Math.floor(Math.random() * availableRelics.length)] : GAME_DATA.relics.coffee_drip;
+                const relic = getTreasureRelic(prev.relics.map(pr => pr.id)) || GAME_DATA.relics.coffee_drip;
 
                 // Mark node as completed
                 let newMap = [...prev.map];
@@ -1480,8 +1610,15 @@ const App: React.FC = () => {
                 // 25% Shop, 25% Monster, 50% Event
                 const roll = rngRef.current ? rngRef.current.events.next() * 100 : Math.random() * 100;
                 if (roll < 25) {
-                    const stock = getRandomRewardCards(3, rngRef.current?.cards);
-                    return { ...newState, status: 'VENDOR', vendorStock: stock, message: 'Opportunity: Hidden Vendor discovered!' };
+                    const inventory = createVendorInventory(prev.relics.map(r => r.id));
+                    return {
+                        ...newState,
+                        status: 'VENDOR',
+                        vendorStock: inventory.cards,
+                        vendorRelics: inventory.relics,
+                        vendorPotions: inventory.potions,
+                        message: 'Opportunity: Hidden Vendor discovered!'
+                    };
                 } else if (roll < 50) {
                     // Fight hard pool monster
                     const nextEnemies = getEncounterForFloor(node.floor, rngRef.current?.encounters);
@@ -1648,8 +1785,9 @@ const App: React.FC = () => {
 
     // --- Vendor Actions ---
 
-    const handleBuyCard = (card: CardData, price: number) => {
+    const handleBuyCard = (card: CardData) => {
         setGameState(prev => {
+            const price = getVendorCardPrice(card);
             if (prev.playerStats.capital < price) return prev;
 
             const newDeck = [...prev.deck, card]; // Add to Master Deck
@@ -1664,6 +1802,36 @@ const App: React.FC = () => {
             };
         });
     };
+    const handleBuyRelic = (relic: RelicData) => {
+        setGameState(prev => {
+            const price = getVendorRelicPrice(relic);
+            if (prev.playerStats.capital < price) return prev;
+
+            return {
+                ...prev,
+                playerStats: { ...prev.playerStats, capital: prev.playerStats.capital - price },
+                relics: [...prev.relics, relic],
+                vendorRelics: prev.vendorRelics?.filter(r => r.id !== relic.id),
+                message: `Acquired ${relic.name} for $${price}k.`
+            };
+        });
+    };
+
+    const handleBuyPotion = (potion: PotionData) => {
+        setGameState(prev => {
+            const price = getVendorPotionPrice(potion);
+            if (prev.playerStats.capital < price || !canAcquirePotion(prev.potions)) return prev;
+
+            return {
+                ...prev,
+                playerStats: { ...prev.playerStats, capital: prev.playerStats.capital - price },
+                potions: addPotionToSlot(prev.potions, potion),
+                vendorPotions: prev.vendorPotions?.filter(p => p !== potion),
+                message: `Acquired ${potion.name} for $${price}k.`
+            };
+        });
+    };
+
     const handleRemoveCardService = (price: number) => {
         if (gameState.playerStats.capital < price) return;
         setPendingRemovalPrice(price);
@@ -1675,6 +1843,7 @@ const App: React.FC = () => {
             ...prev,
             playerStats: { ...prev.playerStats, capital: prev.playerStats.capital - pendingRemovalPrice },
             deck: prev.deck.filter(c => c.id !== card.id),
+            cardRemovalCost: (prev.cardRemovalCost || 75) + 25,
             message: `Removed ${card.name} from codebase.`
         }));
         setViewingPile(null);
@@ -1951,10 +2120,20 @@ const App: React.FC = () => {
             message: "",
             map: [],
             currentMapPosition: null,
+            vendorStock: [],
+            vendorRelics: [],
+            vendorPotions: [],
+            cardRemovalCost: 75,
             pendingDiscard: 0
         });
         setViewingDeckForUpgrade(false);
         resetPostMortemState(); // Clear post-mortem state for new run
+        setStoryCard(null);
+        setShowStoryCard(false);
+        setBossRelicChoices([]);
+        setBossRelicResolved(false);
+        setBossRelicSkipped(false);
+        setSelectedBossRelicId(null);
     };
 
     const getBandwidthSegments = () => {
@@ -1962,6 +2141,52 @@ const App: React.FC = () => {
         const totalBandwidth = Math.max(gameState.playerStats.bandwidth, 3);
         for (let i = 0; i < totalBandwidth; i++) segments.push(i < gameState.playerStats.bandwidth);
         return segments;
+    };
+
+    const hasPendingVictoryChoices = () => {
+        const reward = gameState.lastVictoryReward;
+        if (!reward) return !!gameState.pendingPotionReward;
+        if (reward.capital > 0 && !reward.goldCollected) return true;
+        if (reward.cardRewards.length > 0 && !reward.cardCollected) return true;
+        if (reward.relic && !reward.relicCollected) return true;
+        if (gameState.pendingPotionReward) return true;
+        return false;
+    };
+
+    const getVendorCardPrice = (card: CardData) => {
+        switch (card.rarity) {
+            case 'rare': return 150;
+            case 'uncommon': return 75;
+            default: return 50;
+        }
+    };
+
+    const getVendorRelicPrice = (relic: RelicData) => {
+        switch (relic.rarity) {
+            case 'rare': return 300;
+            case 'uncommon': return 250;
+            default: return 150;
+        }
+    };
+
+    const getVendorPotionPrice = (potion: PotionData) => {
+        switch (potion.rarity) {
+            case 'rare': return 100;
+            case 'uncommon': return 75;
+            default: return 50;
+        }
+    };
+
+    const createVendorInventory = (ownedRelicIds: string[] = []) => {
+        const cards = getRandomRewardCards(5, rngRef.current?.cards);
+        const relicPool = Object.values(GAME_DATA.relics).filter(relic =>
+            relic.rarity !== 'starter' &&
+            relic.rarity !== 'boss' &&
+            !ownedRelicIds.includes(relic.id)
+        );
+        const relics = shuffle(relicPool, rngRef.current?.relics).slice(0, 2);
+        const potions = [generateRandomPotion('cto'), generateRandomPotion('cto')];
+        return { cards, relics, potions };
     };
 
     // --- Render Helpers ---
@@ -3298,8 +3523,7 @@ const App: React.FC = () => {
 
     // --- VENDOR SCREEN ---
     if (gameState.status === 'VENDOR') {
-        const cardPrice = 50;
-        const removePrice = 75;
+        const removePrice = gameState.cardRemovalCost || 75;
 
         return (
             <div
@@ -3319,18 +3543,19 @@ const App: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="flex gap-16">
+                    <div className="grid grid-cols-[2fr_1fr] gap-10">
                         {/* Cards Section */}
                         <div className="flex-1">
                             <h3 className="text-gray-500 font-mono text-sm uppercase tracking-wider mb-6">Acquire Assets</h3>
                             <div className="flex flex-wrap gap-6">
                                 {gameState.vendorStock?.map(card => {
+                                    const cardPrice = getVendorCardPrice(card);
                                     const canAfford = gameState.playerStats.capital >= cardPrice;
                                     return (
                                         <div key={card.id} className="flex flex-col items-center gap-3">
                                             <Card card={card} onDragStart={() => { }} disabled={!canAfford} gifUrl={getCardGifUrl(card.id)} />
                                             <button
-                                                onClick={() => handleBuyCard(card, cardPrice)}
+                                                onClick={() => handleBuyCard(card)}
                                                 disabled={!canAfford}
                                                 className={`px-4 py-2 rounded-lg text-sm font-mono flex items-center gap-1 ${canAfford ? 'bg-primary text-white hover:bg-green-600' : 'bg-gray-200 text-gray-400'}`}
                                                 style={{ boxShadow: canAfford ? '4px 4px 8px #C8CED3, -4px -4px 8px #FFFFFF' : 'none' }}
@@ -3346,30 +3571,101 @@ const App: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Services Section */}
-                        <div className="w-72 border-l border-gray-200 pl-10">
-                            <h3 className="text-gray-500 font-mono text-sm uppercase tracking-wider mb-6">Services</h3>
-                            <div className="flex flex-col gap-4">
-                                <div
-                                    className="flex flex-col gap-3 bg-red-50 p-5 rounded-xl border border-red-200"
-                                    style={{ boxShadow: '4px 4px 8px #C8CED3, -4px -4px 8px #FFFFFF' }}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center text-red-500">
-                                            <Trash2 size={20} />
-                                        </div>
-                                        <div>
-                                            <div className="text-gray-800 font-bold">Cut a Feature</div>
-                                            <div className="text-xs text-gray-500">Streamline your playbook. Remove one card.</div>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => handleRemoveCardService(removePrice)}
-                                        disabled={gameState.playerStats.capital < removePrice}
-                                        className={`w-full px-4 py-2 rounded-lg text-sm font-mono ${gameState.playerStats.capital >= removePrice ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-200 text-gray-400'}`}
+                        <div className="border-l border-gray-200 pl-10 space-y-6">
+                            <div>
+                                <h3 className="text-gray-500 font-mono text-sm uppercase tracking-wider mb-4">Relics</h3>
+                                <div className="space-y-3">
+                                    {gameState.vendorRelics?.map(relic => {
+                                        const price = getVendorRelicPrice(relic);
+                                        const canAfford = gameState.playerStats.capital >= price;
+                                        return (
+                                            <div
+                                                key={relic.id}
+                                                className="bg-white border border-purple-200 p-4 rounded-xl"
+                                                style={{ boxShadow: '4px 4px 8px #C8CED3, -4px -4px 8px #FFFFFF' }}
+                                            >
+                                                <div className="flex items-center gap-3 mb-3">
+                                                    <div className="text-2xl bg-purple-100 p-2 rounded-lg border border-purple-200">{relic.icon}</div>
+                                                    <div className="flex-1">
+                                                        <div className="text-sm font-bold text-purple-600">{relic.name}</div>
+                                                        <div className="text-xs text-gray-500">{relic.description}</div>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleBuyRelic(relic)}
+                                                    disabled={!canAfford}
+                                                    className={`w-full px-4 py-2 rounded-lg text-sm font-mono ${canAfford ? 'bg-purple-500 text-white hover:bg-purple-600' : 'bg-gray-200 text-gray-400'}`}
+                                                >
+                                                    ${price}k
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                    {gameState.vendorRelics?.length === 0 && (
+                                        <div className="text-gray-400 italic text-sm">No relics in stock</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 className="text-gray-500 font-mono text-sm uppercase tracking-wider mb-4">Potions</h3>
+                                <div className="space-y-3">
+                                    {gameState.vendorPotions?.map(potion => {
+                                        const price = getVendorPotionPrice(potion);
+                                        const canAfford = gameState.playerStats.capital >= price && canAcquirePotion(gameState.potions);
+                                        return (
+                                            <div
+                                                key={potion.id}
+                                                className="bg-white border border-blue-200 p-4 rounded-xl"
+                                                style={{ boxShadow: '4px 4px 8px #C8CED3, -4px -4px 8px #FFFFFF' }}
+                                            >
+                                                <div className="flex items-center gap-3 mb-3">
+                                                    <div className="text-2xl bg-blue-100 p-2 rounded-lg border border-blue-200">{potion.icon}</div>
+                                                    <div className="flex-1">
+                                                        <div className="text-sm font-bold text-blue-600">{potion.name}</div>
+                                                        <div className="text-xs text-gray-500">{potion.description}</div>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleBuyPotion(potion)}
+                                                    disabled={!canAfford}
+                                                    className={`w-full px-4 py-2 rounded-lg text-sm font-mono ${canAfford ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-200 text-gray-400'}`}
+                                                >
+                                                    ${price}k
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                    {gameState.vendorPotions?.length === 0 && (
+                                        <div className="text-gray-400 italic text-sm">No potions in stock</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 className="text-gray-500 font-mono text-sm uppercase tracking-wider mb-4">Services</h3>
+                                <div className="flex flex-col gap-4">
+                                    <div
+                                        className="flex flex-col gap-3 bg-red-50 p-5 rounded-xl border border-red-200"
+                                        style={{ boxShadow: '4px 4px 8px #C8CED3, -4px -4px 8px #FFFFFF' }}
                                     >
-                                        ${removePrice}k
-                                    </button>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center text-red-500">
+                                                <Trash2 size={20} />
+                                            </div>
+                                            <div>
+                                                <div className="text-gray-800 font-bold">Cut a Feature</div>
+                                                <div className="text-xs text-gray-500">Streamline your playbook. Remove one card. Cost rises each use.</div>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => handleRemoveCardService(removePrice)}
+                                            disabled={gameState.playerStats.capital < removePrice}
+                                            className={`w-full px-4 py-2 rounded-lg text-sm font-mono ${gameState.playerStats.capital >= removePrice ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-200 text-gray-400'}`}
+                                        >
+                                            ${removePrice}k
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -4133,14 +4429,113 @@ const App: React.FC = () => {
                                     {/* Next Challenge Button */}
                                     <button
                                         onClick={handleVictoryProceed}
-                                        className="group bg-primary text-white font-bold py-4 px-10 rounded-xl hover:bg-green-600 transition-all duration-200 font-mono text-sm uppercase tracking-wider flex items-center gap-3"
-                                        style={{ boxShadow: '8px 8px 16px #C8CED3, -8px -8px 16px #FFFFFF, 0 0 20px rgba(0,214,126,0.3)' }}
+                                        disabled={hasPendingVictoryChoices()}
+                                        className={`group font-bold py-4 px-10 rounded-xl transition-all duration-200 font-mono text-sm uppercase tracking-wider flex items-center gap-3 ${hasPendingVictoryChoices()
+                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            : 'bg-primary text-white hover:bg-green-600'
+                                            }`}
+                                        style={{ boxShadow: hasPendingVictoryChoices() ? 'none' : '8px 8px 16px #C8CED3, -8px -8px 16px #FFFFFF, 0 0 20px rgba(0,214,126,0.3)' }}
                                     >
-                                        <span>Next Challenge</span>
+                                        <span>{gameState.enemies.some(e => e.type === 'boss') ? 'Choose Boss Perk' : 'Next Challenge'}</span>
                                         <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
                                     </button>
 
-                                    <p className="text-gray-400 text-xs mt-4 font-mono">Keep building. Keep shipping. 🚀</p>
+                                    <p className="text-gray-400 text-xs mt-4 font-mono">
+                                        {hasPendingVictoryChoices() ? 'Resolve every reward before continuing.' : 'Keep building. Keep shipping. 🚀'}
+                                    </p>
+                                </>
+                            )}
+
+                            {victoryPhase === 'bossRelic' && (
+                                <>
+                                    <div className="text-5xl mb-4">👑</div>
+                                    <h2 className="text-2xl font-display font-bold text-gray-800 mb-2">Boss Perk</h2>
+                                    <p className="text-gray-500 mb-6 text-center text-sm">
+                                        Pick one final perk for this run, or skip it.
+                                    </p>
+
+                                    {macroNarrative?.bossVictoryTweet && (
+                                        <div
+                                            className="w-full bg-white border border-gray-200 rounded-2xl p-6 mb-6"
+                                            style={{ boxShadow: '8px 8px 16px #C8CED3, -8px -8px 16px #FFFFFF' }}
+                                        >
+                                            <div className="flex items-start gap-4">
+                                                <div className="text-3xl bg-amber-100 rounded-full p-2">
+                                                    {macroNarrative.startupEmoji || '🚀'}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="font-bold text-gray-800">{gameState.startupName || 'Startup'}</span>
+                                                        <span className="text-gray-400 text-sm">{macroNarrative.startupHandle || '@startup'}</span>
+                                                    </div>
+                                                    <p className="text-gray-800 text-lg leading-relaxed">{macroNarrative.bossVictoryTweet.content}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="w-full space-y-3 mb-6">
+                                        {bossRelicChoices.map((relic) => {
+                                            const isSelected = selectedBossRelicId === relic.id;
+                                            return (
+                                                <div
+                                                    key={relic.id}
+                                                    onClick={!bossRelicResolved ? () => handleTakeBossRelic(relic) : undefined}
+                                                    className={`
+                                                        bg-white border p-4 rounded-xl
+                                                        ${isSelected ? 'border-amber-400 bg-amber-50' : 'border-purple-200'}
+                                                        ${bossRelicResolved ? 'opacity-60' : 'cursor-pointer hover:border-purple-400 transition-all'}
+                                                    `}
+                                                    style={{ boxShadow: '6px 6px 12px #C8CED3, -6px -6px 12px #FFFFFF' }}
+                                                >
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="text-3xl bg-purple-100 p-2.5 rounded-lg border border-purple-200">
+                                                            {relic.icon}
+                                                        </div>
+                                                        <div className="flex-1 text-left">
+                                                            <div className="text-purple-600 font-bold flex items-center gap-2">
+                                                                {relic.name}
+                                                                <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-purple-100 text-purple-500">Boss</span>
+                                                            </div>
+                                                            <div className="text-sm text-gray-500">{relic.description}</div>
+                                                        </div>
+                                                        <span className={`text-sm font-mono ${isSelected ? 'text-amber-600' : 'text-purple-500'}`}>
+                                                            {isSelected ? '✓ Selected' : bossRelicResolved ? 'Locked' : 'Click to choose'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={handleSkipBossRelic}
+                                            disabled={bossRelicResolved}
+                                            className={`px-4 py-2 rounded-lg font-mono text-sm transition-colors ${bossRelicResolved
+                                                ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                                                : 'bg-white border border-gray-300 text-gray-600 hover:border-gray-400'
+                                                }`}
+                                        >
+                                            {bossRelicSkipped ? 'Skipped' : 'Skip Boss Perk'}
+                                        </button>
+                                        <button
+                                            onClick={handleVictoryProceed}
+                                            disabled={!bossRelicResolved || !!pendingSecretWeaponRelic}
+                                            className={`group font-bold py-4 px-10 rounded-xl transition-all duration-200 font-mono text-sm uppercase tracking-wider flex items-center gap-3 ${bossRelicResolved && !pendingSecretWeaponRelic
+                                                ? 'bg-primary text-white hover:bg-green-600'
+                                                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                                }`}
+                                            style={{ boxShadow: bossRelicResolved && !pendingSecretWeaponRelic ? '8px 8px 16px #C8CED3, -8px -8px 16px #FFFFFF, 0 0 20px rgba(0,214,126,0.3)' : 'none' }}
+                                        >
+                                            <span>Complete Act 1</span>
+                                            <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                        </button>
+                                    </div>
+
+                                    <p className="text-gray-400 text-xs mt-4 font-mono">
+                                        {pendingSecretWeaponRelic ? 'Finish the Secret Weapon selection to continue.' : 'This run ends after Act 1 for now.'}
+                                    </p>
                                 </>
                             )}
                         </div>
@@ -4177,6 +4572,55 @@ const App: React.FC = () => {
                     </div>
                 )}
 
+                {gameState.status === 'VICTORY_ALL' && (
+                    <div
+                        className="fixed inset-0 z-[100] flex items-center justify-center animate-in fade-in duration-500"
+                        style={{ background: 'radial-gradient(ellipse at center, #FFFFFF 0%, #F0FFF4 40%, #E8ECEF 100%)' }}
+                    >
+                        <div className="max-w-2xl w-full p-8 flex flex-col items-center">
+                            <div className="text-6xl mb-4">🏁</div>
+                            <h2 className="text-3xl font-display font-bold text-primary mb-2">Act 1 Complete</h2>
+                            <p className="text-gray-500 mb-6 text-center">
+                                This run ends here for now. Acts 2 and 3 are still pending.
+                            </p>
+
+                            {macroNarrative?.bossVictoryTweet && (
+                                <div
+                                    className="w-full bg-white border border-gray-200 rounded-2xl p-6 mb-8"
+                                    style={{ boxShadow: '8px 8px 16px #C8CED3, -8px -8px 16px #FFFFFF' }}
+                                >
+                                    <div className="flex items-start gap-4">
+                                        <div className="text-3xl bg-green-100 rounded-full p-2">
+                                            {macroNarrative.startupEmoji || '🚀'}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="font-bold text-gray-800">{gameState.startupName || 'Startup'}</span>
+                                                <span className="text-gray-400 text-sm">{macroNarrative.startupHandle || '@startup'}</span>
+                                            </div>
+                                            <p className="text-gray-800 text-lg leading-relaxed">{macroNarrative.bossVictoryTweet.content}</p>
+                                            <div className="flex items-center gap-6 mt-4 text-gray-400 text-sm">
+                                                <span>❤️ {macroNarrative.bossVictoryTweet.likes || 1200}</span>
+                                                <span>🔁 {macroNarrative.bossVictoryTweet.retweets || 340}</span>
+                                                <span>💬 {macroNarrative.bossVictoryTweet.replies || 89}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <button
+                                onClick={handleRestart}
+                                className="group bg-primary text-white font-bold py-4 px-10 rounded-xl hover:bg-green-600 transition-all duration-200 font-mono text-sm uppercase tracking-wider flex items-center gap-3"
+                                style={{ boxShadow: '8px 8px 16px #C8CED3, -8px -8px 16px #FFFFFF, 0 0 20px rgba(0,214,126,0.3)' }}
+                            >
+                                <span>Start New Run</span>
+                                <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {gameState.status === 'GAME_OVER' && (
                     <>
                         <PostMortemModal
@@ -4186,7 +4630,11 @@ const App: React.FC = () => {
                             floor={gameState.floor}
                             onRestart={handleRestart}
                         />
-                        {/* Share Story Card button that overlays on top */}
+                    </>
+                )}
+
+                {(gameState.status === 'GAME_OVER' || gameState.status === 'VICTORY_ALL') && (
+                    <>
                         {storyCard && !showStoryCard && (
                             <button
                                 onClick={() => setShowStoryCard(true)}
@@ -4455,7 +4903,7 @@ const App: React.FC = () => {
 
             {/* === NARRATIVE SYSTEM UI === */}
             {/* Tweet Sidebar - collapsible timeline on the right (hidden during VICTORY and GAME_OVER) */}
-            {gameState.status !== 'VICTORY' && gameState.status !== 'GAME_OVER' && (
+            {gameState.status !== 'VICTORY' && gameState.status !== 'GAME_OVER' && gameState.status !== 'VICTORY_ALL' && (
                 <TweetSidebar
                     tweets={tweetHistory}
                     currentTweet={currentTweet}

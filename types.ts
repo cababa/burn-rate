@@ -349,6 +349,9 @@ export interface GameState {
   map: MapLayer[];
   currentMapPosition: { floor: number; nodeId: string } | null;
   vendorStock?: CardData[];
+  vendorRelics?: RelicData[];
+  vendorPotions?: PotionData[];
+  cardRemovalCost?: number;
   lastVictoryReward?: {
     capital: number;           // Pending gold to claim
     cardRewards: CardData[];   // 3 card choices

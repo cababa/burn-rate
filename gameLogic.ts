@@ -45,8 +45,13 @@ export const generateStarterDeck = (): CardData[] => {
     return deck;
 };
 
-export const getRandomRewardCards = (count: number, rng?: SeededRandom): CardData[] => {
+export const getRandomRewardCards = (
+    count: number,
+    rng?: SeededRandom,
+    forcedRarity?: 'common' | 'uncommon' | 'rare'
+): CardData[] => {
     const getRarity = (): 'common' | 'uncommon' | 'rare' => {
+        if (forcedRarity) return forcedRarity;
         const roll = rng ? rng.next() * 100 : Math.random() * 100;
         if (roll < 60) return 'common';
         if (roll < 97) return 'uncommon';
@@ -654,8 +659,8 @@ export const getTreasureRelic = (excludeIds: string[] = []): RelicData | null =>
         // 33% uncommon
         return getRandomRelic('uncommon', excludeIds) || getRandomRelic('common', excludeIds);
     } else {
-        // 17% rare (we use uncommon as fallback since no rare tier yet)
-        return getRandomRelic('uncommon', excludeIds) || getRandomRelic('common', excludeIds);
+        // 17% rare
+        return getRandomRelic('rare', excludeIds) || getRandomRelic('uncommon', excludeIds) || getRandomRelic('common', excludeIds);
     }
 };
 
@@ -670,9 +675,12 @@ export const getEliteRelic = (excludeIds: string[] = []): RelicData | null => {
     if (roll < 25) {
         // 25% common
         return getRandomRelic('common', excludeIds) || getRandomRelic('uncommon', excludeIds);
-    } else {
-        // 75% uncommon (would be uncommon/rare split in full StS)
+    } else if (roll < 80) {
+        // 55% uncommon
         return getRandomRelic('uncommon', excludeIds) || getRandomRelic('common', excludeIds);
+    } else {
+        // 20% rare
+        return getRandomRelic('rare', excludeIds) || getRandomRelic('uncommon', excludeIds) || getRandomRelic('common', excludeIds);
     }
 };
 
@@ -1670,7 +1678,7 @@ export const getEncounterForFloor = (floor: number, rng?: SeededRandom): EnemyDa
 
 // Get Elite Encounter
 export const getEliteEncounter = (rng?: SeededRandom): EnemyData[] => {
-    const eliteIds = ['scope_creep', 'over_engineer'];
+    const eliteIds = ['scope_creep', 'over_engineer', 'legacy_systems'];
     const eliteId = rng ? rng.pick(eliteIds) : eliteIds[Math.floor(Math.random() * eliteIds.length)];
 
     if (eliteId === 'over_engineer') {
@@ -1682,7 +1690,7 @@ export const getEliteEncounter = (rng?: SeededRandom): EnemyData[] => {
         }];
     }
 
-    // Scope Creep or Legacy Systems (3 sentries)
+    // Scope Creep
     if (eliteId === 'scope_creep') {
         const elite = GAME_DATA.enemies.scope_creep;
         return [{
@@ -2274,6 +2282,9 @@ export const resolveEnemyTurn = (prev: GameState, rng?: SeededRandom): GameState
     let newRelics = prev.relics.map(relic => ({ ...relic }));
 
     if (newEnemies.every(e => e.hp <= 0) && newStatus !== 'GAME_OVER') {
+        const isBossVictory = newEnemies.some(e => e.type === 'boss');
+        const isEliteVictory = !isBossVictory && newEnemies.some(e => e.type === 'elite');
+
         newStatus = 'VICTORY';
         newMessage = "PROBLEM SOLVED.";
         getGlobalLogger().log('COMBAT_VICTORY', 'All enemies defeated.');
@@ -2284,31 +2295,20 @@ export const resolveEnemyTurn = (prev: GameState, rng?: SeededRandom): GameState
                 const capitalGained = Math.floor(Math.random() * (max - min + 1)) + min;
                 earnedCapital += capitalGained;
                 getGlobalLogger().log('REWARD_CAPITAL', `Gained ${capitalGained} capital from ${enemyData.name}.`);
-
-                // Elite and Boss give relics
-                console.log('DEBUG RELIC: enemyData.type =', enemyData.type, 'earnedRelic =', earnedRelic);
-                if ((enemyData.type === 'elite' || enemyData.type === 'boss') && !earnedRelic) {
-                    // Get random relic from pool (not already owned)
-                    const ownedRelicIds = prev.relics.map(r => r.id);
-                    const availableRelics = Object.values(GAME_DATA.relics).filter(r =>
-                        !ownedRelicIds.includes(r.id) &&
-                        r.rarity !== 'starter' &&
-                        (enemyData.type === 'boss' ? true : r.rarity !== 'boss')
-                    );
-
-                    console.log('DEBUG RELIC: availableRelics.length =', availableRelics.length);
-
-                    if (availableRelics.length > 0) {
-                        earnedRelic = availableRelics[Math.floor(Math.random() * availableRelics.length)];
-                        newMessage += ` Found Relic: ${earnedRelic.name}!`;
-                        getGlobalLogger().log('REWARD_RELIC', `Found relic: ${earnedRelic.name}.`);
-                    }
-                }
             } else {
                 earnedCapital += 15;
                 getGlobalLogger().log('REWARD_CAPITAL', `Gained 15 capital from ${enemyData.name} (default).`);
             }
         });
+
+        if (isEliteVictory) {
+            earnedRelic = getEliteRelic(prev.relics.map(r => r.id)) || undefined;
+            if (earnedRelic) {
+                newMessage += ` Found Relic: ${earnedRelic.name}!`;
+                getGlobalLogger().log('REWARD_RELIC', `Found relic: ${earnedRelic.name}.`);
+            }
+        }
+
         newMessage += ` Earned $${earnedCapital}k Capital.`;
     }
 
@@ -2373,7 +2373,10 @@ export const resolveEnemyTurn = (prev: GameState, rng?: SeededRandom): GameState
     }
 
     // Generate card rewards for victory
-    const cardRewards = newStatus === 'VICTORY' ? getRandomRewardCards(3, rng) : [];
+    const isBossVictory = newStatus === 'VICTORY' && newEnemies.some(e => e.type === 'boss');
+    const cardRewards = newStatus === 'VICTORY'
+        ? getRandomRewardCards(3, rng, isBossVictory ? 'rare' : undefined)
+        : [];
 
     // Check if any enemy gives card rewards
     const shouldGetCardReward = newStatus === 'VICTORY' && newEnemies.some(e => e.rewards?.card_reward !== false);
@@ -2648,6 +2651,8 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
         if (finalState.status === 'VICTORY') {
             let earnedCapital = 0;
             let earnedRelic: RelicData | undefined;
+            const isBossVictory = prev.enemies.some(e => e.type === 'boss');
+            const isEliteVictory = !isBossVictory && prev.enemies.some(e => e.type === 'elite');
 
             // Calculate Capital rewards from enemies
             prev.enemies.forEach(e => {
@@ -2658,24 +2663,13 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
                 }
             });
 
-            // Elite/Boss Relic Logic
-            const isEliteOrBoss = prev.enemies.some(e => e.type === 'elite' || e.type === 'boss');
-            const isBoss = prev.enemies.some(e => e.type === 'boss');
-            if (isEliteOrBoss) {
-                const ownedRelicIds = finalState.relics.map(r => r.id);
-                const availableRelics = Object.values(GAME_DATA.relics).filter(r =>
-                    !ownedRelicIds.includes(r.id) &&
-                    r.rarity !== 'starter' &&
-                    (isBoss ? true : r.rarity !== 'boss')
-                );
-
-                if (availableRelics.length > 0) {
-                    earnedRelic = availableRelics[Math.floor(Math.random() * availableRelics.length)];
-                }
+            // Elite rewards grant a regular relic. Boss rewards defer to the boss relic screen.
+            if (isEliteVictory) {
+                earnedRelic = getEliteRelic(finalState.relics.map(r => r.id)) || undefined;
             }
 
             // Generate card rewards
-            const cardRewards = getRandomRewardCards(3, rng);
+            const cardRewards = getRandomRewardCards(3, rng, isBossVictory ? 'rare' : undefined);
             const shouldGetCardReward = prev.enemies.some(e => e.rewards?.card_reward !== false);
 
             // Check for potion drop
@@ -3509,6 +3503,9 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
     let earnedRelic: RelicData | undefined;
 
     if (newStatus === 'VICTORY') {
+        const isBossVictory = prev.enemies.some(e => e.type === 'boss');
+        const isEliteVictory = !isBossVictory && prev.enemies.some(e => e.type === 'elite');
+
         // Calculate Capital
         prev.enemies.forEach(e => {
             if (e.rewards && e.rewards.capital) {
@@ -3518,20 +3515,9 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
             }
         });
 
-        // Elite/Boss Relic Logic
-        const isEliteOrBoss = prev.enemies.some(e => e.type === 'elite' || e.type === 'boss');
-        const isBoss = prev.enemies.some(e => e.type === 'boss');
-        if (isEliteOrBoss) {
-            const ownedRelicIds = newRelics.map(r => r.id);
-            const availableRelics = Object.values(GAME_DATA.relics).filter(r =>
-                !ownedRelicIds.includes(r.id) &&
-                r.rarity !== 'starter' &&
-                (isBoss ? true : r.rarity !== 'boss')
-            );
-
-            if (availableRelics.length > 0) {
-                earnedRelic = availableRelics[Math.floor(Math.random() * availableRelics.length)];
-            }
+        // Elite rewards grant a regular relic. Boss rewards defer to the boss relic screen.
+        if (isEliteVictory) {
+            earnedRelic = getEliteRelic(newRelics.map(r => r.id)) || undefined;
         }
     }
 
@@ -3554,7 +3540,9 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
     });
 
     // Generate card rewards for victory
-    const cardRewards = newStatus === 'VICTORY' ? getRandomRewardCards(3, rng) : [];
+    const cardRewards = newStatus === 'VICTORY'
+        ? getRandomRewardCards(3, rng, prev.enemies.some(e => e.type === 'boss') ? 'rare' : undefined)
+        : [];
     const shouldGetCardReward = newStatus === 'VICTORY' && prev.enemies.some(e => e.rewards?.card_reward !== false);
 
     // Check for potion drop on victory
