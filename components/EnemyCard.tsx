@@ -11,6 +11,7 @@ import { STATUS_CONFIG, INTENT_ICONS } from '../constants';
 import { triggerDamageFlash, triggerBumpRight, triggerBumpLeft, triggerShake } from '../animations';
 import { UnitHandle } from './Unit';
 import { FloatingNumbers, useFloatingNumbers } from './FloatingNumbers';
+import { GlossaryText, GlossaryTerm } from './GlossaryText';
 
 
 
@@ -59,7 +60,6 @@ const StatusBadge: React.FC<{
     return (
         <div
             className={`group/status relative flex items-center gap-0.5 ${colors.bg} ${colors.text} ${colors.border} border px-1.5 py-0.5 rounded-full text-[10px] font-semibold shadow-sm cursor-help`}
-            title={config.description}
         >
             <span className="text-xs">{config.icon}</span>
             <span>{value}</span>
@@ -67,7 +67,7 @@ const StatusBadge: React.FC<{
             {/* Tooltip */}
             <div className={`absolute bottom-full left-0 mb-2 w-48 p-2 bg-white border ${colors.border} rounded-lg text-xs text-left shadow-lg hidden group-hover/status:block z-[100] whitespace-normal break-words`}>
                 <div className={`${colors.text} font-bold mb-0.5 uppercase tracking-wider text-[10px]`}>{config.label}</div>
-                <div className="text-gray-600">{config.description.replace('{0}', Math.abs(value).toString())}</div>
+                <div className="text-gray-600"><GlossaryText text={config.description.replace('{0}', Math.abs(value).toString())} /></div>
             </div>
         </div>
     );
@@ -180,7 +180,7 @@ export const EnemyCard = React.forwardRef<UnitHandle, EnemyCardProps>(({
             <div
                 ref={containerRef}
                 className={`
-                    relative rounded-2xl overflow-hidden
+                    relative rounded-2xl overflow-visible
                     transition-all duration-200
                     ${isTargetable ? 'hover:scale-[1.03]' : ''}
                     ${isSelected ? 'ring-2 ring-red-400 ring-offset-2 ring-offset-background' : ''}
@@ -215,7 +215,7 @@ export const EnemyCard = React.forwardRef<UnitHandle, EnemyCardProps>(({
 
                 {/* Art Area */}
                 <div
-                    className="relative w-full h-28 flex items-center justify-center overflow-hidden"
+                    className="relative w-full h-28 flex items-center justify-center overflow-hidden rounded-t-2xl"
                     style={{
                         background: 'linear-gradient(180deg, rgba(200,210,220,0.3) 0%, rgba(180,190,200,0.2) 100%)',
                     }}
@@ -245,7 +245,7 @@ export const EnemyCard = React.forwardRef<UnitHandle, EnemyCardProps>(({
                         {/* Description Tooltip */}
                         {description && (
                             <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 p-3 bg-white border border-gray-200 rounded-lg text-xs text-left shadow-xl hidden group-hover/name:block z-[100] text-gray-600 font-normal">
-                                {description}
+                                <GlossaryText text={description} />
                             </div>
                         )}
                     </h3>
@@ -272,14 +272,14 @@ export const EnemyCard = React.forwardRef<UnitHandle, EnemyCardProps>(({
                                 </div>
                                 {intent.type === 'attack' && (
                                     <p className="text-gray-600">
-                                        Intends to deal <span className="font-bold text-red-600">⚔️ {calculateIntentDamage()}</span> damage.
+                                        <GlossaryText text={`Intends to deal ${calculateIntentDamage()} Runway damage.`} />
                                     </p>
                                 )}
                                 {intent.type === 'buff' && (
-                                    <p className="text-gray-600">Enemy is powering up: {intent.description}</p>
+                                    <p className="text-gray-600"><GlossaryText text={`Enemy is powering up: ${intent.description}`} /></p>
                                 )}
                                 {intent.type === 'debuff' && (
-                                    <p className="text-gray-600">Will apply negative effects: {intent.description}</p>
+                                    <p className="text-gray-600"><GlossaryText text={`Will apply negative effects: ${intent.description}`} /></p>
                                 )}
                             </div>
                         </div>
@@ -288,7 +288,7 @@ export const EnemyCard = React.forwardRef<UnitHandle, EnemyCardProps>(({
                     {/* HP Bar */}
                     <div className="space-y-1">
                         <div className="flex justify-between text-[10px] font-mono">
-                            <span className="text-red-600 font-semibold uppercase tracking-wide">Complexity</span>
+                            <span className="text-red-600 font-semibold uppercase tracking-wide"><GlossaryTerm term="Complexity" /></span>
                             <span className="text-gray-700 font-bold">{currentHp}/{maxHp}</span>
                         </div>
                         <div

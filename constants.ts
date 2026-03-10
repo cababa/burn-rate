@@ -6,30 +6,39 @@ export const MAX_HAND_SIZE = 10;
 // Keyword glossary for verbose tooltips - explains all gameplay terms
 export const KEYWORD_GLOSSARY: Record<string, { icon: string; color: string; description: string }> = {
     // Core mechanics
-    Execute: { icon: "⚔️", color: "text-danger", description: "Deal damage to enemy Complexity" },
-    Buffer: { icon: "🛡️", color: "text-info", description: "Temporary protection that blocks incoming damage" },
-    Velocity: { icon: "💪", color: "text-warning", description: "Increases all Execute damage dealt" },
-    Bandwidth: { icon: "⚡", color: "text-primary", description: "Energy to play cards each turn" },
-    Runway: { icon: "💰", color: "text-primary", description: "Your health - reach $0 and you fail" },
-    Complexity: { icon: "🎯", color: "text-danger", description: "Enemy health - reduce to 0 to defeat" },
-    Perk: { icon: "🎁", color: "text-purple-400", description: "Permanent bonus that helps throughout your run" },
+    "Max Runway": { icon: "🏦", color: "text-emerald-600", description: "Your maximum health cap. Healing cannot go above this amount unless you raise Max Runway." },
+    Execute: { icon: "⚔️", color: "text-danger", description: "Deal damage to enemy Complexity. If Complexity reaches 0, that enemy is defeated." },
+    Execution: { icon: "⚔️", color: "text-danger", description: "Attack damage. Velocity usually increases how much Execution your cards deal." },
+    Buffer: { icon: "🛡️", color: "text-info", description: "Temporary protection that absorbs incoming damage before your Runway is hit. Usually removed at the start of your next turn." },
+    Mitigation: { icon: "🧱", color: "text-info", description: "Your current Buffer total. If an effect says it grants Mitigation, it is giving you defensive protection right now." },
+    Velocity: { icon: "💪", color: "text-warning", description: "Attack power. Each point usually adds +1 damage to your Execute cards and attack intents." },
+    Bandwidth: { icon: "⚡", color: "text-primary", description: "Energy for the turn. Playing cards spends Bandwidth, and unused Bandwidth is lost when the turn ends." },
+    Runway: { icon: "💰", color: "text-primary", description: "Your health. If your Runway hits 0, the startup fails and the run ends." },
+    Complexity: { icon: "🎯", color: "text-danger", description: "Enemy health. Reduce an enemy's Complexity to 0 to remove it from the fight." },
+    Perk: { icon: "🎁", color: "text-purple-400", description: "A permanent relic-style bonus that lasts for the rest of the run." },
+    Capital: { icon: "💵", color: "text-amber-600", description: "Your money. Spend Capital in shops and gain it from fights and events." },
+    Draw: { icon: "🃏", color: "text-blue-600", description: "Take cards from your Backlog into your hand. If the Backlog is empty, your discard pile is shuffled into a new Backlog." },
+    Discard: { icon: "🗑️", color: "text-gray-500", description: "Move a card out of your hand after use or by effect. Discarded cards return later when your deck reshuffles." },
 
     // Status effects (debuffs)
-    Exposed: { icon: "🎯", color: "text-danger", description: "Takes 50% more Execute damage" },
-    Drained: { icon: "😓", color: "text-purple-400", description: "Deals 25% less Execute damage" },
-    Fragile: { icon: "🩹", color: "text-orange-400", description: "Gains 25% less Buffer" },
+    Exposed: { icon: "🎯", color: "text-danger", description: "Target takes 50% more attack damage while this debuff lasts." },
+    Drained: { icon: "😓", color: "text-purple-400", description: "Target deals 25% less attack damage while this debuff lasts." },
+    Fragile: { icon: "🩹", color: "text-orange-400", description: "Target gains 25% less Buffer from block effects while this debuff lasts." },
 
     // Card mechanics
-    Archive: { icon: "📁", color: "text-gray-400", description: "Remove from deck for this combat only" },
-    Fleeting: { icon: "👻", color: "text-blue-300", description: "If not played, Archives at end of turn" },
-    Retain: { icon: "📌", color: "text-yellow-200", description: "Keep in hand instead of discarding" },
-    Unplayable: { icon: "🚫", color: "text-gray-500", description: "Cannot be played, clogs your hand" },
+    Archive: { icon: "📁", color: "text-gray-400", description: "Exhaust. The card is removed for the rest of this combat and goes to the Archive pile." },
+    Fleeting: { icon: "👻", color: "text-blue-300", description: "Ethereal. If the card is still in your hand when the turn ends, it is Archived automatically." },
+    Retain: { icon: "📌", color: "text-yellow-500", description: "The card stays in your hand at end of turn instead of being discarded." },
+    Unplayable: { icon: "🚫", color: "text-gray-500", description: "The card cannot be played directly and usually exists as a drawback or status effect." },
+    Status: { icon: "💀", color: "text-gray-500", description: "A negative or utility card type. Status cards often clog your hand or trigger special effects." },
 
     // Deck zones
-    Backlog: { icon: "📚", color: "text-gray-300", description: "Your draw pile of undrawn cards" },
+    Backlog: { icon: "📚", color: "text-gray-500", description: "Your draw pile. These are the cards you have not drawn yet this cycle." },
 
     // Power effects
-    Momentum: { icon: "📊", color: "text-info", description: "Gain Velocity at the start of each turn" },
+    Momentum: { icon: "📊", color: "text-info", description: "A scaling effect that grants Velocity at the start of each turn." },
+    "ALL enemies": { icon: "🎯", color: "text-rose-600", description: "The effect hits every living enemy in the combat instead of a single target." },
+    "random enemy": { icon: "🎲", color: "text-pink-600", description: "The game chooses one living enemy at random each time the effect resolves." },
 };
 
 export const CARD_TYPE_CONFIG = {
@@ -2673,21 +2682,21 @@ export const GAME_DATA = {
 
 // Status effect icons and labels for startup theme
 export const STATUS_CONFIG = {
-    vulnerable: { icon: "🎯", label: "Exposed", description: "Takes 50% more Execution" },
-    weak: { icon: "😓", label: "Drained", description: "Deals 25% less Execution" },
-    strength: { icon: "💪", label: "Velocity", descPositive: "+{0} to all Execution", descNegative: "{0} to all Execution" },
-    frail: { icon: "🩹", label: "Fragile", description: "Buffer reduced by 25%" },
-    metallicize: { icon: "🛡️", label: "Auto-Buffer", description: "Gain {0} Buffer at end of turn" },
-    thorns: { icon: "⚡", label: "Counterattack", description: "Execute {0} when hit" },
-    artifact: { icon: "💎", label: "Buffer", description: "Negates next {0} debuff(s)" },
-    evolve: { icon: "📖", label: "Troubleshoot", description: "Draw {0} card(s) when drawing Status cards" },
-    feelNoPain: { icon: "🧘", label: "Lean Ops", description: "Gain {0} Buffer when a card is Archived" },
-    noDraw: { icon: "🚫", label: "Flow State Lock", description: "Cannot draw cards this turn" },
-    antifragile: { icon: "📈", label: "Antifragile", description: "Gain +{0} Velocity when losing Runway from cards" },
-    growth: { icon: "📊", label: "Momentum", description: "Gains +{0} Velocity each turn" },
-    curlUp: { icon: "🥚", label: "Defensive", description: "Gains {0} Buffer when first attacked" },
-    malleable: { icon: "🍃", label: "Adaptive", description: "Gains {0}+ Buffer when attacked" },
-    asleep: { icon: "😴", label: "Dormant", description: "Inactive until damaged" },
+    vulnerable: { icon: "🎯", label: "Exposed", description: "Takes 50% more Execution from attacks while this debuff lasts" },
+    weak: { icon: "😓", label: "Drained", description: "Deals 25% less Execution while this debuff lasts" },
+    strength: { icon: "💪", label: "Velocity", descPositive: "+{0} damage to attacks and attack intents", descNegative: "{0} damage to attacks and attack intents" },
+    frail: { icon: "🩹", label: "Fragile", description: "Buffer gained from block effects is reduced by 25%" },
+    metallicize: { icon: "🛡️", label: "Auto-Buffer", description: "Gain {0} Buffer automatically at the end of each turn" },
+    thorns: { icon: "⚡", label: "Counterattack", description: "Deal {0} damage back whenever hit by an attack" },
+    artifact: { icon: "💎", label: "Buffer", description: "Negates the next {0} debuff application(s)" },
+    evolve: { icon: "📖", label: "Troubleshoot", description: "Draw {0} card(s) whenever you draw a Status card" },
+    feelNoPain: { icon: "🧘", label: "Lean Ops", description: "Gain {0} Buffer whenever a card is Archived" },
+    noDraw: { icon: "🚫", label: "Flow State Lock", description: "Cannot draw cards for the rest of this turn" },
+    antifragile: { icon: "📈", label: "Antifragile", description: "Gain +{0} Velocity whenever a card effect costs you Runway" },
+    growth: { icon: "📊", label: "Momentum", description: "Gains +{0} Velocity at the start of each turn" },
+    curlUp: { icon: "🥚", label: "Defensive", description: "Gains {0} Buffer the first time it is attacked" },
+    malleable: { icon: "🍃", label: "Adaptive", description: "Gains increasing Buffer each time it is attacked" },
+    asleep: { icon: "😴", label: "Dormant", description: "Inactive until damaged or otherwise awakened" },
 };
 
 // Intent icons for enemy actions

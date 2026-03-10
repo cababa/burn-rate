@@ -4,6 +4,7 @@ import React from 'react';
 import { CardData } from '../types';
 import { Zap, Ghost, Archive } from 'lucide-react';
 import { KEYWORD_GLOSSARY } from '../constants';
+import { GlossaryText, getGlossaryKeywords } from './GlossaryText';
 
 interface CardProps {
   card: CardData;
@@ -108,31 +109,8 @@ export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selecta
     }
   };
 
-  // Format description with keyword highlighting
-  const formatDescription = (text: string) => {
-    const keywordPattern = Object.keys(KEYWORD_GLOSSARY).join('|');
-    const regex = new RegExp(`(\\b(?:${keywordPattern})\\b)`, 'g');
-    const parts = text.split(regex);
-
-    return parts.map((part, i) => {
-      const keyword = KEYWORD_GLOSSARY[part];
-      if (keyword) {
-        return <span key={i} className={`${keyword.color} font-semibold`}>{part}</span>;
-      }
-      return part;
-    });
-  };
-
-  // Get keywords for tooltip
   const getKeywordsInDescription = (): string[] => {
-    const found: string[] = [];
-    const text = card.description;
-
-    Object.keys(KEYWORD_GLOSSARY).forEach(keyword => {
-      if (text.includes(keyword)) {
-        found.push(keyword);
-      }
-    });
+    const found = getGlossaryKeywords(card.description);
 
     if (card.exhaust && !found.includes('Archive')) found.push('Archive');
     if (card.ethereal && !found.includes('Fleeting')) found.push('Fleeting');
@@ -312,12 +290,12 @@ export const Card: React.FC<CardProps> = ({ card, onDragStart, disabled, selecta
           className="flex-1 text-[10px] text-gray-600 leading-tight text-center px-1"
           style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}
         >
-          {formatDescription(card.description)}
+          <GlossaryText text={card.description} />
         </div>
       </div>
 
       {/* Tooltip */}
-      <div className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full w-64 bg-white border border-gray-200 p-2.5 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+      <div className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full w-64 bg-white border border-gray-200 p-2.5 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-50">
         {card.tooltip && (
           <div className={keywordsInCard.length > 0 ? "border-b border-gray-200 pb-2 mb-2" : ""}>
             <div className="text-xs font-bold text-amber-600 mb-0.5">{card.tooltip.term}</div>

@@ -3,6 +3,7 @@ import React from 'react';
 import { Terminal, Sword, TrendingUp, ShieldAlert, HelpCircle, Shield, AlertTriangle, Zap, BarChart3, TrendingDown, ArrowUpCircle, ShieldOff, Moon, Layers, Hexagon, Sprout, Ban, RefreshCw, Heart } from 'lucide-react';
 import { EnemyIntent, EntityStatus, EnemyStatuses } from '../types';
 import { FloatingNumbers, useFloatingNumbers } from './FloatingNumbers';
+import { GlossaryText, GlossaryTerm } from './GlossaryText';
 
 import { STATUS_CONFIG, INTENT_ICONS } from '../constants';
 import { triggerDamageFlash, triggerBumpRight, triggerBumpLeft, triggerShake, ANIMATION_CLASSES, ANIMATION_TIMING } from '../animations';
@@ -77,7 +78,7 @@ const StatusIcon: React.FC<{
       {/* Tooltip */}
       <div className={`absolute bottom-full right-0 mb-2 w-56 p-3 bg-white border ${colors.border} rounded-lg text-xs text-left shadow-xl hidden group-hover/status:block z-[100] whitespace-normal break-words`}>
         <div className={`${colors.text} font-bold mb-1 uppercase tracking-wider`}>{config.label}</div>
-        <div className="text-gray-600">{formattedDesc}</div>
+        <div className="text-gray-600"><GlossaryText text={formattedDesc} /></div>
         {subtext && <div className="text-gray-400 mt-1 italic">{subtext}</div>}
       </div>
     </div>
@@ -196,9 +197,9 @@ export const Unit = React.forwardRef<UnitHandle, UnitProps>(({
           <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-white border border-blue-300 rounded-lg text-xs text-left shadow-xl hidden group-hover/mitigation:block z-[100] whitespace-normal break-words">
             <div className="text-blue-600 font-bold mb-1 uppercase tracking-wider">Mitigation (Block)</div>
             <div className="text-gray-600 mb-1">
-              Prevents the next <b className="text-gray-800">{mitigation} damage</b>.
+              <GlossaryText text={`Prevents the next ${mitigation} damage before your Runway is hit.`} />
             </div>
-            <div className="text-gray-400 italic">Removed at the start of your turn.</div>
+            <div className="text-gray-400 italic">Most Buffer disappears at the start of your next turn unless an effect says it stays.</div>
           </div>
         </div>
       )}
@@ -265,13 +266,24 @@ export const Unit = React.forwardRef<UnitHandle, UnitProps>(({
       </div>
 
       {/* Stats Bar (Runway/Health) */}
-      <div className="w-full space-y-1 pointer-events-none">
+      <div className="w-full space-y-1">
         <div className="flex justify-between text-xs font-mono mb-1">
-          <span className={isEnemy ? 'text-red-600 font-semibold' : 'text-primary font-semibold'}>
-            {isEnemy ? 'COMPLEXITY' : 'RUNWAY'}
+          <span className={`group/resource relative ${isEnemy ? 'text-red-600 font-semibold' : 'text-primary font-semibold'}`}>
+            <GlossaryTerm term={isEnemy ? 'Complexity' : 'Runway'} />
+            <div className="pointer-events-none absolute bottom-full left-0 z-[120] mb-2 hidden w-56 rounded-lg border border-gray-200 bg-white p-3 text-left text-xs shadow-xl group-hover/resource:block">
+              <div className={`mb-1 font-bold ${isEnemy ? 'text-red-600' : 'text-primary'}`}>
+                {isEnemy ? 'Complexity' : 'Runway'}
+              </div>
+              <div className="text-gray-600">
+                <GlossaryText text={isEnemy
+                  ? `${name} has ${currentHp} current Complexity out of ${maxHp}.`
+                  : `Current Runway: $${currentHp}k. Max Runway: $${maxHp}k.`}
+                />
+              </div>
+            </div>
           </span>
           <span className="text-gray-700 font-bold">
-            {isEnemy ? `${currentHp}/${maxHp}` : `$${currentHp}k`}
+            {isEnemy ? `${currentHp}/${maxHp}` : `$${currentHp}k / $${maxHp}k`}
           </span>
         </div>
         <div
@@ -313,16 +325,16 @@ export const Unit = React.forwardRef<UnitHandle, UnitProps>(({
             {intent.type === 'attack' && (
               <div>
                 <p className="text-gray-600 mb-1">
-                  Intends to deal <b className="text-red-600 text-sm">⚔️ {calculateIntentDamage()} Runway damage</b>.
+                  <GlossaryText text={`Intends to deal ${calculateIntentDamage()} Runway damage.`} />
                 </p>
                 {statuses && statuses.strength !== 0 && (
                   <p className="text-gray-400 italic text-[10px] mt-1">
-                    (Base {intent.value} {statuses.strength > 0 ? '+' : ''}{statuses.strength} Velocity)
+                    <GlossaryText text={`Base ${intent.value} ${statuses.strength > 0 ? '+' : ''}${statuses.strength} Velocity`} />
                   </p>
                 )}
                 {statuses && statuses.weak > 0 && (
                   <p className="text-purple-500 italic text-[10px] mt-1">
-                    (Reduced by Drained: -25%)
+                    <GlossaryText text="Reduced by Drained: -25%" />
                   </p>
                 )}
               </div>
@@ -333,7 +345,7 @@ export const Unit = React.forwardRef<UnitHandle, UnitProps>(({
                 <p className="text-amber-600 font-bold mb-1">⬆️ {intent.description}</p>
                 <div className="text-gray-500">
                   {intent.description.includes('Momentum') || intent.description.includes('Add Feature')
-                    ? 'Gains Velocity each turn. Kill fast!'
+                    ? <GlossaryText text="Gains Velocity each turn. Kill fast!" />
                     : 'Enemy is powering up.'}
                 </div>
               </div>
@@ -343,7 +355,7 @@ export const Unit = React.forwardRef<UnitHandle, UnitProps>(({
               <div>
                 <p className="text-purple-600 font-bold mb-1">⬇️ {intent.description}</p>
                 <div className="text-gray-500">
-                  Applies negative status effects to your Runway.
+                  <GlossaryText text="Applies negative status effects that weaken your Runway or damage output." />
                 </div>
               </div>
             )}

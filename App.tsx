@@ -78,6 +78,7 @@ import { PostMortemAnalysis, generatePostMortem } from './postMortemService';
 import { getGlobalLogger } from './logger';
 import { StartupTipsOverlay } from './components/StartupTipsOverlay';
 import { streamStartupTips, getFallbackTips } from './startupTipsStreamingService';
+import { GlossaryText, GlossaryTerm } from './components/GlossaryText';
 
 const App: React.FC = () => {
     // --- Game State Initialization ---
@@ -3585,12 +3586,12 @@ const App: React.FC = () => {
                                                 style={{ boxShadow: '4px 4px 8px #C8CED3, -4px -4px 8px #FFFFFF' }}
                                             >
                                                 <div className="flex items-center gap-3 mb-3">
-                                                    <div className="text-2xl bg-purple-100 p-2 rounded-lg border border-purple-200">{relic.icon}</div>
-                                                    <div className="flex-1">
-                                                        <div className="text-sm font-bold text-purple-600">{relic.name}</div>
-                                                        <div className="text-xs text-gray-500">{relic.description}</div>
+                                                        <div className="text-2xl bg-purple-100 p-2 rounded-lg border border-purple-200">{relic.icon}</div>
+                                                        <div className="flex-1">
+                                                            <div className="text-sm font-bold text-purple-600">{relic.name}</div>
+                                                            <div className="text-xs text-gray-500"><GlossaryText text={relic.description} /></div>
+                                                        </div>
                                                     </div>
-                                                </div>
                                                 <button
                                                     onClick={() => handleBuyRelic(relic)}
                                                     disabled={!canAfford}
@@ -3620,12 +3621,12 @@ const App: React.FC = () => {
                                                 style={{ boxShadow: '4px 4px 8px #C8CED3, -4px -4px 8px #FFFFFF' }}
                                             >
                                                 <div className="flex items-center gap-3 mb-3">
-                                                    <div className="text-2xl bg-blue-100 p-2 rounded-lg border border-blue-200">{potion.icon}</div>
-                                                    <div className="flex-1">
-                                                        <div className="text-sm font-bold text-blue-600">{potion.name}</div>
-                                                        <div className="text-xs text-gray-500">{potion.description}</div>
+                                                        <div className="text-2xl bg-blue-100 p-2 rounded-lg border border-blue-200">{potion.icon}</div>
+                                                        <div className="flex-1">
+                                                            <div className="text-sm font-bold text-blue-600">{potion.name}</div>
+                                                            <div className="text-xs text-gray-500"><GlossaryText text={potion.description} /></div>
+                                                        </div>
                                                     </div>
-                                                </div>
                                                 <button
                                                     onClick={() => handleBuyPotion(potion)}
                                                     disabled={!canAfford}
@@ -3655,7 +3656,7 @@ const App: React.FC = () => {
                                             </div>
                                             <div>
                                                 <div className="text-gray-800 font-bold">Cut a Feature</div>
-                                                <div className="text-xs text-gray-500">Streamline your playbook. Remove one card. Cost rises each use.</div>
+                                                <div className="text-xs text-gray-500"><GlossaryText text="Streamline your playbook. Remove one card. Cost rises each use." /></div>
                                             </div>
                                         </div>
                                         <button
@@ -3883,7 +3884,7 @@ const App: React.FC = () => {
                                         <span className="text-[10px] uppercase bg-purple-100 px-1 rounded text-purple-600">Perk</span>
                                         <span className="text-[10px] uppercase bg-gray-100 px-1 rounded text-gray-500">{relic.rarity}</span>
                                     </div>
-                                    <div className="text-xs text-gray-700 mb-2">{relic.description}</div>
+                                    <div className="text-xs text-gray-700 mb-2"><GlossaryText text={relic.description} /></div>
                                     {relic.tooltip && (
                                         <div className="border-t border-gray-200 pt-2 mt-2">
                                             <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">{relic.tooltip.term}</div>
@@ -3918,7 +3919,7 @@ const App: React.FC = () => {
                                     <>
                                         <span className="text-lg">{potion.icon}</span>
                                         {/* Tooltip */}
-                                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 p-3 bg-white border border-blue-300 rounded-lg shadow-xl hidden group-hover:block z-50 pointer-events-none">
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 p-3 bg-white border border-blue-300 rounded-lg shadow-xl hidden group-hover:block z-50">
                                             <div className="font-bold text-blue-600 mb-1 flex items-center gap-2">
                                                 <span>{potion.name}</span>
                                                 <span className={`text-[10px] uppercase px-1 rounded ${potion.rarity === 'rare' ? 'bg-amber-100 text-amber-600' :
@@ -3926,7 +3927,7 @@ const App: React.FC = () => {
                                                         'bg-gray-100 text-gray-500'
                                                     }`}>{potion.rarity}</span>
                                             </div>
-                                            <div className="text-xs text-gray-700 mb-2">{potion.description}</div>
+                                            <div className="text-xs text-gray-700 mb-2"><GlossaryText text={potion.description} /></div>
                                             {potion.tooltip && (
                                                 <div className="border-t border-gray-200 pt-2 mt-2">
                                                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">{potion.tooltip.term}</div>
@@ -3934,7 +3935,7 @@ const App: React.FC = () => {
                                                 </div>
                                             )}
                                             <div className="text-[10px] text-gray-500 mt-2 border-t border-gray-200 pt-2">
-                                                <span className="text-blue-500">Click</span> to use • <span className="text-red-500">Right-click</span> to discard
+                                                <GlossaryText text="Click to use • Right-click to discard" />
                                             </div>
                                         </div>
                                     </>
@@ -4371,7 +4372,7 @@ const App: React.FC = () => {
                                                                 {gameState.lastVictoryReward.relic.name}
                                                                 <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-purple-100 text-purple-500">Perk</span>
                                                             </div>
-                                                            <div className="text-sm text-gray-500">{gameState.lastVictoryReward.relic.description}</div>
+                                                            <div className="text-sm text-gray-500"><GlossaryText text={gameState.lastVictoryReward.relic.description} /></div>
                                                         </div>
                                                         {gameState.lastVictoryReward.relicCollected ? (
                                                             <span className="text-primary font-mono text-sm">✓ Unlocked</span>
@@ -4400,7 +4401,7 @@ const App: React.FC = () => {
                                                                         'bg-gray-100 text-gray-500'
                                                                     }`}>{gameState.pendingPotionReward.rarity}</span>
                                                             </div>
-                                                            <div className="text-sm text-gray-500">{gameState.pendingPotionReward.description}</div>
+                                                            <div className="text-sm text-gray-500"><GlossaryText text={gameState.pendingPotionReward.description} /></div>
                                                         </div>
                                                         <div className="flex flex-col gap-2">
                                                             <button
@@ -4497,7 +4498,7 @@ const App: React.FC = () => {
                                                                 {relic.name}
                                                                 <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-purple-100 text-purple-500">Boss</span>
                                                             </div>
-                                                            <div className="text-sm text-gray-500">{relic.description}</div>
+                                                            <div className="text-sm text-gray-500"><GlossaryText text={relic.description} /></div>
                                                         </div>
                                                         <span className={`text-sm font-mono ${isSelected ? 'text-amber-600' : 'text-purple-500'}`}>
                                                             {isSelected ? '✓ Selected' : bossRelicResolved ? 'Locked' : 'Click to choose'}
@@ -4693,7 +4694,7 @@ const App: React.FC = () => {
 
                 {/* Left-Center: Energy/Bandwidth */}
                 <div className="w-32 flex flex-col items-center gap-2 mb-4 ml-4">
-                    <div className="flex items-center gap-2 text-amber-600">
+                    <div className="group/resource relative flex items-center gap-2 text-amber-600">
                         <div className="relative">
                             <Battery size={44} className="stroke-1" />
                             <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center pl-1 pr-2.5 gap-0.5">
@@ -4707,7 +4708,13 @@ const App: React.FC = () => {
                         </div>
                         <div className="flex flex-col">
                             <span className="text-2xl font-bold font-mono leading-none">{gameState.playerStats.bandwidth}</span>
-                            <span className="text-[9px] text-gray-500 font-mono uppercase tracking-widest">Bandwidth</span>
+                            <span className="text-[9px] text-gray-500 font-mono uppercase tracking-widest"><GlossaryTerm term="Bandwidth" /></span>
+                        </div>
+                        <div className="pointer-events-none absolute bottom-full left-1/2 z-[120] mb-2 hidden w-64 -translate-x-1/2 rounded-lg border border-amber-300 bg-white p-3 text-left text-xs shadow-xl group-hover/resource:block">
+                            <div className="mb-1 font-bold text-amber-600">Bandwidth</div>
+                            <div className="text-gray-600">
+                                <GlossaryText text={`You have ${gameState.playerStats.bandwidth} Bandwidth available this turn. Playing cards spends Bandwidth, and most turns reset back to your normal starting amount.`} />
+                            </div>
                         </div>
                     </div>
                 </div>
