@@ -17,7 +17,7 @@ import {
 // CONFIGURATION
 // ============================================
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-latest:generateContent';
 
 // ============================================
 // API KEY MANAGEMENT

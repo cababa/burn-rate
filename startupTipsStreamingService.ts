@@ -1,7 +1,7 @@
 // ============================================
 // STARTUP TIPS STREAMING SERVICE
 // ============================================
-// Streams educational startup history lessons using Gemini Flash Lite
+// Streams educational startup history lessons using the configured Gemini Flash model
 // to entertain users while the main narrative generates
 
 import { getApiKey, getFastModel } from './settingsService';

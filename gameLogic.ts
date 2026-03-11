@@ -2557,6 +2557,114 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
         return { actions: boosted, applied };
     };
 
+    const applyPostPlayExhaust = (state: GameState, exhaustedCard: CardData): GameState => {
+        let nextState: GameState = {
+            ...state,
+            hand: state.hand.filter(c => c !== exhaustedCard),
+            exhaustPile: [...state.exhaustPile, exhaustedCard],
+        };
+
+        const statuses = nextState.playerStats.statuses;
+
+        if (statuses.feelNoPain > 0) {
+            let blockGain = statuses.feelNoPain;
+            if (statuses.frail > 0) {
+                blockGain = Math.floor(blockGain * 0.75);
+            }
+            if (blockGain > 0) {
+                nextState = {
+                    ...nextState,
+                    playerStats: {
+                        ...nextState.playerStats,
+                        mitigation: nextState.playerStats.mitigation + blockGain,
+                    },
+                };
+            }
+        }
+
+        const sentinelEffect = exhaustedCard.effects?.find(effect => effect.type === 'sentinel_effect');
+        if (sentinelEffect?.value) {
+            nextState = {
+                ...nextState,
+                playerStats: {
+                    ...nextState.playerStats,
+                    bandwidth: nextState.playerStats.bandwidth + sentinelEffect.value,
+                },
+            };
+        }
+
+        const phoenixDamage = getPhoenixProtocolDamage(nextState.relics);
+        if (phoenixDamage > 0) {
+            nextState = {
+                ...nextState,
+                enemies: nextState.enemies.map(enemy => enemy.hp > 0 ? {
+                    ...enemy,
+                    statuses: { ...enemy.statuses },
+                    hp: Math.max(0, enemy.hp - phoenixDamage),
+                } : enemy),
+            };
+        }
+
+        if (statuses.darkEmbrace > 0) {
+            const drawRes = drawCards(nextState.drawPile, nextState.discardPile, statuses.darkEmbrace);
+            const processed = processDrawnCards(
+                drawRes.drawn,
+                nextState.hand,
+                drawRes.newDiscard,
+                drawRes.newDraw,
+                nextState.playerStats,
+                nextState.message
+            );
+            nextState = {
+                ...nextState,
+                hand: processed.hand,
+                drawPile: processed.drawPile,
+                discardPile: processed.discard,
+                playerStats: processed.stats,
+                message: processed.message,
+            };
+
+            if (processed.stats.statuses.fireBreathing > 0) {
+                const statusDrawn = processed.drawnCards.filter(c => c.type === 'status');
+                if (statusDrawn.length > 0) {
+                    const baseDamage = processed.stats.statuses.fireBreathing;
+                    nextState = {
+                        ...nextState,
+                        enemies: nextState.enemies.map(enemy => {
+                            if (enemy.hp <= 0) return enemy;
+                            let damage = baseDamage * statusDrawn.length;
+                            if (enemy.statuses.vulnerable > 0) {
+                                damage = Math.floor(damage * getVulnerableMultiplier(nextState.relics));
+                            }
+                            let mitigation = enemy.mitigation;
+                            if (mitigation > 0) {
+                                const blocked = Math.min(mitigation, damage);
+                                mitigation -= blocked;
+                                damage -= blocked;
+                            }
+                            return {
+                                ...enemy,
+                                statuses: { ...enemy.statuses },
+                                mitigation,
+                                hp: Math.max(0, enemy.hp - damage),
+                            };
+                        }),
+                    };
+                }
+            }
+        }
+
+        if (nextState.enemies.every(e => e.hp <= 0)) {
+            nextState = {
+                ...nextState,
+                status: 'VICTORY',
+                message: nextState.message || 'PROBLEM SOLVED.',
+            };
+        }
+
+        return nextState;
+    };
+
     // === NEW ENGINE PATH ===
     if (shouldUseNewEngine) {
         getGlobalLogger().log('CARD_PLAY', `[NEW ENGINE] Playing ${card.name}`, { cardId: card.id, cost: costPaid });
@@ -2568,22 +2676,11 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
             playerStatuses.doubleTap = Math.max(0, playerStatuses.doubleTap - 1);
         }
 
-        // Handle rage - gain block when playing attacks
-        let rageMitigation = prev.playerStats.mitigation;
-        if (card.type === 'attack' && playerStatuses.rage > 0) {
-            let rageBlock = playerStatuses.rage;
-            if (playerStatuses.frail > 0) {
-                rageBlock = Math.floor(rageBlock * 0.75);
-            }
-            rageMitigation += rageBlock * repeatCount;
-        }
-
         // Build initial state with status updates
         const workingRelics = prev.relics.map(relic => ({ ...relic }));
         let workingStats = {
             ...prev.playerStats,
             statuses: playerStatuses,
-            mitigation: rageMitigation,
         };
         let attackRelicBonusDamage = 0;
         let attackRelicMessages: string[] = [];
@@ -2607,18 +2704,33 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
             },
         };
         let pendingAttackBonusDamage = attackRelicBonusDamage;
+        const reducerRng = rng ? {
+            nextInt: (min: number, max: number) => rng.nextInt(min, max),
+            pick: <T,>(array: T[]) => rng.pick(array),
+            shuffle: <T,>(array: T[]) => rng.shuffle(array),
+        } : undefined;
 
         // Process card effects (potentially multiple times for doubleTap)
         for (let r = 0; r < repeatCount; r++) {
             const actionsRaw = cardToActions(card, target, targetEnemyId, r === 0 ? costPaid : 0);
-            const bonusResult = applyFirstAttackBonusToActions(actionsRaw, pendingAttackBonusDamage);
+            const actionsWithRage = card.type === 'attack' && workingState.playerStats.statuses.rage > 0
+                ? [
+                    {
+                        type: 'GAIN_BLOCK',
+                        payload: { amount: workingState.playerStats.statuses.rage },
+                        source: card.id,
+                    },
+                    ...actionsRaw,
+                ]
+                : actionsRaw;
+            const bonusResult = applyFirstAttackBonusToActions(actionsWithRage, pendingAttackBonusDamage);
             const actions = bonusResult.actions;
             if (bonusResult.applied) pendingAttackBonusDamage = 0;
             const queue = new ActionQueue();
             queue.enqueueMany(actions);
 
             const eventLog = new EventLog();
-            const reducer = new ActionReducer(workingState, queue, eventLog, undefined);
+            const reducer = new ActionReducer(workingState, queue, eventLog, reducerRng);
 
             const { state, events } = reducer.processAll();
             workingState = {
@@ -2637,7 +2749,7 @@ export const resolveCardEffect = (prev: GameState, card: CardData, target: 'enem
         // Remove card from hand first
         finalState.hand = finalState.hand.filter(c => c !== card);
         if (card.exhaust) {
-            finalState.exhaustPile = [...finalState.exhaustPile, card];
+            finalState = applyPostPlayExhaust(finalState, card);
         } else {
             finalState.discardPile = [...finalState.discardPile, card];
         }

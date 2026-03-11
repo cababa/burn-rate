@@ -100,8 +100,39 @@ export function cardToActions(
   // For X-cost cards, effects loop based on cost paid
   const loops = card.cost === -1 ? actualCost : 1;
   
-  // Convert each effect
-  for (const effect of card.effects) {
+  // Convert each effect, collapsing consecutive identical damage effects into
+  // a single multi-hit action so attack reactions can resolve in StS order.
+  for (let i = 0; i < card.effects.length; i++) {
+    const effect = card.effects[i];
+
+    if (effect.type === 'damage') {
+      let hits = loops;
+      while (i + 1 < card.effects.length) {
+        const next = card.effects[i + 1];
+        if (
+          next.type !== 'damage' ||
+          next.value !== effect.value ||
+          next.target !== effect.target ||
+          next.strengthMultiplier !== effect.strengthMultiplier
+        ) {
+          break;
+        }
+        hits += loops;
+        i += 1;
+      }
+
+      const isRandomEnemy = effect.target === 'enemy' && card.description.toLowerCase().includes('random enemy');
+      const payload: DealDamagePayload = {
+        targets: effect.target === 'all_enemies' ? 'all' : isRandomEnemy ? 'random' : 'single',
+        targetId: isRandomEnemy ? undefined : targetEnemyId,
+        amount: effect.value,
+        hits,
+        strengthMultiplier: effect.strengthMultiplier,
+      };
+      actions.push({ type: 'DEAL_DAMAGE', payload, source });
+      continue;
+    }
+
     const effectActions = effectToActions(effect, card, target, targetEnemyId, loops);
     actions.push(...effectActions);
   }
@@ -124,17 +155,6 @@ function effectToActions(
   
   for (let i = 0; i < loops; i++) {
     switch (effect.type) {
-      case 'damage': {
-        const payload: DealDamagePayload = {
-          targets: effect.target === 'all_enemies' ? 'all' : 'single',
-          targetId: targetEnemyId,
-          amount: effect.value,
-          strengthMultiplier: effect.strengthMultiplier,
-        };
-        actions.push({ type: 'DEAL_DAMAGE', payload, source });
-        break;
-      }
-      
       case 'block': {
         const payload: GainBlockPayload = { amount: effect.value };
         actions.push({ type: 'GAIN_BLOCK', payload, source });

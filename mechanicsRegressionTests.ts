@@ -3,6 +3,7 @@ import { resolveCardEffect, resolveEnemyTurn } from './gameLogic.ts';
 import { GAME_DATA } from './constants.ts';
 import { isEffectTypeSupported } from './engine/cardToActions.ts';
 import type { CardData, EnemyData, GameState, RelicData } from './types.ts';
+import { SeededRandom } from './rng.ts';
 
 let passed = 0;
 let failed = 0;
@@ -192,6 +193,85 @@ function run() {
   {
     const appCode = fs.readFileSync('./App.tsx', 'utf-8');
     assert(appCode.includes('onClick={endTurn}'), 'End Turn button uses endTurn handler');
+  }
+
+  // 11) Rage must trigger per Double Tap copy, before each attack, so Juggernaut procs twice.
+  {
+    const state = makeState();
+    const card = { ...GAME_DATA.cards.cto_commit, id: 'rage_double_tap_test' };
+    state.hand = [card];
+    state.playerStats.statuses.rage = 3;
+    state.playerStats.statuses.doubleTap = 1;
+    state.playerStats.statuses.juggernaut = 5;
+
+    const out = resolveCardEffect(state, card, 'enemy', 'e1', new SeededRandom(1));
+    assert(out.playerStats.mitigation === 6, 'Rage grants block for each Double Tap attack copy', `block=${out.playerStats.mitigation}`);
+    assert(out.enemies[0].hp === 18, 'Juggernaut also triggers for each Rage block gain', `enemyHp=${out.enemies[0].hp}`);
+  }
+
+  // 12) Attack variants must still trigger on-hit enemy reactions like Curl Up.
+  {
+    const state = makeState();
+    const card = { ...GAME_DATA.cards.cto_leverage, id: 'curlup_body_slam_test' };
+    state.hand = [card];
+    state.playerStats.mitigation = 15;
+    state.enemies = [makeEnemy('e1', 50)];
+    state.enemies[0].statuses.curlUp = 5;
+
+    const out = resolveCardEffect(state, card, 'enemy', 'e1');
+    assert(out.enemies[0].hp === 35, 'Leverage deals block-scaled damage', `enemyHp=${out.enemies[0].hp}`);
+    assert(out.enemies[0].mitigation === 5, 'Curl Up triggers after special attack damage', `enemyBlock=${out.enemies[0].mitigation}`);
+    assert(out.enemies[0].statuses.curlUp === 0, 'Curl Up is consumed by special attack damage', `curlUp=${out.enemies[0].statuses.curlUp}`);
+  }
+
+  // 13) Exhaust hooks must fire in the new engine, including the played exhaust card.
+  {
+    const state = makeState();
+    const card = { ...GAME_DATA.cards.cto_all_in_pivot, id: 'fiend_fire_hooks_test' };
+    state.hand = [
+      card,
+      { ...GAME_DATA.cards.cto_commit, id: 'ff_a' },
+      { ...GAME_DATA.cards.cto_stay_focused, id: 'ff_b' },
+    ];
+    state.drawPile = [{ ...GAME_DATA.cards.cto_commit, id: 'ff_draw' }];
+    state.playerStats.statuses.feelNoPain = 3;
+    state.playerStats.statuses.darkEmbrace = 1;
+    state.enemies = [makeEnemy('e1', 60)];
+    state.playerStats.bandwidth = 2;
+
+    const out = resolveCardEffect(state, card, 'enemy', 'e1');
+    assert(out.playerStats.mitigation === 9, 'Fiend Fire triggers Feel No Pain for all 3 exhausts', `block=${out.playerStats.mitigation}`);
+    assert(out.hand.some(c => c.id === 'ff_draw'), 'Dark Embrace draws during Fiend Fire resolution', `hand=${out.hand.map(c => c.id).join(',')}`);
+    assert(out.exhaustPile.some(c => c.id === card.id), 'Played Fiend Fire also exhausts itself', `exhaust=${out.exhaustPile.map(c => c.id).join(',')}`);
+  }
+
+  // 14) Draw-triggered powers must resolve during card effects in the new engine.
+  {
+    const state = makeState();
+    const card = { ...GAME_DATA.cards.cto_pivot_ready, id: 'draw_trigger_test' };
+    state.hand = [card];
+    state.drawPile = [
+      { ...GAME_DATA.cards.cto_commit, id: 'follow_draw' },
+      { ...GAME_DATA.cards.status_legacy_code, id: 'status_draw' },
+    ];
+    state.playerStats.statuses.evolve = 1;
+    state.playerStats.statuses.fireBreathing = 6;
+
+    const out = resolveCardEffect(state, card, 'self');
+    assert(out.hand.some(c => c.id === 'status_draw'), 'Original status draw still reaches hand', `hand=${out.hand.map(c => c.id).join(',')}`);
+    assert(out.hand.some(c => c.id === 'follow_draw'), 'Evolve draw resolves during the same card', `hand=${out.hand.map(c => c.id).join(',')}`);
+    assert(out.enemies[0].hp === 34, 'Fire Breathing damages enemies on status draw during card resolution', `enemyHp=${out.enemies[0].hp}`);
+  }
+
+  // 15) Shotgun Debug must pick a random target for each hit, using seeded combat RNG.
+  {
+    const state = makeState();
+    const card = { ...GAME_DATA.cards.cto_shotgun_debug, id: 'shotgun_random_test' };
+    state.hand = [card];
+    state.enemies = [makeEnemy('e1', 20), makeEnemy('e2', 20)];
+
+    const out = resolveCardEffect(state, card, 'enemy', 'e1', new SeededRandom(1));
+    assert(out.enemies[0].hp === 17 && out.enemies[1].hp === 14, 'Shotgun Debug rerolls target on each hit', `hp=${out.enemies.map(e => `${e.id}:${e.hp}`).join(',')}`);
   }
 
   console.log(`Done: ${passed} passed, ${failed} failed.`);

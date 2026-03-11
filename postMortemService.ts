@@ -109,7 +109,7 @@ const REAL_STARTUP_FAILURES = [
 // GEMINI API CONFIGURATION
 // ============================================
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-latest:generateContent';
 
 const POST_MORTEM_SCHEMA = {
     type: "object",

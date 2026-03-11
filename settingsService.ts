@@ -30,12 +30,8 @@ export interface ModelOption {
 }
 
 export type TextModelOption =
-    | 'gemini-3-flash-preview'   // Newest Flash preview model (Dec 2025)
-    | 'gemini-3-pro-preview'     // Newest Pro preview model (Dec 2025)
-    | 'gemini-2.5-pro'           // State-of-the-art thinking model
-    | 'gemini-2.5-flash'         // Best price-performance, stable
-    | 'gemini-2.5-flash-lite'    // Fastest, cost-efficient
-    | 'gemini-2.0-flash';        // Previous generation
+    | 'gemini-flash-latest'
+    | 'gemini-pro-latest';
 
 export type ImageModelOption =
     | 'gemini-3-pro-image-preview'  // Gemini 3 image generation
@@ -47,40 +43,16 @@ export type ImageModelOption =
 // ============================================
 
 export const TEXT_MODELS: Record<TextModelOption, ModelOption> = {
-    'gemini-3-flash-preview': {
-        id: 'gemini-3-flash-preview',
-        name: 'Gemini 3 Flash (Preview)',
-        description: 'Newest and most capable Flash model (Preview)',
+    'gemini-flash-latest': {
+        id: 'gemini-flash-latest',
+        name: 'Gemini Flash Latest',
+        description: 'Fastest text model for lightweight generation during gameplay',
         tier: 'standard'
     },
-    'gemini-3-pro-preview': {
-        id: 'gemini-3-pro-preview',
-        name: 'Gemini 3 Pro (Preview)',
-        description: 'Most powerful model with advanced reasoning (Preview)',
-        tier: 'premium'
-    },
-    'gemini-2.5-pro': {
-        id: 'gemini-2.5-pro',
-        name: 'Gemini 2.5 Pro',
-        description: 'State-of-the-art thinking for complex problems',
-        tier: 'premium'
-    },
-    'gemini-2.5-flash': {
-        id: 'gemini-2.5-flash',
-        name: 'Gemini 2.5 Flash',
-        description: 'Best price-performance, fast and capable',
-        tier: 'standard'
-    },
-    'gemini-2.5-flash-lite': {
-        id: 'gemini-2.5-flash-lite',
-        name: 'Gemini 2.5 Flash Lite',
-        description: 'Fastest and most cost-efficient',
-        tier: 'free'
-    },
-    'gemini-2.0-flash': {
-        id: 'gemini-2.0-flash',
-        name: 'Gemini 2.0 Flash',
-        description: 'Previous generation stable model',
+    'gemini-pro-latest': {
+        id: 'gemini-pro-latest',
+        name: 'Gemini Pro Latest',
+        description: 'Higher-reasoning text model for macro narrative and post-mortems',
         tier: 'standard'
     }
 };
@@ -112,14 +84,27 @@ export const IMAGE_MODELS: Record<ImageModelOption, ModelOption> = {
 
 const DEFAULT_SETTINGS: GameSettings = {
     geminiApiKey: '',
-    reasoningModel: 'gemini-3-flash-preview',      // Heavy for MACRO + Post-Mortem
-    fastModel: 'gemini-3-flash-preview',     // Fast for MESO per-floor
+    reasoningModel: 'gemini-pro-latest',
+    fastModel: 'gemini-flash-latest',
     imageModel: 'gemini-2.5-flash-image',
     enableNarrativeLogging: false,
     autoSkipTweets: false
 };
 
 const STORAGE_KEY = 'game_settings';
+
+function isValidTextModel(model: unknown): model is TextModelOption {
+    return model === 'gemini-flash-latest' || model === 'gemini-pro-latest';
+}
+
+function normalizeSettings(settings: Partial<GameSettings>): GameSettings {
+    return {
+        ...DEFAULT_SETTINGS,
+        ...settings,
+        reasoningModel: isValidTextModel(settings.reasoningModel) ? settings.reasoningModel : DEFAULT_SETTINGS.reasoningModel,
+        fastModel: isValidTextModel(settings.fastModel) ? settings.fastModel : DEFAULT_SETTINGS.fastModel,
+    };
+}
 
 // ============================================
 // SETTINGS MANAGEMENT
@@ -142,10 +127,7 @@ export function loadSettings(): GameSettings {
         const parsed = JSON.parse(stored);
 
         // Merge with defaults to handle new fields
-        return {
-            ...DEFAULT_SETTINGS,
-            ...parsed
-        };
+        return normalizeSettings(parsed);
     } catch (err) {
         console.warn('[Settings] Failed to load settings:', err);
         return DEFAULT_SETTINGS;

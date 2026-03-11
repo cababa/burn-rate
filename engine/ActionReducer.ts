@@ -29,8 +29,13 @@ import type { GameEvent, GameEventType } from './events.ts';
 import type { PendingChoice, ChoiceResult } from './choices.ts';
 import { ActionQueue } from './ActionQueue.ts';
 import { EventLog } from './EventLog.ts';
-import type { RNGService } from './RNGService.ts';
-import { getCrunchModeStrength, getPressureCookerWeak } from '../gameLogic.ts';
+import { getCrunchModeStrength, getPhoenixProtocolDamage, getPressureCookerWeak } from '../gameLogic.ts';
+
+interface ReducerRNG {
+  nextInt(min: number, max: number): number;
+  pick<T>(array: T[]): T;
+  shuffle<T>(array: T[]): T[];
+}
 
 /**
  * Core engine reducer that processes Actions from an ActionQueue, mutates
@@ -51,7 +56,7 @@ export class ActionReducer {
   private state: GameState;
   private readonly queue: ActionQueue;
   private readonly eventLog: EventLog;
-  private readonly rng?: RNGService;
+  private readonly rng?: ReducerRNG;
 
   // Engine-level choice model (not yet wired to GameState.pendingSelection)
   private pendingChoice?: PendingChoice;
@@ -60,7 +65,7 @@ export class ActionReducer {
     state: GameState,
     queue: ActionQueue,
     eventLog: EventLog,
-    rng?: RNGService
+    rng?: ReducerRNG
   ) {
     this.state = state;
     this.queue = queue;
@@ -255,122 +260,13 @@ export class ActionReducer {
     const payload = action.payload as DealDamagePayload | undefined;
     if (!payload || payload.amount <= 0) return;
 
-    // Work on a cloned enemies array to maintain immutability semantics.
-    const enemies: EnemyData[] = this.state.enemies.map(e => ({
-      ...e,
-      statuses: { ...e.statuses },
-    }));
+    const enemies = this.resolveDamagePayload(payload, action, {
+      attackerStatuses: this.state.playerStats.statuses,
+      triggersAttackReactions: true,
+      emitBump: true,
+    }).enemies;
 
-    const hits = payload.hits && payload.hits > 0 ? payload.hits : 1;
-    const attackerStatuses = this.state.playerStats.statuses;
-
-    // Emit a BUMP for the attacker
-    if (action.source) {
-      this.emitEvent('BUMP', {
-        targetId: action.source,
-        direction: action.source === 'player' ? 'right' : 'left'
-      }, action.source);
-    }
-
-    for (let hit = 0; hit < hits; hit++) {
-      const targets = this.getTargetEnemies(payload, enemies);
-      if (targets.length === 0) break;
-
-      for (const enemy of targets) {
-        if (enemy.hp <= 0) continue;
-
-        const base = payload.amount;
-        const strengthMultiplier = payload.strengthMultiplier ?? 1;
-        const damagePerHit = this.calculateFinalDamage(
-          base,
-          attackerStatuses,
-          enemy.statuses,
-          strengthMultiplier,
-          this.state.relics
-        );
-
-        let remaining = damagePerHit;
-        let blocked = 0;
-
-        if (enemy.mitigation > 0 && remaining > 0) {
-          blocked = Math.min(enemy.mitigation, remaining);
-          enemy.mitigation -= blocked;
-          remaining -= blocked;
-        }
-
-        if (remaining > 0) {
-          const prevHp = enemy.hp;
-          enemy.hp = Math.max(0, enemy.hp - remaining);
-
-          this.emitEvent(
-            'HIT',
-            {
-              targetId: enemy.id,
-              enemyName: enemy.name,
-              amount: remaining,
-              blocked,
-              hpBefore: prevHp,
-              hpAfter: enemy.hp,
-              lethal: enemy.hp === 0,
-            },
-            action.source
-          );
-
-          // Enemy status reactions on taking damage
-          // curlUp: First unblocked hit triggers block gain and consumes the status
-          if (enemy.statuses.curlUp > 0 && remaining > 0) {
-            const curlUpBlock = enemy.statuses.curlUp;
-            enemy.mitigation += curlUpBlock;
-            enemy.statuses.curlUp = 0;
-          }
-
-          // malleable: Each hit grants stacking block
-          if (enemy.statuses.malleable > 0 && remaining > 0) {
-            enemy.mitigation += enemy.statuses.malleable;
-            enemy.statuses.malleable += 1;
-          }
-
-          // asleep: Wake up when damaged
-          if (enemy.statuses.asleep > 0 && remaining > 0) {
-            enemy.statuses.asleep = 0;
-          }
-
-          // Monolith boss split trigger at 50% HP
-          if (
-            enemy.id.startsWith('boss_the_monolith') &&
-            enemy.hp <= enemy.maxHp / 2 &&
-            enemy.currentIntent?.type !== 'unknown'
-          ) {
-            enemy.currentIntent = {
-              type: 'unknown',
-              value: 0,
-              icon: 'unknown',
-              description: 'Splitting...'
-            };
-          }
-        } else {
-          // Fully blocked hit
-          this.emitEvent(
-            'HIT',
-            {
-              targetId: enemy.id,
-              enemyName: enemy.name,
-              amount: 0,
-              blocked,
-              hpBefore: enemy.hp,
-              hpAfter: enemy.hp,
-              lethal: false,
-            },
-            action.source
-          );
-        }
-      }
-    }
-
-    this.state = {
-      ...this.state,
-      enemies,
-    };
+    this.state = { ...this.state, enemies };
 
     // Inline victory check after damage.
     this.checkVictoryInternal();
@@ -445,56 +341,81 @@ export class ActionReducer {
     let drawPile = [...this.state.drawPile];
     let discardPile = [...this.state.discardPile];
     const hand = [...this.state.hand];
+    const pendingDraws: number[] = [payload.count];
+    let safety = 0;
 
-    for (let i = 0; i < payload.count; i++) {
-      if (drawPile.length === 0) {
-        if (discardPile.length === 0) break;
+    while (pendingDraws.length > 0 && safety < 50) {
+      const drawCount = pendingDraws.shift()!;
+      safety += 1;
+      let statusDrawnThisBatch = 0;
 
-        const toShuffle = [...discardPile];
-        if (this.rng) {
-          drawPile = this.rng.shuffle(toShuffle);
-        } else {
-          drawPile = toShuffle.sort(() => Math.random() - 0.5);
+      for (let i = 0; i < drawCount; i++) {
+        if (drawPile.length === 0) {
+          if (discardPile.length === 0) break;
+
+          const toShuffle = [...discardPile];
+          if (this.rng) {
+            drawPile = this.rng.shuffle(toShuffle);
+          } else {
+            drawPile = toShuffle.sort(() => Math.random() - 0.5);
+          }
+          discardPile = [];
+
+          this.emitEvent(
+            'DECK_SHUFFLED',
+            { from: 'discardPile', to: 'drawPile' },
+            action.source
+          );
         }
-        discardPile = [];
 
-        this.emitEvent(
-          'DECK_SHUFFLED',
-          { from: 'discardPile', to: 'drawPile' },
-          action.source
-        );
+        const card = drawPile.pop();
+        if (!card) break;
+
+        if (hand.length < MAX_HAND_SIZE) {
+          hand.push(card);
+          this.emitEvent(
+            'CARD_MOVED',
+            {
+              cardId: card.id,
+              card: card,
+              from: 'drawPile',
+              to: 'hand',
+            },
+            action.source
+          );
+
+          if (card.type === 'status') {
+            statusDrawnThisBatch += 1;
+          }
+        } else {
+          // StS behavior: overdrawn cards are burned to discard, not skipped.
+          discardPile.push(card);
+          this.emitEvent(
+            'CARD_MOVED',
+            {
+              cardId: card.id,
+              card: card,
+              from: 'drawPile',
+              to: 'discardPile',
+              handFull: true,
+              burned: true,
+            },
+            action.source
+          );
+        }
       }
 
-      const card = drawPile.pop();
-      if (!card) break;
+      if (statusDrawnThisBatch > 0) {
+        const fireBreathing = this.state.playerStats.statuses.fireBreathing || 0;
+        if (fireBreathing > 0) {
+          const fireBreathingDamage = fireBreathing * statusDrawnThisBatch;
+          this.applyNonAttackAoEDamage(fireBreathingDamage, action.source);
+        }
 
-      if (hand.length < MAX_HAND_SIZE) {
-        hand.push(card);
-        this.emitEvent(
-          'CARD_MOVED',
-          {
-            cardId: card.id,
-            card: card,
-            from: 'drawPile',
-            to: 'hand',
-          },
-          action.source
-        );
-      } else {
-        // StS behavior: overdrawn cards are burned to discard, not skipped.
-        discardPile.push(card);
-        this.emitEvent(
-          'CARD_MOVED',
-          {
-            cardId: card.id,
-            card: card,
-            from: 'drawPile',
-            to: 'discardPile',
-            handFull: true,
-            burned: true,
-          },
-          action.source
-        );
+        const evolve = this.state.playerStats.statuses.evolve || 0;
+        if (evolve > 0 && this.state.playerStats.statuses.noDraw === 0) {
+          pendingDraws.push(evolve * statusDrawnThisBatch);
+        }
       }
     }
 
@@ -684,77 +605,7 @@ export class ActionReducer {
   private handleExhaustCard(action: Action): void {
     const payload = action.payload as ExhaustCardPayload | undefined;
     if (!payload) return;
-
-    const { cardId, from } = payload;
-    let { hand, drawPile, discardPile, exhaustPile } = this.state;
-
-    let cardToExhaust: typeof hand[number] | undefined;
-
-    if (from === 'hand') {
-      const newHand = [...hand];
-      const index = newHand.findIndex(c => c.id === cardId);
-      if (index !== -1) {
-        [cardToExhaust] = newHand.splice(index, 1);
-        hand = newHand;
-      }
-    } else if (from === 'drawPile') {
-      const newDraw = [...drawPile];
-      const index = newDraw.findIndex(c => c.id === cardId);
-      if (index !== -1) {
-        [cardToExhaust] = newDraw.splice(index, 1);
-        drawPile = newDraw;
-      }
-    } else if (from === 'discardPile') {
-      const newDiscard = [...discardPile];
-      const index = newDiscard.findIndex(c => c.id === cardId);
-      if (index !== -1) {
-        [cardToExhaust] = newDiscard.splice(index, 1);
-        discardPile = newDiscard;
-      }
-    } else if (from === 'deck') {
-      const newDeck = [...this.state.deck];
-      const index = newDeck.findIndex(c => c.id === cardId);
-      if (index !== -1) {
-        [cardToExhaust] = newDeck.splice(index, 1);
-        this.state = {
-          ...this.state,
-          deck: newDeck,
-        };
-      }
-    }
-
-    if (!cardToExhaust) {
-      // Nothing to exhaust
-      this.state = {
-        ...this.state,
-        hand,
-        drawPile,
-        discardPile,
-        exhaustPile,
-      };
-      return;
-    }
-
-    exhaustPile = [...exhaustPile, cardToExhaust];
-
-    this.emitEvent(
-      'CARD_MOVED',
-      {
-        cardId: cardToExhaust.id,
-        card: cardToExhaust,
-        from,
-        to: 'exhaustPile',
-      },
-      action.source
-    );
-
-    this.state = {
-      ...this.state,
-      hand,
-      drawPile,
-      discardPile,
-      exhaustPile,
-    };
+    this.exhaustCardFromZone(payload.cardId, payload.from, action.source);
   }
 
   /**
@@ -780,81 +631,18 @@ export class ActionReducer {
     const baseAmount = mitigation * factor;
     if (baseAmount <= 0) return;
 
-    const enemies: EnemyData[] = this.state.enemies.map(e => ({
-      ...e,
-      statuses: { ...e.statuses },
-    }));
-
-    const attackerStatuses = this.state.playerStats.statuses;
     const targetPayload: DealDamagePayload = {
       targets: payload.targets,
       targetId: payload.targetId,
       amount: baseAmount,
     };
 
-    const targets = this.getTargetEnemies(targetPayload, enemies);
-    if (targets.length === 0) {
-      this.state = { ...this.state, enemies };
-      return;
-    }
+    const enemies = this.resolveDamagePayload(targetPayload, action, {
+      attackerStatuses: this.state.playerStats.statuses,
+      triggersAttackReactions: true,
+    }).enemies;
 
-    for (const enemy of targets) {
-      if (enemy.hp <= 0) continue;
-
-      const damage = this.calculateFinalDamage(
-        baseAmount,
-        attackerStatuses,
-        enemy.statuses,
-        1,
-        this.state.relics
-      );
-
-      let remaining = damage;
-      let blocked = 0;
-
-      if (enemy.mitigation > 0 && remaining > 0) {
-        blocked = Math.min(enemy.mitigation, remaining);
-        enemy.mitigation -= blocked;
-        remaining -= blocked;
-      }
-
-      if (remaining > 0) {
-        const prevHp = enemy.hp;
-        enemy.hp = Math.max(0, enemy.hp - remaining);
-        this.emitEvent(
-          'HIT',
-          {
-            targetId: enemy.id,
-            enemyName: enemy.name,
-            amount: remaining,
-            blocked,
-            hpBefore: prevHp,
-            hpAfter: enemy.hp,
-            lethal: enemy.hp === 0,
-          },
-          action.source
-        );
-      } else {
-        this.emitEvent(
-          'HIT',
-          {
-            targetId: enemy.id,
-            enemyName: enemy.name,
-            amount: 0,
-            blocked,
-            hpBefore: enemy.hp,
-            hpAfter: enemy.hp,
-            lethal: false,
-          },
-          action.source
-        );
-      }
-    }
-
-    this.state = {
-      ...this.state,
-      enemies,
-    };
+    this.state = { ...this.state, enemies };
     this.checkVictoryInternal();
   }
 
@@ -879,81 +667,18 @@ export class ActionReducer {
     const baseAmount = base + perMatch * matches;
     if (baseAmount <= 0) return;
 
-    const enemies: EnemyData[] = this.state.enemies.map(e => ({
-      ...e,
-      statuses: { ...e.statuses },
-    }));
-
-    const attackerStatuses = this.state.playerStats.statuses;
     const targetPayload: DealDamagePayload = {
       targets: payload.targets,
       targetId: payload.targetId,
       amount: baseAmount,
     };
 
-    const targets = this.getTargetEnemies(targetPayload, enemies);
-    if (targets.length === 0) {
-      this.state = { ...this.state, enemies };
-      return;
-    }
+    const enemies = this.resolveDamagePayload(targetPayload, action, {
+      attackerStatuses: this.state.playerStats.statuses,
+      triggersAttackReactions: true,
+    }).enemies;
 
-    for (const enemy of targets) {
-      if (enemy.hp <= 0) continue;
-
-      const damage = this.calculateFinalDamage(
-        baseAmount,
-        attackerStatuses,
-        enemy.statuses,
-        1,
-        this.state.relics
-      );
-
-      let remaining = damage;
-      let blocked = 0;
-
-      if (enemy.mitigation > 0 && remaining > 0) {
-        blocked = Math.min(enemy.mitigation, remaining);
-        enemy.mitigation -= blocked;
-        remaining -= blocked;
-      }
-
-      if (remaining > 0) {
-        const prevHp = enemy.hp;
-        enemy.hp = Math.max(0, enemy.hp - remaining);
-        this.emitEvent(
-          'HIT',
-          {
-            targetId: enemy.id,
-            enemyName: enemy.name,
-            amount: remaining,
-            blocked,
-            hpBefore: prevHp,
-            hpAfter: enemy.hp,
-            lethal: enemy.hp === 0,
-          },
-          action.source
-        );
-      } else {
-        this.emitEvent(
-          'HIT',
-          {
-            targetId: enemy.id,
-            enemyName: enemy.name,
-            amount: 0,
-            blocked,
-            hpBefore: enemy.hp,
-            hpAfter: enemy.hp,
-            lethal: false,
-          },
-          action.source
-        );
-      }
-    }
-
-    this.state = {
-      ...this.state,
-      enemies,
-    };
+    this.state = { ...this.state, enemies };
     this.checkVictoryInternal();
   }
 
@@ -994,76 +719,15 @@ export class ActionReducer {
       return;
     }
 
-    const enemies: EnemyData[] = this.state.enemies.map(e => ({
-      ...e,
-      statuses: { ...e.statuses },
-    }));
-    const attackerStatuses = this.state.playerStats.statuses;
-
     const targetPayload: DealDamagePayload = {
       targets: payload.targets,
       targetId: payload.targetId,
       amount: baseAmount,
     };
-
-    const targets = this.getTargetEnemies(targetPayload, enemies);
-    if (targets.length === 0) {
-      this.state = { ...this.state, enemies };
-      return;
-    }
-
-    for (const enemy of targets) {
-      if (enemy.hp <= 0) continue;
-
-      const damage = this.calculateFinalDamage(
-        baseAmount,
-        attackerStatuses,
-        enemy.statuses,
-        1,
-        this.state.relics
-      );
-
-      let remaining = damage;
-      let blocked = 0;
-
-      if (enemy.mitigation > 0 && remaining > 0) {
-        blocked = Math.min(enemy.mitigation, remaining);
-        enemy.mitigation -= blocked;
-        remaining -= blocked;
-      }
-
-      if (remaining > 0) {
-        const prevHp = enemy.hp;
-        enemy.hp = Math.max(0, enemy.hp - remaining);
-        this.emitEvent(
-          'HIT',
-          {
-            targetId: enemy.id,
-            enemyName: enemy.name,
-            amount: remaining,
-            blocked,
-            hpBefore: prevHp,
-            hpAfter: enemy.hp,
-            lethal: enemy.hp === 0,
-          },
-          action.source
-        );
-      } else {
-        this.emitEvent(
-          'HIT',
-          {
-            targetId: enemy.id,
-            enemyName: enemy.name,
-            amount: 0,
-            blocked,
-            hpBefore: enemy.hp,
-            hpAfter: enemy.hp,
-            lethal: false,
-          },
-          action.source
-        );
-      }
-    }
+    const damageResult = this.resolveDamagePayload(targetPayload, action, {
+      attackerStatuses: this.state.playerStats.statuses,
+      triggersAttackReactions: true,
+    });
 
     // Increase rampage bonus for future plays
     if (cardRef) {
@@ -1072,7 +736,7 @@ export class ActionReducer {
 
     this.state = {
       ...this.state,
-      enemies,
+      enemies: damageResult.enemies,
     };
     this.checkVictoryInternal();
   }
@@ -1085,86 +749,22 @@ export class ActionReducer {
     const payload = action.payload as DealDamageLifestealPayload | undefined;
     if (!payload || payload.amount <= 0) return;
 
-    const enemies: EnemyData[] = this.state.enemies.map(e => ({
-      ...e,
-      statuses: { ...e.statuses },
-    }));
-    const attackerStatuses = this.state.playerStats.statuses;
-
     const targetPayload: DealDamagePayload = {
       targets: payload.targets,
       targetId: payload.targetId,
       amount: payload.amount,
     };
-
-    let totalUnblocked = 0;
-
-    const targets = this.getTargetEnemies(targetPayload, enemies);
-    if (targets.length === 0) {
-      this.state = { ...this.state, enemies };
-      return;
-    }
-
-    for (const enemy of targets) {
-      if (enemy.hp <= 0) continue;
-
-      const damage = this.calculateFinalDamage(
-        payload.amount,
-        attackerStatuses,
-        enemy.statuses,
-        1,
-        this.state.relics
-      );
-
-      let remaining = damage;
-      let blocked = 0;
-
-      if (enemy.mitigation > 0 && remaining > 0) {
-        blocked = Math.min(enemy.mitigation, remaining);
-        enemy.mitigation -= blocked;
-        remaining -= blocked;
-      }
-
-      if (remaining > 0) {
-        totalUnblocked += remaining;
-        const prevHp = enemy.hp;
-        enemy.hp = Math.max(0, enemy.hp - remaining);
-        this.emitEvent(
-          'HIT',
-          {
-            targetId: enemy.id,
-            enemyName: enemy.name,
-            amount: remaining,
-            blocked,
-            hpBefore: prevHp,
-            hpAfter: enemy.hp,
-            lethal: enemy.hp === 0,
-          },
-          action.source
-        );
-      } else {
-        this.emitEvent(
-          'HIT',
-          {
-            targetId: enemy.id,
-            enemyName: enemy.name,
-            amount: 0,
-            blocked,
-            hpBefore: enemy.hp,
-            hpAfter: enemy.hp,
-            lethal: false,
-          },
-          action.source
-        );
-      }
-    }
+    const damageResult = this.resolveDamagePayload(targetPayload, action, {
+      attackerStatuses: this.state.playerStats.statuses,
+      triggersAttackReactions: true,
+    });
 
     // Apply lifesteal heal
     let nextPlayerStats = this.state.playerStats;
-    if (totalUnblocked > 0) {
+    if (damageResult.totalUnblocked > 0) {
       const hpBefore = nextPlayerStats.hp;
       const maxHp = nextPlayerStats.maxHp;
-      const healAmount = Math.min(totalUnblocked, maxHp - hpBefore);
+      const healAmount = Math.min(damageResult.totalUnblocked, maxHp - hpBefore);
       if (healAmount > 0) {
         nextPlayerStats = {
           ...nextPlayerStats,
@@ -1175,7 +775,7 @@ export class ActionReducer {
 
     this.state = {
       ...this.state,
-      enemies,
+      enemies: damageResult.enemies,
       playerStats: nextPlayerStats,
     };
     this.checkVictoryInternal();
@@ -1189,58 +789,20 @@ export class ActionReducer {
     const payload = action.payload as DealDamageFeedPayload | undefined;
     if (!payload || payload.amount <= 0) return;
 
-    const enemies: EnemyData[] = this.state.enemies.map(e => ({
-      ...e,
-      statuses: { ...e.statuses },
-    }));
-    const attackerStatuses = this.state.playerStats.statuses;
-
-    const enemy = enemies.find(e => e.id === payload.targetId);
-    if (!enemy || enemy.hp <= 0) {
-      this.state = { ...this.state, enemies };
-      return;
-    }
-
-    const damage = this.calculateFinalDamage(
-      payload.amount,
-      attackerStatuses,
-      enemy.statuses,
-      1,
-      this.state.relics
-    );
-
-    let remaining = damage;
-    let blocked = 0;
-
-    if (enemy.mitigation > 0 && remaining > 0) {
-      blocked = Math.min(enemy.mitigation, remaining);
-      enemy.mitigation -= blocked;
-      remaining -= blocked;
-    }
-
-    const prevHp = enemy.hp;
-    if (remaining > 0) {
-      enemy.hp = Math.max(0, enemy.hp - remaining);
-    }
-
-    this.emitEvent(
-      'HIT',
-      {
-        targetId: enemy.id,
-        enemyName: enemy.name,
-        amount: remaining,
-        blocked,
-        hpBefore: prevHp,
-        hpAfter: enemy.hp,
-        lethal: enemy.hp === 0,
-      },
-      action.source
-    );
+    const targetPayload: DealDamagePayload = {
+      targets: 'single',
+      targetId: payload.targetId,
+      amount: payload.amount,
+    };
+    const damageResult = this.resolveDamagePayload(targetPayload, action, {
+      attackerStatuses: this.state.playerStats.statuses,
+      triggersAttackReactions: true,
+    });
 
     let nextPlayerStats = this.state.playerStats;
 
     // Apply Feed-style max HP gain if this hit killed the target
-    if (prevHp > 0 && enemy.hp === 0 && payload.maxHpGain > 0) {
+    if (damageResult.killedTargetIds.includes(payload.targetId) && payload.maxHpGain > 0) {
       const newMaxHp = nextPlayerStats.maxHp + payload.maxHpGain;
       const newHp = Math.min(newMaxHp, nextPlayerStats.hp + payload.maxHpGain);
       nextPlayerStats = {
@@ -1252,7 +814,7 @@ export class ActionReducer {
 
     this.state = {
       ...this.state,
-      enemies,
+      enemies: damageResult.enemies,
       playerStats: nextPlayerStats,
     };
     this.checkVictoryInternal();
@@ -1267,7 +829,6 @@ export class ActionReducer {
     if (!payload || payload.perCardDamage <= 0) return;
 
     let hand = [...this.state.hand];
-    let exhaustPile = [...this.state.exhaustPile];
 
     // Filter out the card being played (it's handled separately)
     const cardsToExhaust = hand.filter(c => c.id !== payload.cardId);
@@ -1275,28 +836,13 @@ export class ActionReducer {
 
     // Exhaust all OTHER cards from hand
     for (const card of cardsToExhaust) {
-      exhaustPile.push(card);
-      this.emitEvent(
-        'CARD_MOVED',
-        {
-          cardId: card.id,
-          from: 'hand',
-          to: 'exhaustPile',
-        },
-        action.source
-      );
+      this.exhaustCardFromZone(card.id, 'hand', action.source);
     }
 
-    // Keep only the played card in hand (it will be exhausted separately due to exhaust:true)
-    hand = hand.filter(c => c.id === payload.cardId);
+    // Preserve any cards drawn by exhaust hooks (e.g. Dark Embrace).
+    hand = [...this.state.hand];
 
     const totalBaseDamage = payload.perCardDamage * numToExhaust;
-
-    const enemies: EnemyData[] = this.state.enemies.map(e => ({
-      ...e,
-      statuses: { ...e.statuses },
-    }));
-    const attackerStatuses = this.state.playerStats.statuses;
 
     if (totalBaseDamage > 0) {
       const targetPayload: DealDamagePayload = {
@@ -1304,54 +850,19 @@ export class ActionReducer {
         targetId: payload.targetId,
         amount: totalBaseDamage,
       };
-
-      const targets = this.getTargetEnemies(targetPayload, enemies);
-      for (const enemy of targets) {
-        if (enemy.hp <= 0) continue;
-
-        const damage = this.calculateFinalDamage(
-          totalBaseDamage,
-          attackerStatuses,
-          enemy.statuses,
-          1,
-          this.state.relics
-        );
-
-        let remaining = damage;
-        let blocked = 0;
-
-        if (enemy.mitigation > 0 && remaining > 0) {
-          blocked = Math.min(enemy.mitigation, remaining);
-          enemy.mitigation -= blocked;
-          remaining -= blocked;
-        }
-
-        const prevHp = enemy.hp;
-        if (remaining > 0) {
-          enemy.hp = Math.max(0, enemy.hp - remaining);
-        }
-
-        this.emitEvent(
-          'HIT',
-          {
-            targetId: enemy.id,
-            enemyName: enemy.name,
-            amount: remaining,
-            blocked,
-            hpBefore: prevHp,
-            hpAfter: enemy.hp,
-            lethal: enemy.hp === 0,
-          },
-          action.source
-        );
-      }
+      const damageResult = this.resolveDamagePayload(targetPayload, action, {
+        attackerStatuses: this.state.playerStats.statuses,
+        triggersAttackReactions: true,
+      });
+      this.state = {
+        ...this.state,
+        enemies: damageResult.enemies,
+      };
     }
 
     this.state = {
       ...this.state,
       hand,
-      exhaustPile,
-      enemies,
     };
     this.checkVictoryInternal();
   }
@@ -1491,7 +1002,6 @@ export class ActionReducer {
     if (!payload || payload.count <= 0) return;
 
     let hand = [...this.state.hand];
-    let exhaustPile = [...this.state.exhaustPile];
 
     const toExhaust = Math.min(payload.count, hand.length);
     for (let i = 0; i < toExhaust; i++) {
@@ -1501,20 +1011,13 @@ export class ActionReducer {
         ? this.rng.nextInt(0, hand.length - 1)
         : Math.floor(Math.random() * hand.length);
       const [card] = hand.splice(index, 1);
-      exhaustPile.push(card);
-
-      this.emitEvent(
-        'CARD_MOVED',
-        { cardId: card.id, from: 'hand', to: 'exhaustPile' },
-        action.source
-      );
+      this.state = {
+        ...this.state,
+        hand,
+      };
+      this.exhaustCardFromZone(card.id, 'hand', action.source);
+      hand = [...this.state.hand];
     }
-
-    this.state = {
-      ...this.state,
-      hand,
-      exhaustPile,
-    };
   }
 
   /**
@@ -1523,35 +1026,13 @@ export class ActionReducer {
    */
   private handleExhaustNonAttacksFromHand(action: Action): void {
     const payload = action.payload as ExhaustNonAttacksFromHandPayload | undefined;
-
-    const remaining: CardData[] = [];
-    const toExhaust: CardData[] = [];
-
-    for (const card of this.state.hand) {
-      if (card.type === 'attack') {
-        remaining.push(card);
-      } else {
-        toExhaust.push(card);
-      }
-    }
+    const toExhaust = this.state.hand.filter(card => card.type !== 'attack');
 
     if (toExhaust.length === 0) return;
 
-    const exhaustPile = [...this.state.exhaustPile, ...toExhaust];
-
     for (const card of toExhaust) {
-      this.emitEvent(
-        'CARD_MOVED',
-        { cardId: card.id, from: 'hand', to: 'exhaustPile' },
-        action.source
-      );
+      this.exhaustCardFromZone(card.id, 'hand', action.source);
     }
-
-    this.state = {
-      ...this.state,
-      hand: remaining,
-      exhaustPile,
-    };
 
     // Apply optional block gain per exhausted card (Second Wind).
     if (payload?.blockPerExhausted && payload.blockPerExhausted > 0) {
@@ -1691,32 +1172,12 @@ export class ActionReducer {
 
     const selectedSet = new Set(payload.selectedCardIds);
     const from = payload.from;
-
-    let sourceZone = [...(this.state[from] as CardData[])];
-    let exhaustPile = [...this.state.exhaustPile];
-
-    const toExhaust: CardData[] = [];
-    const remaining: CardData[] = [];
-
-    for (const card of sourceZone) {
-      if (selectedSet.has(card.id)) {
-        toExhaust.push(card);
-      } else {
-        remaining.push(card);
-      }
-    }
-
-    exhaustPile.push(...toExhaust);
+    const sourceZone = [...(this.state[from] as CardData[])];
+    const toExhaust = sourceZone.filter(card => selectedSet.has(card.id));
 
     for (const card of toExhaust) {
-      this.emitEvent('CARD_MOVED', { cardId: card.id, from, to: 'exhaustPile' }, action.source);
+      this.exhaustCardFromZone(card.id, from, action.source);
     }
-
-    this.state = {
-      ...this.state,
-      [from]: remaining,
-      exhaustPile,
-    };
   }
 
   /**
@@ -1990,6 +1451,283 @@ export class ActionReducer {
   // ============================================================
   // Helpers
   // ============================================================
+
+  private resolveDamagePayload(
+    payload: DealDamagePayload,
+    action: Action,
+    options: {
+      attackerStatuses: EntityStatus;
+      triggersAttackReactions: boolean;
+      emitBump?: boolean;
+    }
+  ): { enemies: EnemyData[]; totalUnblocked: number; killedTargetIds: string[] } {
+    const enemies: EnemyData[] = this.state.enemies.map(e => ({
+      ...e,
+      statuses: { ...e.statuses },
+    }));
+    const totalUnblockedByTarget = new Map<string, number>();
+    const killedTargetIds = new Set<string>();
+    const reactionState = new Map<string, { tookUnblockedHit: boolean; malleableBlock: number }>();
+
+    if (options.emitBump && action.source) {
+      this.emitEvent(
+        'BUMP',
+        {
+          targetId: action.source,
+          direction: action.source === 'player' ? 'right' : 'left',
+        },
+        action.source
+      );
+    }
+
+    const hits = payload.hits && payload.hits > 0 ? payload.hits : 1;
+
+    for (let hit = 0; hit < hits; hit++) {
+      const targets = this.getTargetEnemies(payload, enemies);
+      if (targets.length === 0) break;
+
+      for (const enemy of targets) {
+        if (enemy.hp <= 0) continue;
+
+        const damage = this.calculateFinalDamage(
+          payload.amount,
+          options.attackerStatuses,
+          enemy.statuses,
+          payload.strengthMultiplier ?? 1,
+          this.state.relics
+        );
+
+        let remaining = damage;
+        let blocked = 0;
+
+        if (enemy.mitigation > 0 && remaining > 0) {
+          blocked = Math.min(enemy.mitigation, remaining);
+          enemy.mitigation -= blocked;
+          remaining -= blocked;
+        }
+
+        const prevHp = enemy.hp;
+        if (remaining > 0) {
+          enemy.hp = Math.max(0, enemy.hp - remaining);
+          totalUnblockedByTarget.set(enemy.id, (totalUnblockedByTarget.get(enemy.id) || 0) + remaining);
+          if (enemy.hp === 0) {
+            killedTargetIds.add(enemy.id);
+          }
+
+          if (options.triggersAttackReactions) {
+            const state = reactionState.get(enemy.id) || { tookUnblockedHit: false, malleableBlock: 0 };
+            state.tookUnblockedHit = true;
+            if (enemy.statuses.malleable > 0) {
+              state.malleableBlock += enemy.statuses.malleable;
+              enemy.statuses.malleable += 1;
+            }
+            reactionState.set(enemy.id, state);
+          }
+        }
+
+        this.emitEvent(
+          'HIT',
+          {
+            targetId: enemy.id,
+            enemyName: enemy.name,
+            amount: remaining,
+            blocked,
+            hpBefore: prevHp,
+            hpAfter: enemy.hp,
+            lethal: enemy.hp === 0,
+          },
+          action.source
+        );
+      }
+    }
+
+    if (options.triggersAttackReactions) {
+      for (const enemy of enemies) {
+        const reaction = reactionState.get(enemy.id);
+        if (!reaction?.tookUnblockedHit) continue;
+
+        if (enemy.statuses.curlUp > 0) {
+          enemy.mitigation += enemy.statuses.curlUp;
+          enemy.statuses.curlUp = 0;
+        }
+
+        if (reaction.malleableBlock > 0) {
+          enemy.mitigation += reaction.malleableBlock;
+        }
+
+        if (enemy.statuses.asleep > 0) {
+          enemy.statuses.asleep = 0;
+        }
+
+        if (
+          enemy.id.startsWith('boss_the_monolith') &&
+          enemy.hp <= enemy.maxHp / 2 &&
+          enemy.currentIntent?.type !== 'unknown'
+        ) {
+          enemy.currentIntent = {
+            type: 'unknown',
+            value: 0,
+            icon: 'unknown',
+            description: 'Splitting...',
+          };
+        }
+      }
+    }
+
+    return {
+      enemies,
+      totalUnblocked: Array.from(totalUnblockedByTarget.values()).reduce((sum, value) => sum + value, 0),
+      killedTargetIds: Array.from(killedTargetIds),
+    };
+  }
+
+  private applyNonAttackAoEDamage(amount: number, source?: string): void {
+    if (amount <= 0) return;
+
+    const enemies: EnemyData[] = this.state.enemies.map(e => ({
+      ...e,
+      statuses: { ...e.statuses },
+    }));
+
+    for (const enemy of enemies) {
+      if (enemy.hp <= 0) continue;
+
+      let damage = amount;
+      if (enemy.statuses.vulnerable > 0) {
+        damage = Math.floor(damage * this.getVulnerableMultiplierInternal(this.state.relics));
+      }
+
+      if (enemy.mitigation > 0 && damage > 0) {
+        const blocked = Math.min(enemy.mitigation, damage);
+        enemy.mitigation -= blocked;
+        damage -= blocked;
+      }
+
+      if (damage > 0) {
+        enemy.hp = Math.max(0, enemy.hp - damage);
+      }
+    }
+
+    this.state = {
+      ...this.state,
+      enemies,
+    };
+    this.checkVictoryInternal();
+  }
+
+  private exhaustCardFromZone(
+    cardId: string,
+    from: 'hand' | 'drawPile' | 'discardPile' | 'deck' | 'exhaustPile',
+    source?: string
+  ): CardData | undefined {
+    let { hand, drawPile, discardPile, exhaustPile } = this.state;
+    let deck = [...this.state.deck];
+    let cardToExhaust: CardData | undefined;
+
+    if (from === 'hand') {
+      hand = [...hand];
+      const index = hand.findIndex(c => c.id === cardId);
+      if (index !== -1) {
+        [cardToExhaust] = hand.splice(index, 1);
+      }
+    } else if (from === 'drawPile') {
+      drawPile = [...drawPile];
+      const index = drawPile.findIndex(c => c.id === cardId);
+      if (index !== -1) {
+        [cardToExhaust] = drawPile.splice(index, 1);
+      }
+    } else if (from === 'discardPile') {
+      discardPile = [...discardPile];
+      const index = discardPile.findIndex(c => c.id === cardId);
+      if (index !== -1) {
+        [cardToExhaust] = discardPile.splice(index, 1);
+      }
+    } else if (from === 'deck') {
+      const index = deck.findIndex(c => c.id === cardId);
+      if (index !== -1) {
+        [cardToExhaust] = deck.splice(index, 1);
+      }
+    } else {
+      return undefined;
+    }
+
+    if (!cardToExhaust) {
+      return undefined;
+    }
+
+    exhaustPile = [...exhaustPile, cardToExhaust];
+
+    this.emitEvent(
+      'CARD_MOVED',
+      {
+        cardId: cardToExhaust.id,
+        card: cardToExhaust,
+        from,
+        to: 'exhaustPile',
+      },
+      source
+    );
+
+    this.state = {
+      ...this.state,
+      hand,
+      drawPile,
+      discardPile,
+      exhaustPile,
+      deck,
+    };
+
+    this.onCardExhausted(cardToExhaust, source);
+    return cardToExhaust;
+  }
+
+  private onCardExhausted(card: CardData, source?: string): void {
+    const feelNoPain = this.state.playerStats.statuses.feelNoPain || 0;
+    if (feelNoPain > 0) {
+      this.handleGainBlock({
+        type: 'GAIN_BLOCK',
+        payload: { amount: feelNoPain } as GainBlockPayload,
+        source,
+      });
+    }
+
+    const sentinelEffect = card.effects?.find(effect => effect.type === 'sentinel_effect');
+    if (sentinelEffect?.value) {
+      this.handleGainBandwidth({
+        type: 'GAIN_BANDWIDTH',
+        payload: { amount: sentinelEffect.value },
+        source,
+      });
+    }
+
+    const phoenixDamage = getPhoenixProtocolDamage(this.state.relics);
+    if (phoenixDamage > 0) {
+      const enemies = this.state.enemies.map(enemy => ({
+        ...enemy,
+        statuses: { ...enemy.statuses },
+      }));
+
+      for (const enemy of enemies) {
+        if (enemy.hp <= 0) continue;
+        enemy.hp = Math.max(0, enemy.hp - phoenixDamage);
+      }
+
+      this.state = {
+        ...this.state,
+        enemies,
+      };
+      this.checkVictoryInternal();
+    }
+
+    const darkEmbrace = this.state.playerStats.statuses.darkEmbrace || 0;
+    if (darkEmbrace > 0) {
+      this.handleDrawCards({
+        type: 'DRAW_CARDS',
+        payload: { count: darkEmbrace } as DrawCardsPayload,
+        source,
+      });
+    }
+  }
 
   /**
    * Emit a GameEvent into the EventLog.

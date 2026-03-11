@@ -148,7 +148,7 @@ const testModelSwitchAndTimingLogs = async () => {
     const restoreEnv = installMockEnv(fetchMock);
     try {
         await generateMacroNarrative(context);
-        assert(requestedUrl.includes('gemini-flash-lite-latest'), 'Uses gemini-flash-lite-latest endpoint');
+        assert(requestedUrl.includes('gemini-flash-latest'), 'Uses gemini-flash-latest endpoint');
         assert(logs.some(l => l.includes('Time to first byte')), 'Logs TTFB');
         assert(logs.some(l => l.includes('Response complete')), 'Logs total/parse timing');
     } finally {
